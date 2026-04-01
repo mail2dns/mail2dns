@@ -1,6 +1,6 @@
 import { Command } from 'commander'
 import { EMAIL_PROVIDERS, DNS_PROVIDERS } from './providers.js'
-import { confirm, resolveInputs, log } from './utils.js'
+import { ask, confirm, resolveInputs, log } from './utils.js'
 import { buildRecords, getEmailInputDefs } from './core.js'
 import type { SetupRecordsOptions } from './types.js'
 
@@ -14,9 +14,8 @@ function addEmailOptions(cmd: Command): Command {
   return cmd
     .option('--verify-txt <value>',  'email verification TXT record value')
     .option('--dkim-key <value>',    'DKIM key (Google Workspace)')
-    .option('--aws-key <key>',       'AWS access key ID (SES)')
-    .option('--aws-secret <secret>', 'AWS secret access key (SES)')
     .option('--aws-region <region>', 'AWS region (SES)')
+    .option('--ses-mode <mode>',     'SES setup mode: auto (AWS CLI) or manual (paste tokens)')
 }
 
 function addDnsOptions(cmd: Command): Command {
@@ -45,9 +44,19 @@ addDnsOptions(addEmailOptions(
 )).action(async (domain: string, emailProvider: string, dnsProvider: string, opts: Record<string, string | undefined>) => {
   validateProviders(emailProvider, dnsProvider)
 
-  const emailInputDefs = getEmailInputDefs(emailProvider)
+  let mode: 'auto' | 'manual' | undefined
+  if (EMAIL_PROVIDERS[emailProvider].type === 'hybrid') {
+    if (opts.sesMode === 'auto' || opts.sesMode === 'manual') {
+      mode = opts.sesMode as 'auto' | 'manual'
+    } else {
+      const answer = await ask('SES setup — choose mode:\n  1) Automated (uses AWS CLI to fetch DKIM tokens)\n  2) Manual (paste DKIM tokens from AWS console)\nChoice [1/2]: ')
+      mode = answer === '2' ? 'manual' : 'auto'
+    }
+  }
+
+  const emailInputDefs = getEmailInputDefs(emailProvider, mode)
   const emailInputs = await resolveInputs(emailInputDefs, opts)
-  const { records, verificationPrefix } = await buildRecords({ domain, emailProvider, emailInputs })
+  const { records, verificationPrefix } = await buildRecords({ domain, emailProvider, emailInputs, mode })
 
   const dnsDef = DNS_PROVIDERS[dnsProvider]
   const dnsInputs = await resolveInputs(dnsDef.inputs, opts)

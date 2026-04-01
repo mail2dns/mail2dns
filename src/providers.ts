@@ -1,6 +1,6 @@
 import { setupRecords as cloudflareSetupRecords } from './dns-modules/cloudflare.js'
 import { inputs as sesInputs, getRecords as sesGetRecords } from './email-modules/ses.js'
-import type { DnsProviderDef, EmailProviderDef, ModuleEmailProviderDef } from './types.js'
+import type { DnsProviderDef, EmailProviderDef, HybridEmailProviderDef } from './types.js'
 
 export const DNS_PROVIDERS: Record<string, DnsProviderDef> = {
   cloudflare: {
@@ -15,8 +15,9 @@ export const EMAIL_PROVIDERS: Record<string, EmailProviderDef> = {
   migadu:          { type: 'template' },
   googleworkspace: { type: 'template' },
   ses: {
-    type: 'module',
+    type: 'hybrid',
+    templateName: 'ses',
     inputs: sesInputs,
-    getRecords: sesGetRecords as ModuleEmailProviderDef['getRecords']
+    getRecords: sesGetRecords as HybridEmailProviderDef['getRecords']
   }
 }

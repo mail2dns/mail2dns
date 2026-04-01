@@ -36,7 +36,14 @@ export interface ModuleEmailProviderDef {
   getRecords: (opts: { domain: string } & Record<string, string>) => Promise<DnsRecord[]>
 }
 
-export type EmailProviderDef = TemplateEmailProviderDef | ModuleEmailProviderDef
+export interface HybridEmailProviderDef {
+  type: 'hybrid'
+  templateName: string
+  inputs: InputDef[]
+  getRecords: (opts: { domain: string } & Record<string, string>) => Promise<DnsRecord[]>
+}
+
+export type EmailProviderDef = TemplateEmailProviderDef | ModuleEmailProviderDef | HybridEmailProviderDef
 
 export interface EmailTemplateRecord {
   type: string

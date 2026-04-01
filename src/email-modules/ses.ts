@@ -1,15 +1,41 @@
-// Amazon SES email module
-// DNS records (DKIM CNAMEs, verification TXT) are generated per-domain via the AWS SDK.
-// Requires: @aws-sdk/client-ses
-
+import { execFile } from 'child_process'
+import { promisify } from 'util'
 import type { DnsRecord, InputDef } from '../types.js'
 
+const execFileAsync = promisify(execFile) as (file: string, args: string[]) => Promise<{ stdout: string; stderr: string }>
+
 export const inputs: InputDef[] = [
-  { flag: 'awsKey',    name: 'AWS access key ID',     env: 'AWS_ACCESS_KEY_ID'     },
-  { flag: 'awsSecret', name: 'AWS secret access key', env: 'AWS_SECRET_ACCESS_KEY' },
-  { flag: 'awsRegion', name: 'AWS region',            env: 'AWS_REGION'            }
+  { flag: 'awsRegion', name: 'AWS region', env: 'AWS_REGION' }
 ]
 
-export async function getRecords({ domain, awsKey, awsSecret, awsRegion }: { domain: string; awsKey: string; awsSecret: string; awsRegion: string }): Promise<DnsRecord[]> {
-  throw new Error('Amazon SES module not yet implemented')
+async function aws<T>(args: string[]): Promise<T> {
+  const { stdout } = await execFileAsync('aws', [...args, '--output', 'json'])
+    .catch((e: { stderr?: string; message: string }) => {
+      throw new Error(`AWS CLI error: ${e.stderr?.trim() || e.message}\nIs the AWS CLI installed and configured?`)
+    })
+  return JSON.parse(stdout) as T
+}
+
+export async function getRecords({ domain, awsRegion }: { domain: string; awsRegion: string }): Promise<DnsRecord[]> {
+  const regionArgs = ['--region', awsRegion]
+
+  const [identity, dkim] = await Promise.all([
+    aws<{ VerificationToken: string }>(['ses', 'verify-domain-identity', '--domain', domain, ...regionArgs]),
+    aws<{ DkimTokens: string[]      }>(['ses', 'verify-domain-dkim',     '--domain', domain, ...regionArgs])
+  ])
+
+  const { VerificationToken } = identity
+  const { DkimTokens } = dkim
+  if (!VerificationToken) throw new Error('SES did not return a verification token')
+  if (!DkimTokens || DkimTokens.length < 3) throw new Error('SES did not return 3 DKIM tokens')
+
+  return [
+    { type: 'TXT',   name: '_amazonses',                        content: VerificationToken,                                  ttl: 1            },
+    { type: 'MX',    name: '@',                                  content: `inbound-smtp.${awsRegion}.amazonaws.com`,          ttl: 1, priority: 10 },
+    { type: 'TXT',   name: '@',                                  content: 'v=spf1 include:amazonses.com ~all',                ttl: 1            },
+    { type: 'TXT',   name: '_dmarc',                             content: 'v=DMARC1; p=none;',                               ttl: 1            },
+    { type: 'CNAME', name: `${DkimTokens[0]}._domainkey`,       content: `${DkimTokens[0]}.dkim.amazonses.com`,             ttl: 1            },
+    { type: 'CNAME', name: `${DkimTokens[1]}._domainkey`,       content: `${DkimTokens[1]}.dkim.amazonses.com`,             ttl: 1            },
+    { type: 'CNAME', name: `${DkimTokens[2]}._domainkey`,       content: `${DkimTokens[2]}.dkim.amazonses.com`,             ttl: 1            },
+  ]
 }

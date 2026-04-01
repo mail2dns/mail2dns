@@ -6,7 +6,15 @@ const output = {
     Object.entries(DNS_PROVIDERS).map(([key, def]) => [key, { inputs: def.inputs }])
   ),
   emailProviders: Object.fromEntries(
-    Object.keys(EMAIL_PROVIDERS).map(key => [key, { inputs: getEmailInputDefs(key) }])
+    Object.entries(EMAIL_PROVIDERS).map(([key, def]) => {
+      if (def.type === 'hybrid') {
+        return [key, {
+          inputs:     getEmailInputDefs(key, 'manual'),
+          autoInputs: getEmailInputDefs(key, 'auto')
+        }]
+      }
+      return [key, { inputs: getEmailInputDefs(key) }]
+    })
   )
 }
 

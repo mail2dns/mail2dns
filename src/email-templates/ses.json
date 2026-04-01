@@ -1,0 +1,26 @@
+{
+  "verificationPrefix": "_amazonses",
+  "inputs": [
+    { "flag": "verifyTxt",  "name": "Domain verification TXT value", "env": "SES_VERIFY_TXT"  },
+    { "flag": "dkimToken1", "name": "DKIM token 1",                  "env": "SES_DKIM_TOKEN1" },
+    { "flag": "dkimToken2", "name": "DKIM token 2",                  "env": "SES_DKIM_TOKEN2" },
+    { "flag": "dkimToken3", "name": "DKIM token 3",                  "env": "SES_DKIM_TOKEN3" },
+    { "flag": "awsRegion",  "name": "AWS region",                    "env": "AWS_REGION"      }
+  ],
+  "inputInstructions": {
+    "verifyTxt": "In the AWS SES console, go to Configuration > Verified identities > [your domain]. Under 'Domain verification', copy the TXT record value.",
+    "dkimToken1": "In the AWS SES console under 'DKIM authentication', copy the Name of the first CNAME record. Paste only the token prefix — the part before '._domainkey'.",
+    "dkimToken2": "Copy the token prefix for the second DKIM CNAME record.",
+    "dkimToken3": "Copy the token prefix for the third DKIM CNAME record.",
+    "awsRegion": "The AWS region where your SES is configured (e.g. us-east-1). Used to build the inbound MX endpoint."
+  },
+  "records": [
+    { "type": "TXT",   "name": "_amazonses",              "value": "{VERIFY_TXT}" },
+    { "type": "MX",    "name": "@",                        "value": "inbound-smtp.{AWS_REGION}.amazonaws.com", "priority": 10 },
+    { "type": "TXT",   "name": "@",                        "value": "v=spf1 include:amazonses.com ~all" },
+    { "type": "TXT",   "name": "_dmarc",                   "value": "v=DMARC1; p=none;" },
+    { "type": "CNAME", "name": "{DKIM_TOKEN1}._domainkey", "value": "{DKIM_TOKEN1}.dkim.amazonses.com" },
+    { "type": "CNAME", "name": "{DKIM_TOKEN2}._domainkey", "value": "{DKIM_TOKEN2}.dkim.amazonses.com" },
+    { "type": "CNAME", "name": "{DKIM_TOKEN3}._domainkey", "value": "{DKIM_TOKEN3}.dkim.amazonses.com" }
+  ]
+}
