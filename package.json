@@ -1,0 +1,30 @@
+{
+  "name": "mail2dns",
+  "version": "1.0.0",
+  "description": "CLI tool to configure DNS records for email providers",
+  "main": "dist/cli.js",
+  "bin": {
+    "mail2dns": "./dist/cli.js"
+  },
+  "files": ["dist"],
+  "type": "module",
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsx src/cli.ts",
+    "typecheck": "tsc",
+    "test": "node --import tsx/esm --test tests/**/*.test.js",
+    "export-inputs": "tsx scripts/export-inputs.ts"
+  },
+  "dependencies": {
+    "commander": "^14.0.3"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^25.5.0",
+    "tsup": "^8.5.1",
+    "tsx": "^4.21.0",
+    "typescript": "^6.0.2"
+  }
+}
