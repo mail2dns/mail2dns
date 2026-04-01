@@ -67,18 +67,18 @@ mail2dns setup example.com migadu cloudflare
 
 #### Inputs
 
-| Flag          | Env var             | Description                                                                              |
-|---------------|---------------------|------------------------------------------------------------------------------------------|
-| `‑‑verifyTxt` | `MIGADU_VERIFY_TXT` | Full verification TXT value from your Migadu account (e.g. `hosted‑email‑verify=abc123`) |
+| Flag           | Env var             | Description                                                                              |
+|----------------|---------------------|------------------------------------------------------------------------------------------|
+| `‑‑verify-txt` | `MIGADU_VERIFY_TXT` | Full verification TXT value from your Migadu account (e.g. `hosted‑email‑verify=abc123`) |
 
 ### Google Workspace
 
 #### Inputs
 
-| Flag          | Env var             | Description                                                                                    |
-|---------------|---------------------|------------------------------------------------------------------------------------------------|
-| `‑‑verifyTxt` | `GOOGLE_VERIFY_TXT` | Full verification TXT value from Google Admin Console (e.g. `google‑site‑verification=abc123`) |
-| `‑‑dkim‑key`  | `GOOGLE_DKIM_KEY`   | DKIM TXT value from Google Admin Console (e.g. `v=DKIM1; k=rsa; p=...`)                        |
+| Flag           | Env var             | Description                                                                                    |
+|----------------|---------------------|------------------------------------------------------------------------------------------------|
+| `‑‑verify-txt` | `GOOGLE_VERIFY_TXT` | Full verification TXT value from Google Admin Console (e.g. `google‑site‑verification=abc123`) |
+| `‑‑dkim‑key`   | `GOOGLE_DKIM_KEY`   | DKIM TXT value from Google Admin Console (e.g. `v=DKIM1; k=rsa; p=...`)                        |
 
 ### Amazon SES
 
