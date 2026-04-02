@@ -12,7 +12,7 @@ npm install -g mail2dns
 
 ## Usage
 
-### Create records for a new email provider
+### Create new DNS records for an email provider
 ```bash
 mail2dns setup [options] <domain> <email-provider> <dns-provider>
 ```
