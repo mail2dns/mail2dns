@@ -9,6 +9,7 @@
   "files": ["dist"],
   "type": "module",
   "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
     "build": "node node_modules/tsup/dist/cli-default.js",
     "dev": "node node_modules/tsx/dist/cli.mjs src/cli.ts",
     "typecheck": "node node_modules/typescript/lib/tsc.js",
