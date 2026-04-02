@@ -61,6 +61,7 @@ mail2dns setup example.com migadu cloudflare
 | Provider | Key |
 |----------|-----|
 | [Cloudflare](#cloudflare) | `cloudflare` |
+| [GoDaddy](#godaddy) | `godaddy` |
 
 ## Email providers
 
@@ -112,5 +113,14 @@ For fully automated SES setup pass the option `--ses-mode=auto`. This will use t
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
 | `--token` | `CLOUDFLARE_API_TOKEN` | Cloudflare API token |  |
+
+### GoDaddy
+
+#### Inputs
+
+| Flag | Env var | Description | Example |
+|------|---------|-------------|---------|
+| `--key` | `GODADDY_API_KEY` | GoDaddy API key |  |
+| `--secret` | `GODADDY_API_SECRET` | GoDaddy API secret |  |
 
 <!-- /generated -->
