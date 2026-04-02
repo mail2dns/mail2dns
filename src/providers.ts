@@ -23,6 +23,7 @@ export const EMAIL_PROVIDERS: Record<string, EmailProviderDef> = {
     name: 'Amazon SES',
     type: 'hybrid',
     templateName: 'ses',
+    autoExplanation: 'For fully automated SES setup pass the option `--ses-mode=auto`. This will use the AWS CLI to obtain the configuration values (AWS CLI installed on host machine is required).',
     inputs: sesInputs,
     getRecords: sesGetRecords as HybridEmailProviderDef['getRecords']
   }

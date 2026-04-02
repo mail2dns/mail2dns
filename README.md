@@ -46,20 +46,21 @@ MIGADU_VERIFY_TXT="hosted-email-verify=YOUR_KEY" \
 CLOUDFLARE_API_TOKEN=YOUR_CF_TOKEN \
 mail2dns setup example.com migadu cloudflare
 ```
+<!-- generated -->
+
 ## Supported Email providers
 
-| Provider                              | Key             |
-|---------------------------------------|-----------------|
-| [Migadu](#migadu)                     | migadu          |
-| [Amazon SES](#amazon-ses)             | ses             |
-| [Google Workspace](#google-workspace) | googleworkspace |
+| Provider | Key |
+|----------|-----|
+| [Migadu](#migadu) | `migadu` |
+| [Google Workspace](#google-workspace) | `googleworkspace` |
+| [Amazon SES](#amazon-ses) | `ses` |
 
 ## Supported DNS providers
 
-| Provider                  | Key        |
-|---------------------------|------------|
-| [Cloudflare](#cloudflare) | cloudflare |
-
+| Provider | Key |
+|----------|-----|
+| [Cloudflare](#cloudflare) | `cloudflare` |
 
 ## Email providers
 
@@ -67,28 +68,40 @@ mail2dns setup example.com migadu cloudflare
 
 #### Inputs
 
-| Flag           | Env var             | Description                                                                              |
-|----------------|---------------------|------------------------------------------------------------------------------------------|
-| `‑‑verify-txt` | `MIGADU_VERIFY_TXT` | Full verification TXT value from your Migadu account (e.g. `hosted‑email‑verify=abc123`) |
+| Flag | Env var | Description | Example |
+|------|---------|-------------|---------|
+| `--verify-txt` | `MIGADU_VERIFY_TXT` | Migadu verification TXT value | `hosted-email-verify=abc123` |
 
 ### Google Workspace
 
 #### Inputs
 
-| Flag           | Env var             | Description                                                                                    |
-|----------------|---------------------|------------------------------------------------------------------------------------------------|
-| `‑‑verify-txt` | `GOOGLE_VERIFY_TXT` | Full verification TXT value from Google Admin Console (e.g. `google‑site‑verification=abc123`) |
-| `‑‑dkim‑key`   | `GOOGLE_DKIM_KEY`   | DKIM TXT value from Google Admin Console (e.g. `v=DKIM1; k=rsa; p=...`)                        |
+| Flag | Env var | Description | Example |
+|------|---------|-------------|---------|
+| `--verify-txt` | `GOOGLE_VERIFY_TXT` | Google Workspace verification TXT value | `google-site-verification=abc123` |
+| `--dkim-key` | `GOOGLE_DKIM_KEY` | Google Workspace DKIM key | `v=DKIM1; k=rsa; p=...` |
 
 ### Amazon SES
 
+For fully automated SES setup pass the option `--ses-mode=auto`. This will use the AWS CLI to obtain the configuration values (AWS CLI installed on host machine is required).
+
 #### Inputs
 
-| Flag           | Env var                 | Description                   |
-|----------------|-------------------------|-------------------------------|
-| `‑‑aws‑key`    | `AWS_ACCESS_KEY_ID`     | AWS access key ID             |
-| `‑‑aws‑secret` | `AWS_SECRET_ACCESS_KEY` | AWS secret access key         |
-| `‑‑aws‑region` | `AWS_REGION`            | AWS region (e.g. `us-east-1`) |
+##### Auto Mode
+
+| Flag | Env var | Description | Example |
+|------|---------|-------------|---------|
+| `--aws-region` | `AWS_REGION` | AWS region | `us-east-1` |
+
+##### Manual Mode (default)
+
+| Flag | Env var | Description | Example |
+|------|---------|-------------|---------|
+| `--verify-txt` | `SES_VERIFY_TXT` | Domain verification TXT value | `pmBGN/7MjnfhTKUZ06Enqq1PeGUaOkw8lGhcfwefcHU=` |
+| `--dkim-token1` | `SES_DKIM_TOKEN1` | DKIM token 1 |  |
+| `--dkim-token2` | `SES_DKIM_TOKEN2` | DKIM token 2 |  |
+| `--dkim-token3` | `SES_DKIM_TOKEN3` | DKIM token 3 |  |
+| `--aws-region` | `AWS_REGION` | AWS region | `us-east-1` |
 
 ## DNS providers
 
@@ -96,6 +109,8 @@ mail2dns setup example.com migadu cloudflare
 
 #### Inputs
 
-| Flag      | Env var                | Description          |
-|-----------|------------------------|----------------------|
-| `‑‑token` | `CLOUDFLARE_API_TOKEN` | Cloudflare API token |
+| Flag | Env var | Description | Example |
+|------|---------|-------------|---------|
+| `--token` | `CLOUDFLARE_API_TOKEN` | Cloudflare API token |  |
+
+<!-- /generated -->

@@ -42,6 +42,7 @@ export interface HybridEmailProviderDef {
   type: 'hybrid'
   name: string
   templateName: string
+  autoExplanation: string
   inputs: InputDef[]
   getRecords: (opts: { domain: string } & Record<string, string>) => Promise<DnsRecord[]>
 }

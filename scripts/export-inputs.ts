@@ -12,6 +12,7 @@ const output = {
       if (def.type === 'hybrid') {
         return [key, {
           name: def.name,
+          autoExplanation: def.autoExplanation,
           inputs: getEmailInputDefs(key, 'manual'),
           autoInputs: getEmailInputDefs(key, 'auto')
         }]
