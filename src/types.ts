@@ -10,34 +10,37 @@ export interface InputDef {
   flag: string
   name: string
   env?: string
+  example?: string
   instructions?: string
 }
 
 export interface SetupRecordsOptions {
   domain: string
   records: DnsRecord[]
-  token: string
-  confirm: (question: string) => Promise<boolean>
   verificationPrefix?: string
 }
 
 export interface DnsProviderDef {
-  setupRecords: (opts: SetupRecordsOptions) => Promise<void>
+  name: string
+  setupRecords: (opts: SetupRecordsOptions, inputs: Record<string, string>) => Promise<void>
   inputs: InputDef[]
 }
 
 export interface TemplateEmailProviderDef {
-  type: 'template'
+  type: 'template',
+  name: string
 }
 
 export interface ModuleEmailProviderDef {
   type: 'module'
+  name: string
   inputs: InputDef[]
   getRecords: (opts: { domain: string } & Record<string, string>) => Promise<DnsRecord[]>
 }
 
 export interface HybridEmailProviderDef {
   type: 'hybrid'
+  name: string
   templateName: string
   inputs: InputDef[]
   getRecords: (opts: { domain: string } & Record<string, string>) => Promise<DnsRecord[]>
@@ -54,7 +57,6 @@ export interface EmailTemplateRecord {
 
 export interface EmailTemplate {
   verificationPrefix?: string
-  inputs?: Array<Omit<InputDef, 'instructions'>>
-  inputInstructions?: Record<string, string>
+  inputs?: InputDef[]
   records: EmailTemplateRecord[]
 }

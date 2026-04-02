@@ -1,13 +1,21 @@
 {
   "verificationPrefix": "google-site-verification",
   "inputs": [
-    { "flag": "verifyTxt", "name": "Google Workspace verification TXT value", "env": "GOOGLE_VERIFY_TXT" },
-    { "flag": "dkimKey",   "name": "Google Workspace DKIM key",              "env": "GOOGLE_DKIM_KEY"  }
+    {
+      "flag": "verifyTxt",
+      "name": "Google Workspace verification TXT value",
+      "env": "GOOGLE_VERIFY_TXT",
+      "example": "google-site-verification=abc123",
+      "instructions": "In Google Admin Console, go to Account > Domains > Manage domains, then click 'Verify' next to your domain and copy the full TXT record value shown."
+    },
+    {
+      "flag": "dkimKey",
+      "name": "Google Workspace DKIM key",
+      "env": "GOOGLE_DKIM_KEY",
+      "example": "v=DKIM1; k=rsa; p=...",
+      "instructions": "In Google Admin Console, go to Apps > Google Workspace > Gmail > Authenticate email, select your domain, generate a new key, then copy the TXT record value shown."
+    }
   ],
-  "inputInstructions": {
-    "verifyTxt": "In Google Admin Console, go to Account > Domains > Manage domains, then click 'Verify' next to your domain and copy the full TXT record value shown.",
-    "dkimKey": "In Google Admin Console, go to Apps > Google Workspace > Gmail > Authenticate email, select your domain, generate a new key, then copy the TXT record value shown."
-  },
   "records": [
     {"type": "TXT", "name": "@", "value": "{VERIFY_TXT}"},
     {"type": "MX", "name": "@", "value": "smtp.google.com", "priority": 1},

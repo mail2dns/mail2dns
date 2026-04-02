@@ -5,7 +5,12 @@ import type { DnsRecord, InputDef } from '../types.js'
 const execFileAsync = promisify(execFile) as (file: string, args: string[]) => Promise<{ stdout: string; stderr: string }>
 
 export const inputs: InputDef[] = [
-  { flag: 'awsRegion', name: 'AWS region', env: 'AWS_REGION' }
+  {
+    flag: 'awsRegion',
+    name: 'AWS region',
+    env: 'AWS_REGION',
+    example: 'us-east-1'
+  }
 ]
 
 async function aws<T>(args: string[]): Promise<T> {

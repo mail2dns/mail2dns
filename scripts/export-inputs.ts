@@ -3,17 +3,20 @@ import { getEmailInputDefs } from '../src/core.js'
 
 const output = {
   dnsProviders: Object.fromEntries(
-    Object.entries(DNS_PROVIDERS).map(([key, def]) => [key, { inputs: def.inputs }])
+    Object.entries(DNS_PROVIDERS).map(([key, def]) => {
+        return [key, { name: def.name, inputs: def.inputs }]
+    })
   ),
   emailProviders: Object.fromEntries(
     Object.entries(EMAIL_PROVIDERS).map(([key, def]) => {
       if (def.type === 'hybrid') {
         return [key, {
-          inputs:     getEmailInputDefs(key, 'manual'),
+          name: def.name,
+          inputs: getEmailInputDefs(key, 'manual'),
           autoInputs: getEmailInputDefs(key, 'auto')
         }]
       }
-      return [key, { inputs: getEmailInputDefs(key) }]
+      return [key, { name: def.name, inputs: getEmailInputDefs(key) }]
     })
   )
 }

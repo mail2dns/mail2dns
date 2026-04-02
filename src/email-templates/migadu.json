@@ -1,11 +1,14 @@
 {
   "verificationPrefix": "hosted-email-verify",
   "inputs": [
-    { "flag": "verifyTxt", "name": "Migadu verification TXT value", "env": "MIGADU_VERIFY_TXT" }
+    {
+      "flag": "verifyTxt",
+      "name": "Migadu verification TXT value",
+      "env": "MIGADU_VERIFY_TXT",
+      "example": "hosted-email-verify=abc123",
+      "instructions": "In your Migadu account page, go to Email Domains > [Email Domain] > DNS Configuration > Setup Instructions and copy the full TXT record value shown under `Verification TXT Record`."
+    }
   ],
-  "inputInstructions": {
-    "verifyTxt": "In your Migadu account page, go to Email Domains > [Email Domain] > DNS Configuration > Setup Instructions and copy the full TXT record value shown under `Verification TXT Record`."
-  },
   "records": [
     {"type": "TXT", "name": "@", "value": "{VERIFY_TXT}"},
     {"type": "MX", "name": "@", "value": "aspmx1.migadu.com", "priority": 10},

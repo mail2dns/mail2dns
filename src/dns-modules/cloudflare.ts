@@ -1,5 +1,15 @@
-import { log } from '../utils.js'
-import type { DnsRecord, SetupRecordsOptions } from '../types.js'
+import { confirm, log } from '../utils.js'
+import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
+
+
+export const inputs: InputDef[] = [
+  {
+    flag: 'token',
+    name: 'Cloudflare API token',
+    env: 'CLOUDFLARE_API_TOKEN',
+    instructions: 'Create a token at https://dash.cloudflare.com/profile/api-tokens with Zone:DNS:Edit permissions'
+  }
+]
 
 const BASE_URL = process.env.CLOUDFLARE_API_URL ?? 'https://api.cloudflare.com/client/v4'
 
@@ -110,7 +120,7 @@ function formatRecord(r: { type: string; name: string; content: string; priority
   return `  [${r.type.padEnd(5)}] ${name} → ${r.content}${priority}`
 }
 
-export async function setupRecords({ domain, records, token, confirm, verificationPrefix }: SetupRecordsOptions): Promise<void> {
+export async function setupRecords({ domain, records, verificationPrefix }: SetupRecordsOptions, { token }: Record<string, string>): Promise<void> {
   const zoneId = await getZoneId(domain, token)
   log.success(`Zone found: ${domain}`)
 

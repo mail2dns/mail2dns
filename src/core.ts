@@ -37,8 +37,7 @@ function buildFromTemplate(templateName: string, domain: string, emailInputs: Re
 
 function templateInputDefs(templateName: string): InputDef[] {
   const template = readTemplate(templateName)
-  const instructions: Record<string, string> = template.inputInstructions ?? {}
-  return (template.inputs ?? []).map(input => ({ ...input, instructions: instructions[input.flag] }))
+  return template.inputs ?? []
 }
 
 export function getEmailInputDefs(emailProvider: string, mode?: 'auto' | 'manual'): InputDef[] {

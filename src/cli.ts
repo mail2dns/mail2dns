@@ -1,8 +1,7 @@
 import { Command } from 'commander'
 import { EMAIL_PROVIDERS, DNS_PROVIDERS } from './providers.js'
-import { ask, confirm, resolveInputs, log } from './utils.js'
+import { ask, resolveInputs, log } from './utils.js'
 import { buildRecords, getEmailInputDefs } from './core.js'
-import type { SetupRecordsOptions } from './types.js'
 
 const program = new Command()
 
@@ -61,7 +60,7 @@ addDnsOptions(addEmailOptions(
   const dnsDef = DNS_PROVIDERS[dnsProvider]
   const dnsInputs = await resolveInputs(dnsDef.inputs, opts)
 
-  await dnsDef.setupRecords({ domain, records, confirm, verificationPrefix, ...dnsInputs } as SetupRecordsOptions)
+  await dnsDef.setupRecords({ domain, records, verificationPrefix }, dnsInputs)
 })
 
 addEmailOptions(
