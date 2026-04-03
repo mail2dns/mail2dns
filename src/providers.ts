@@ -1,5 +1,6 @@
 import { setupRecords as cloudflareSetupRecords, inputs as cloudflareInputs } from './dns-modules/cloudflare.js'
 import { setupRecords as godaddySetupRecords, inputs as godaddyInputs } from './dns-modules/godaddy.js'
+import { setupRecords as netlifySetupRecords, inputs as netlifyInputs } from './dns-modules/netlify.js'
 import { inputs as sesInputs, getRecords as sesGetRecords } from './email-modules/ses.js'
 import type { DnsProviderDef, EmailProviderDef } from './types.js'
 
@@ -13,6 +14,11 @@ export const DNS_PROVIDERS: Record<string, DnsProviderDef> = {
     name: 'GoDaddy',
     setupRecords: godaddySetupRecords,
     inputs: godaddyInputs
+  },
+  netlify: {
+    name: 'Netlify',
+    setupRecords: netlifySetupRecords,
+    inputs: netlifyInputs
   }
 }
 

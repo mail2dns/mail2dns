@@ -62,6 +62,7 @@ mail2dns setup example.com migadu cloudflare
 |----------|-----|
 | [Cloudflare](#cloudflare) | `cloudflare` |
 | [GoDaddy](#godaddy) | `godaddy` |
+| [Netlify](#netlify) | `netlify` |
 
 ## Email providers
 
@@ -122,5 +123,13 @@ For fully automated SES setup pass the option `--ses-mode=auto`. This will use t
 |------|---------|-------------|---------|
 | `--key` | `GODADDY_API_KEY` | GoDaddy API key |  |
 | `--secret` | `GODADDY_API_SECRET` | GoDaddy API secret |  |
+
+### Netlify
+
+#### Inputs
+
+| Flag | Env var | Description | Example |
+|------|---------|-------------|---------|
+| `--token` | `NETLIFY_AUTH_TOKEN` | Netlify personal access token |  |
 
 <!-- /generated -->
