@@ -1,7 +1,7 @@
 import { setupRecords as cloudflareSetupRecords, inputs as cloudflareInputs } from './dns-modules/cloudflare.js'
 import { setupRecords as godaddySetupRecords, inputs as godaddyInputs } from './dns-modules/godaddy.js'
 import { inputs as sesInputs, getRecords as sesGetRecords } from './email-modules/ses.js'
-import type { DnsProviderDef, EmailProviderDef, HybridEmailProviderDef } from './types.js'
+import type { DnsProviderDef, EmailProviderDef } from './types.js'
 
 export const DNS_PROVIDERS: Record<string, DnsProviderDef> = {
   cloudflare: {
@@ -27,10 +27,11 @@ export const EMAIL_PROVIDERS: Record<string, EmailProviderDef> = {
   },
   ses: {
     name: 'Amazon SES',
-    type: 'hybrid',
-    templateName: 'ses',
-    autoExplanation: 'For fully automated SES setup pass the option `--ses-mode=auto`. This will use the AWS CLI to obtain the configuration values (AWS CLI installed on host machine is required).',
-    inputs: sesInputs,
-    getRecords: sesGetRecords as HybridEmailProviderDef['getRecords']
+    type: 'template',
+    auto: {
+      explanation: 'For fully automated SES setup pass the option `--ses-mode=auto`. This will use the AWS CLI to obtain the configuration values (AWS CLI installed on host machine is required).',
+      inputs: sesInputs,
+      getRecords: sesGetRecords
+    }
   }
 }

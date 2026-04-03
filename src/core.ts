@@ -42,9 +42,8 @@ function templateInputDefs(templateName: string): InputDef[] {
 
 export function getEmailInputDefs(emailProvider: string, mode?: 'auto' | 'manual'): InputDef[] {
   const emailDef = EMAIL_PROVIDERS[emailProvider]
-  if (emailDef.type === 'template') return templateInputDefs(emailProvider)
-  if (emailDef.type === 'hybrid') {
-    return mode === 'manual' ? templateInputDefs(emailDef.templateName) : emailDef.inputs
+  if (emailDef.type === 'template') {
+    return (mode === 'auto' && emailDef.auto) ? emailDef.auto.inputs : templateInputDefs(emailProvider)
   }
   return emailDef.inputs
 }
@@ -57,12 +56,12 @@ export async function buildRecords({ domain, emailProvider, emailInputs, mode }:
 }): Promise<{ records: DnsRecord[]; verificationPrefix?: string }> {
   const emailDef = EMAIL_PROVIDERS[emailProvider]
 
-  if (emailDef.type === 'template') return buildFromTemplate(emailProvider, domain, emailInputs)
-
-  if (emailDef.type === 'hybrid') {
-    if (mode === 'manual') return buildFromTemplate(emailDef.templateName, domain, emailInputs)
-    const records = await emailDef.getRecords({ domain, ...emailInputs })
-    return { records, verificationPrefix: undefined }
+  if (emailDef.type === 'template') {
+    if (mode === 'auto' && emailDef.auto) {
+      const records = await emailDef.auto.getRecords({ domain, ...emailInputs })
+      return { records, verificationPrefix: undefined }
+    }
+    return buildFromTemplate(emailProvider, domain, emailInputs)
   }
 
   const records = await emailDef.getRecords({ domain, ...emailInputs })

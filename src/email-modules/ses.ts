@@ -21,7 +21,7 @@ async function aws<T>(args: string[]): Promise<T> {
   return JSON.parse(stdout) as T
 }
 
-export async function getRecords({ domain, awsRegion }: { domain: string; awsRegion: string }): Promise<DnsRecord[]> {
+export async function getRecords({ domain, awsRegion }: { domain: string } & Record<string, string>): Promise<DnsRecord[]> {
   const regionArgs = ['--region', awsRegion]
 
   const [identity, dkim] = await Promise.all([

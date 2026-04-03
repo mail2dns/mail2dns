@@ -59,8 +59,8 @@ lines.push('')
 for (const [key, def] of Object.entries(EMAIL_PROVIDERS)) {
   lines.push(`### ${def.name}`)
   lines.push('')
-  if (def.type === 'hybrid') {
-    lines.push(def.autoExplanation)
+  if (def.type === 'template' && def.auto) {
+    lines.push(def.auto.explanation)
     lines.push('')
     lines.push('#### Inputs')
     lines.push('')

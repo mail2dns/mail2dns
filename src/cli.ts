@@ -44,7 +44,7 @@ addDnsOptions(addEmailOptions(
   validateProviders(emailProvider, dnsProvider)
 
   let mode: 'auto' | 'manual' | undefined
-  if (EMAIL_PROVIDERS[emailProvider].type === 'hybrid') {
+  if (EMAIL_PROVIDERS[emailProvider].type === 'template' && EMAIL_PROVIDERS[emailProvider].auto) {
     if (opts.sesMode === 'auto' || opts.sesMode === 'manual') {
       mode = opts.sesMode as 'auto' | 'manual'
     } else {
