@@ -1,4 +1,4 @@
-import { confirm, log } from '../utils.js'
+import { confirm as utilsConfirm, log } from '../utils.js'
 import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
 
 export const inputs: InputDef[] = [
@@ -116,7 +116,13 @@ function formatRecord(r: { type: string; hostname: string; value: string; priori
   return `  [${r.type.padEnd(5)}] ${name} → ${r.value}${priority}`
 }
 
-export async function setupRecords({ domain, records, verificationPrefix }: SetupRecordsOptions, { token }: Record<string, string>): Promise<void> {
+type Opts = SetupRecordsOptions & { confirm?: (q: string) => Promise<boolean> }
+
+export async function setupRecords(
+  { domain, records, verificationPrefix, confirm: confirmFn }: Opts,
+  { token }: Record<string, string>
+): Promise<void> {
+  const confirm = confirmFn ?? utilsConfirm
   const zoneId = await getZoneId(domain, token)
   log.success(`Zone found: ${domain}`)
 
