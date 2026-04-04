@@ -19,27 +19,20 @@ function buildFromTemplate(template: EmailTemplate, domain: string, emailInputs:
   return { records, verificationPrefix: template.verificationPrefix }
 }
 
-export function getEmailInputDefs(emailProvider: string, mode?: 'auto' | 'manual'): InputDef[] {
+export function getEmailInputDefs(emailProvider: string): InputDef[] {
   const emailDef = EMAIL_PROVIDERS[emailProvider]
-  if (emailDef.type === 'template') {
-    return (mode === 'auto' && emailDef.auto) ? emailDef.auto.inputs : (emailDef.template.inputs ?? [])
-  }
+  if (emailDef.type === 'template') return emailDef.template.inputs ?? []
   return emailDef.inputs
 }
 
-export async function buildRecords({ domain, emailProvider, emailInputs, mode }: {
+export async function buildRecords({ domain, emailProvider, emailInputs }: {
   domain: string
   emailProvider: string
   emailInputs: Record<string, string>
-  mode?: 'auto' | 'manual'
 }): Promise<{ records: DnsRecord[]; verificationPrefix?: string }> {
   const emailDef = EMAIL_PROVIDERS[emailProvider]
 
   if (emailDef.type === 'template') {
-    if (mode === 'auto' && emailDef.auto) {
-      const records = await emailDef.auto.getRecords({ domain, ...emailInputs })
-      return { records, verificationPrefix: undefined }
-    }
     return buildFromTemplate(emailDef.template, domain, emailInputs)
   }
 

@@ -5,7 +5,15 @@ import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
 
 const execFileAsync = promisify(execFile) as (file: string, args: string[]) => Promise<{ stdout: string; stderr: string }>
 
-export const inputs: InputDef[] = []
+export const inputs: InputDef[] = [
+  {
+    flag: 'awsProfile',
+    name: 'AWS profile',
+    env: 'AWS_PROFILE',
+    example: 'my-profile',
+    optional: true
+  }
+]
 
 async function aws<T>(args: string[]): Promise<T> {
   const { stdout } = await execFileAsync('aws', [...args, '--output', 'json'])
@@ -98,9 +106,11 @@ type Opts = SetupRecordsOptions & {
 
 export async function setupRecords(
   { domain, records, verificationPrefix, confirm: confirmFn, aws: awsFn }: Opts,
-  _inputs: Record<string, string>
+  { awsProfile }: Record<string, string>
 ): Promise<void> {
-  const awsCmd = awsFn ?? aws
+  const profileArgs = awsProfile ? ['--profile', awsProfile] : []
+  const awsBase = awsFn ?? aws
+  const awsCmd: AwsFn = (args) => awsBase([...profileArgs, ...args])
   const confirmCmd = confirmFn ?? confirm
   const zoneId = await getHostedZoneId(domain, awsCmd)
   log.success(`Hosted zone found: ${domain}`)

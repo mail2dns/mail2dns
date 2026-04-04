@@ -120,7 +120,10 @@ function formatRecord(r: { type: string; name: string; content: string; priority
   return `  [${r.type.padEnd(5)}] ${name} → ${r.content}${priority}`
 }
 
-export async function setupRecords({ domain, records, verificationPrefix }: SetupRecordsOptions, { token }: Record<string, string>): Promise<void> {
+type Opts = SetupRecordsOptions & { confirm?: (q: string) => Promise<boolean> }
+
+export async function setupRecords({ domain, records, verificationPrefix, confirm: confirmFn }: Opts, { token }: Record<string, string>): Promise<void> {
+  const confirmCmd = confirmFn ?? confirm
   const zoneId = await getZoneId(domain, token)
   log.success(`Zone found: ${domain}`)
 
@@ -142,7 +145,7 @@ export async function setupRecords({ domain, records, verificationPrefix }: Setu
   }
 
   console.log()
-  const ok = await confirm('Proceed? (y/N) ')
+  const ok = await confirmCmd('Proceed? (y/N) ')
   if (!ok) {
     log.warn('Aborted.')
     return

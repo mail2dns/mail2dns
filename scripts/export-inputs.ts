@@ -9,19 +9,8 @@ const output = {
   ),
   emailProviders: Object.fromEntries(
     Object.entries(EMAIL_PROVIDERS).sort(([, a], [, b]) => a.name.localeCompare(b.name)).map(([key, def]) => {
-      const template = def.type === 'template' ? def.template : undefined
-      const records = template?.records
-      const verificationPrefix = template?.verificationPrefix
-      if (def.type === 'template' && def.auto) {
-        return [key, {
-          name: def.name,
-          inputs: getEmailInputDefs(key, 'manual'),
-          autoInputs: getEmailInputDefs(key, 'auto'),
-          autoExplanation: def.auto.explanation,
-          records,
-          verificationPrefix,
-        }]
-      }
+      const records = def.type === 'template' ? def.template.records : def.records
+      const verificationPrefix = def.type === 'template' ? def.template.verificationPrefix : undefined
       return [key, { name: def.name, inputs: getEmailInputDefs(key), records, verificationPrefix }]
     })
   )

@@ -37,6 +37,7 @@ export async function resolveInputs(inputs: InputDef[], argv: Record<string, str
     let value = argv[input.flag]
     if (!value && input.env) value = process.env[input.env]
     if (!value) {
+      if (input.optional) continue
       if (input.instructions) log.dim(`\n${input.instructions}`)
       value = await ask(`${input.name}: `)
     }

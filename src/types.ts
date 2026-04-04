@@ -12,6 +12,7 @@ export interface InputDef {
   env?: string
   example?: string
   instructions?: string
+  optional?: boolean
 }
 
 export interface SetupRecordsOptions {
@@ -30,11 +31,6 @@ export interface TemplateEmailProviderDef {
   type: 'template'
   name: string
   template: EmailTemplate
-  auto?: {
-    explanation: string
-    inputs: InputDef[]
-    getRecords: (opts: { domain: string } & Record<string, string>) => Promise<DnsRecord[]>
-  }
 }
 
 export interface ModuleEmailProviderDef {
@@ -42,6 +38,7 @@ export interface ModuleEmailProviderDef {
   name: string
   inputs: InputDef[]
   getRecords: (opts: { domain: string } & Record<string, string>) => Promise<DnsRecord[]>
+  records?: EmailTemplateRecord[]
 }
 
 export type EmailProviderDef = TemplateEmailProviderDef | ModuleEmailProviderDef

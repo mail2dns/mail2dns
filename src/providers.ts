@@ -6,7 +6,6 @@ import { setupRecords as route53SetupRecords, inputs as route53Inputs } from './
 import { inputs as sesInputs, getRecords as sesGetRecords } from './email-modules/ses.js'
 import migaduTemplate from './email-templates/migadu.json'
 import googleworkspaceTemplate from './email-templates/googleworkspace.json'
-import sesTemplate from './email-templates/ses.json'
 import ms365Template from './email-templates/ms365.json'
 import protonTemplate from './email-templates/proton.json'
 import zohoTemplate from './email-templates/zoho.json'
@@ -68,12 +67,17 @@ export const EMAIL_PROVIDERS: Record<string, EmailProviderDef> = {
   },
   ses: {
     name: 'Amazon SES',
-    type: 'template',
-    template: sesTemplate,
-    auto: {
-      explanation: 'For fully automated SES setup pass the option `--ses-mode=auto`. This will use the AWS CLI to obtain the configuration values (AWS CLI installed on host machine is required).',
-      inputs: sesInputs,
-      getRecords: sesGetRecords
-    }
+    type: 'module',
+    inputs: sesInputs,
+    getRecords: sesGetRecords,
+    records: [
+      { type: 'TXT',   name: '_amazonses',              value: '{VERIFY_TOKEN}' },
+      { type: 'MX',    name: '@',                        value: 'inbound-smtp.{REGION}.amazonaws.com', priority: 10 },
+      { type: 'TXT',   name: '@',                        value: 'v=spf1 include:amazonses.com ~all' },
+      { type: 'TXT',   name: '_dmarc',                   value: 'v=DMARC1; p=none;' },
+      { type: 'CNAME', name: '{DKIM_TOKEN_1}._domainkey', value: '{DKIM_TOKEN_1}.dkim.amazonses.com' },
+      { type: 'CNAME', name: '{DKIM_TOKEN_2}._domainkey', value: '{DKIM_TOKEN_2}.dkim.amazonses.com' },
+      { type: 'CNAME', name: '{DKIM_TOKEN_3}._domainkey', value: '{DKIM_TOKEN_3}.dkim.amazonses.com' }
+    ]
   }
 }

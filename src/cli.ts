@@ -1,6 +1,6 @@
 import { Command } from 'commander'
 import { EMAIL_PROVIDERS, DNS_PROVIDERS } from './providers.js'
-import { ask, resolveInputs, log } from './utils.js'
+import { resolveInputs, log } from './utils.js'
 import { buildRecords, getEmailInputDefs } from './core.js'
 
 const program = new Command()
@@ -11,15 +11,14 @@ program
 
 function addEmailOptions(cmd: Command): Command {
   return cmd
-    .option('--verify-txt <value>',  'email verification TXT record value')
-    .option('--dkim-key <value>',    'DKIM key (Google Workspace)')
-    .option('--aws-region <region>', 'AWS region (SES)')
-    .option('--ses-mode <mode>',     'SES setup mode: auto (AWS CLI) or manual (paste tokens)')
+    .option('--verify-txt <value>', 'email verification TXT record value')
+    .option('--dkim-key <value>',   'DKIM key (Google Workspace)')
 }
 
 function addDnsOptions(cmd: Command): Command {
   return cmd
-    .option('--token <token>', 'DNS provider API token (or CLOUDFLARE_API_TOKEN env)')
+    .option('--token <token>',         'DNS provider API token (or CLOUDFLARE_API_TOKEN env)')
+    .option('--aws-profile <profile>', 'AWS CLI profile to use (Route 53 and SES)')
 }
 
 function validateProviders(emailProvider: string, dnsProvider: string): void {
@@ -43,19 +42,9 @@ addDnsOptions(addEmailOptions(
 )).action(async (domain: string, emailProvider: string, dnsProvider: string, opts: Record<string, string | undefined>) => {
   validateProviders(emailProvider, dnsProvider)
 
-  let mode: 'auto' | 'manual' | undefined
-  if (EMAIL_PROVIDERS[emailProvider].type === 'template' && EMAIL_PROVIDERS[emailProvider].auto) {
-    if (opts.sesMode === 'auto' || opts.sesMode === 'manual') {
-      mode = opts.sesMode as 'auto' | 'manual'
-    } else {
-      const answer = await ask('SES setup — choose mode:\n  1) Automated (uses AWS CLI to fetch DKIM tokens)\n  2) Manual (paste DKIM tokens from AWS console)\nChoice [1/2]: ')
-      mode = answer === '2' ? 'manual' : 'auto'
-    }
-  }
-
-  const emailInputDefs = getEmailInputDefs(emailProvider, mode)
+  const emailInputDefs = getEmailInputDefs(emailProvider)
   const emailInputs = await resolveInputs(emailInputDefs, opts)
-  const { records, verificationPrefix } = await buildRecords({ domain, emailProvider, emailInputs, mode })
+  const { records, verificationPrefix } = await buildRecords({ domain, emailProvider, emailInputs })
 
   const dnsDef = DNS_PROVIDERS[dnsProvider]
   const dnsInputs = await resolveInputs(dnsDef.inputs, opts)
