@@ -64,6 +64,7 @@ mail2dns setup example.com migadu cloudflare
 | Provider | Key |
 |----------|-----|
 | [Cloudflare](#cloudflare) | `cloudflare` |
+| [DigitalOcean](#digitalocean) | `digitalocean` |
 | [GoDaddy](#godaddy) | `godaddy` |
 | [Netlify](#netlify) | `netlify` |
 | [Amazon Route 53](#amazon-route-53) | `route53` |
@@ -148,6 +149,14 @@ For fully automated SES setup pass the option `--ses-mode=auto`. This will use t
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
 | `--token` | `CLOUDFLARE_API_TOKEN` | Cloudflare API token |  |
+
+### DigitalOcean
+
+#### Inputs
+
+| Flag | Env var | Description | Example |
+|------|---------|-------------|---------|
+| `--token` | `DIGITALOCEAN_TOKEN` | DigitalOcean API token |  |
 
 ### GoDaddy
 
