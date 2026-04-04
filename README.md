@@ -55,6 +55,7 @@ mail2dns setup example.com migadu cloudflare
 | [Migadu](#migadu) | `migadu` |
 | [Google Workspace](#google-workspace) | `googleworkspace` |
 | [Microsoft 365](#microsoft-365) | `ms365` |
+| [Zoho Mail](#zoho-mail) | `zoho` |
 | [Amazon SES](#amazon-ses) | `ses` |
 
 ## Supported DNS providers
@@ -93,6 +94,15 @@ mail2dns setup example.com migadu cloudflare
 | `--verify-txt` | `MS365_VERIFY_TXT` | Microsoft 365 domain verification TXT value | `MS=ms12345678` |
 | `--dkim-selector1-target` | `MS365_DKIM_SELECTOR1` | DKIM selector1 CNAME target | `selector1-example-com._domainkey.example.onmicrosoft.com` |
 | `--dkim-selector2-target` | `MS365_DKIM_SELECTOR2` | DKIM selector2 CNAME target | `selector2-example-com._domainkey.example.onmicrosoft.com` |
+
+### Zoho Mail
+
+#### Inputs
+
+| Flag | Env var | Description | Example |
+|------|---------|-------------|---------|
+| `--verify-txt` | `ZOHO_VERIFY_TXT` | Zoho Mail domain verification TXT value | `zoho-verification=zb12345678.zmverify.zoho.com` |
+| `--dkim-key` | `ZOHO_DKIM_KEY` | Zoho Mail DKIM TXT value | `v=DKIM1; k=rsa; p=...` |
 
 ### Amazon SES
 
