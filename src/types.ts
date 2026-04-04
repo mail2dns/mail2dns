@@ -29,6 +29,7 @@ export interface DnsProviderDef {
 export interface TemplateEmailProviderDef {
   type: 'template'
   name: string
+  template: EmailTemplate
   auto?: {
     explanation: string
     inputs: InputDef[]

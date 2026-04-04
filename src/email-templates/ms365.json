@@ -1,0 +1,34 @@
+{
+  "inputs": [
+    {
+      "flag": "verifyTxt",
+      "name": "Microsoft 365 domain verification TXT value",
+      "env": "MS365_VERIFY_TXT",
+      "example": "MS=ms12345678",
+      "instructions": "In the Microsoft 365 admin center, go to Settings > Domains, select your domain, and copy the TXT value shown under 'Verify domain' (starts with MS=ms...)."
+    },
+    {
+      "flag": "dkimSelector1Target",
+      "name": "DKIM selector1 CNAME target",
+      "env": "MS365_DKIM_SELECTOR1",
+      "example": "selector1-example-com._domainkey.example.onmicrosoft.com",
+      "instructions": "In the Microsoft 365 admin center under DNS records, find the CNAME record for 'selector1._domainkey' and copy its target value."
+    },
+    {
+      "flag": "dkimSelector2Target",
+      "name": "DKIM selector2 CNAME target",
+      "env": "MS365_DKIM_SELECTOR2",
+      "example": "selector2-example-com._domainkey.example.onmicrosoft.com",
+      "instructions": "Copy the target value for the 'selector2._domainkey' CNAME record."
+    }
+  ],
+  "records": [
+    { "type": "TXT",   "name": "@",                    "value": "{VERIFY_TXT}" },
+    { "type": "MX",    "name": "@",                    "value": "{DOMAIN_DASHES}.mail.protection.outlook.com", "priority": 0 },
+    { "type": "TXT",   "name": "@",                    "value": "v=spf1 include:spf.protection.outlook.com -all" },
+    { "type": "TXT",   "name": "_dmarc",               "value": "v=DMARC1; p=none;" },
+    { "type": "CNAME", "name": "autodiscover",         "value": "autodiscover.outlook.com" },
+    { "type": "CNAME", "name": "selector1._domainkey", "value": "{DKIM_SELECTOR1_TARGET}" },
+    { "type": "CNAME", "name": "selector2._domainkey", "value": "{DKIM_SELECTOR2_TARGET}" }
+  ]
+}

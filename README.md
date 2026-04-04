@@ -54,6 +54,7 @@ mail2dns setup example.com migadu cloudflare
 |----------|-----|
 | [Migadu](#migadu) | `migadu` |
 | [Google Workspace](#google-workspace) | `googleworkspace` |
+| [Microsoft 365](#microsoft-365) | `ms365` |
 | [Amazon SES](#amazon-ses) | `ses` |
 
 ## Supported DNS providers
@@ -82,6 +83,16 @@ mail2dns setup example.com migadu cloudflare
 |------|---------|-------------|---------|
 | `--verify-txt` | `GOOGLE_VERIFY_TXT` | Google Workspace verification TXT value | `google-site-verification=abc123` |
 | `--dkim-key` | `GOOGLE_DKIM_KEY` | Google Workspace DKIM key | `v=DKIM1; k=rsa; p=...` |
+
+### Microsoft 365
+
+#### Inputs
+
+| Flag | Env var | Description | Example |
+|------|---------|-------------|---------|
+| `--verify-txt` | `MS365_VERIFY_TXT` | Microsoft 365 domain verification TXT value | `MS=ms12345678` |
+| `--dkim-selector1-target` | `MS365_DKIM_SELECTOR1` | DKIM selector1 CNAME target | `selector1-example-com._domainkey.example.onmicrosoft.com` |
+| `--dkim-selector2-target` | `MS365_DKIM_SELECTOR2` | DKIM selector2 CNAME target | `selector2-example-com._domainkey.example.onmicrosoft.com` |
 
 ### Amazon SES
 

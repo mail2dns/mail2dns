@@ -1,25 +1,9 @@
 import { EMAIL_PROVIDERS } from './providers.js'
-import migaduTemplate from './email-templates/migadu.json'
-import googleworkspaceTemplate from './email-templates/googleworkspace.json'
-import sesTemplate from './email-templates/ses.json'
 import type { DnsRecord, EmailTemplate, InputDef } from './types.js'
 
-const TEMPLATES: Record<string, EmailTemplate> = {
-  migadu: migaduTemplate,
-  googleworkspace: googleworkspaceTemplate,
-  ses: sesTemplate
-}
-
-function readTemplate(name: string): EmailTemplate {
-  const template = TEMPLATES[name]
-  if (!template) throw new Error(`Unknown email template: ${name}`)
-  return template
-}
-
-function buildFromTemplate(templateName: string, domain: string, emailInputs: Record<string, string>): { records: DnsRecord[]; verificationPrefix?: string } {
-  const template = readTemplate(templateName)
+function buildFromTemplate(template: EmailTemplate, domain: string, emailInputs: Record<string, string>): { records: DnsRecord[]; verificationPrefix?: string } {
   const toScreamingSnake = (key: string) => key.replace(/([A-Z])/g, '_$1').toUpperCase()
-  const vars: Record<string, string> = { domain, ...emailInputs }
+  const vars: Record<string, string> = { domain, domainDashes: domain.replaceAll('.', '-'), ...emailInputs }
   const records: DnsRecord[] = template.records.map(record => {
     let name = record.name
     let content = record.value
@@ -35,15 +19,10 @@ function buildFromTemplate(templateName: string, domain: string, emailInputs: Re
   return { records, verificationPrefix: template.verificationPrefix }
 }
 
-function templateInputDefs(templateName: string): InputDef[] {
-  const template = readTemplate(templateName)
-  return template.inputs ?? []
-}
-
 export function getEmailInputDefs(emailProvider: string, mode?: 'auto' | 'manual'): InputDef[] {
   const emailDef = EMAIL_PROVIDERS[emailProvider]
   if (emailDef.type === 'template') {
-    return (mode === 'auto' && emailDef.auto) ? emailDef.auto.inputs : templateInputDefs(emailProvider)
+    return (mode === 'auto' && emailDef.auto) ? emailDef.auto.inputs : (emailDef.template.inputs ?? [])
   }
   return emailDef.inputs
 }
@@ -61,7 +40,7 @@ export async function buildRecords({ domain, emailProvider, emailInputs, mode }:
       const records = await emailDef.auto.getRecords({ domain, ...emailInputs })
       return { records, verificationPrefix: undefined }
     }
-    return buildFromTemplate(emailProvider, domain, emailInputs)
+    return buildFromTemplate(emailDef.template, domain, emailInputs)
   }
 
   const records = await emailDef.getRecords({ domain, ...emailInputs })

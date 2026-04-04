@@ -2,6 +2,10 @@ import { setupRecords as cloudflareSetupRecords, inputs as cloudflareInputs } fr
 import { setupRecords as godaddySetupRecords, inputs as godaddyInputs } from './dns-modules/godaddy.js'
 import { setupRecords as netlifySetupRecords, inputs as netlifyInputs } from './dns-modules/netlify.js'
 import { inputs as sesInputs, getRecords as sesGetRecords } from './email-modules/ses.js'
+import migaduTemplate from './email-templates/migadu.json'
+import googleworkspaceTemplate from './email-templates/googleworkspace.json'
+import sesTemplate from './email-templates/ses.json'
+import ms365Template from './email-templates/ms365.json'
 import type { DnsProviderDef, EmailProviderDef } from './types.js'
 
 export const DNS_PROVIDERS: Record<string, DnsProviderDef> = {
@@ -25,15 +29,23 @@ export const DNS_PROVIDERS: Record<string, DnsProviderDef> = {
 export const EMAIL_PROVIDERS: Record<string, EmailProviderDef> = {
   migadu: {
     name: 'Migadu',
-    type: 'template'
+    type: 'template',
+    template: migaduTemplate
   },
   googleworkspace: {
     name: 'Google Workspace',
-    type: 'template'
+    type: 'template',
+    template: googleworkspaceTemplate
+  },
+  ms365: {
+    name: 'Microsoft 365',
+    type: 'template',
+    template: ms365Template
   },
   ses: {
     name: 'Amazon SES',
     type: 'template',
+    template: sesTemplate,
     auto: {
       explanation: 'For fully automated SES setup pass the option `--ses-mode=auto`. This will use the AWS CLI to obtain the configuration values (AWS CLI installed on host machine is required).',
       inputs: sesInputs,
