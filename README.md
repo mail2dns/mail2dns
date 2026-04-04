@@ -66,6 +66,7 @@ mail2dns setup example.com migadu cloudflare
 | [Cloudflare](#cloudflare) | `cloudflare` |
 | [GoDaddy](#godaddy) | `godaddy` |
 | [Netlify](#netlify) | `netlify` |
+| [Amazon Route 53](#amazon-route-53) | `route53` |
 
 ## Email providers
 
@@ -164,5 +165,12 @@ For fully automated SES setup pass the option `--ses-mode=auto`. This will use t
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
 | `--token` | `NETLIFY_AUTH_TOKEN` | Netlify personal access token |  |
+
+### Amazon Route 53
+
+#### Inputs
+
+| Flag | Env var | Description | Example |
+|------|---------|-------------|---------|
 
 <!-- /generated -->

@@ -1,6 +1,7 @@
 import { setupRecords as cloudflareSetupRecords, inputs as cloudflareInputs } from './dns-modules/cloudflare.js'
 import { setupRecords as godaddySetupRecords, inputs as godaddyInputs } from './dns-modules/godaddy.js'
 import { setupRecords as netlifySetupRecords, inputs as netlifyInputs } from './dns-modules/netlify.js'
+import { setupRecords as route53SetupRecords, inputs as route53Inputs } from './dns-modules/route53.js'
 import { inputs as sesInputs, getRecords as sesGetRecords } from './email-modules/ses.js'
 import migaduTemplate from './email-templates/migadu.json'
 import googleworkspaceTemplate from './email-templates/googleworkspace.json'
@@ -25,6 +26,11 @@ export const DNS_PROVIDERS: Record<string, DnsProviderDef> = {
     name: 'Netlify',
     setupRecords: netlifySetupRecords,
     inputs: netlifyInputs
+  },
+  route53: {
+    name: 'Amazon Route 53',
+    setupRecords: route53SetupRecords,
+    inputs: route53Inputs
   }
 }
 
