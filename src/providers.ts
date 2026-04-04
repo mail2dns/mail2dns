@@ -6,6 +6,7 @@ import migaduTemplate from './email-templates/migadu.json'
 import googleworkspaceTemplate from './email-templates/googleworkspace.json'
 import sesTemplate from './email-templates/ses.json'
 import ms365Template from './email-templates/ms365.json'
+import protonTemplate from './email-templates/proton.json'
 import zohoTemplate from './email-templates/zoho.json'
 import type { DnsProviderDef, EmailProviderDef } from './types.js'
 
@@ -42,6 +43,11 @@ export const EMAIL_PROVIDERS: Record<string, EmailProviderDef> = {
     name: 'Microsoft 365',
     type: 'template',
     template: ms365Template
+  },
+  proton: {
+    name: 'Proton Mail',
+    type: 'template',
+    template: protonTemplate
   },
   zoho: {
     name: 'Zoho Mail',

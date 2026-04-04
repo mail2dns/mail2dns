@@ -1,0 +1,43 @@
+{
+  "verificationPrefix": "protonmail-verification",
+  "inputs": [
+    {
+      "flag": "verifyTxt",
+      "name": "Proton Mail domain verification TXT value",
+      "env": "PROTON_VERIFY_TXT",
+      "example": "protonmail-verification=abc123",
+      "instructions": "In the Proton Mail admin panel, go to Settings > Domain names > Add domain, then copy the TXT verification value shown."
+    },
+    {
+      "flag": "dkimCname1",
+      "name": "DKIM CNAME 1 target",
+      "env": "PROTON_DKIM_CNAME1",
+      "example": "protonmail.domainkey.abc123.domains.proton.ch",
+      "instructions": "In the Proton Mail admin panel under Domain names > [your domain] > DKIM, copy the target value for the 'protonmail._domainkey' CNAME record."
+    },
+    {
+      "flag": "dkimCname2",
+      "name": "DKIM CNAME 2 target",
+      "env": "PROTON_DKIM_CNAME2",
+      "example": "protonmail2.domainkey.abc123.domains.proton.ch",
+      "instructions": "Copy the target value for the 'protonmail2._domainkey' CNAME record."
+    },
+    {
+      "flag": "dkimCname3",
+      "name": "DKIM CNAME 3 target",
+      "env": "PROTON_DKIM_CNAME3",
+      "example": "protonmail3.domainkey.abc123.domains.proton.ch",
+      "instructions": "Copy the target value for the 'protonmail3._domainkey' CNAME record."
+    }
+  ],
+  "records": [
+    { "type": "TXT",   "name": "@",                      "value": "{VERIFY_TXT}" },
+    { "type": "MX",    "name": "@",                      "value": "mail.protonmail.ch",    "priority": 10 },
+    { "type": "MX",    "name": "@",                      "value": "mailsec.protonmail.ch", "priority": 20 },
+    { "type": "TXT",   "name": "@",                      "value": "v=spf1 include:_spf.protonmail.ch ~all" },
+    { "type": "TXT",   "name": "_dmarc",                 "value": "v=DMARC1; p=none;" },
+    { "type": "CNAME", "name": "protonmail._domainkey",  "value": "{DKIM_CNAME1}" },
+    { "type": "CNAME", "name": "protonmail2._domainkey", "value": "{DKIM_CNAME2}" },
+    { "type": "CNAME", "name": "protonmail3._domainkey", "value": "{DKIM_CNAME3}" }
+  ]
+}

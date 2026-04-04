@@ -55,6 +55,7 @@ mail2dns setup example.com migadu cloudflare
 | [Migadu](#migadu) | `migadu` |
 | [Google Workspace](#google-workspace) | `googleworkspace` |
 | [Microsoft 365](#microsoft-365) | `ms365` |
+| [Proton Mail](#proton-mail) | `proton` |
 | [Zoho Mail](#zoho-mail) | `zoho` |
 | [Amazon SES](#amazon-ses) | `ses` |
 
@@ -94,6 +95,17 @@ mail2dns setup example.com migadu cloudflare
 | `--verify-txt` | `MS365_VERIFY_TXT` | Microsoft 365 domain verification TXT value | `MS=ms12345678` |
 | `--dkim-selector1-target` | `MS365_DKIM_SELECTOR1` | DKIM selector1 CNAME target | `selector1-example-com._domainkey.example.onmicrosoft.com` |
 | `--dkim-selector2-target` | `MS365_DKIM_SELECTOR2` | DKIM selector2 CNAME target | `selector2-example-com._domainkey.example.onmicrosoft.com` |
+
+### Proton Mail
+
+#### Inputs
+
+| Flag | Env var | Description | Example |
+|------|---------|-------------|---------|
+| `--verify-txt` | `PROTON_VERIFY_TXT` | Proton Mail domain verification TXT value | `protonmail-verification=abc123` |
+| `--dkim-cname1` | `PROTON_DKIM_CNAME1` | DKIM CNAME 1 target | `protonmail.domainkey.abc123.domains.proton.ch` |
+| `--dkim-cname2` | `PROTON_DKIM_CNAME2` | DKIM CNAME 2 target | `protonmail2.domainkey.abc123.domains.proton.ch` |
+| `--dkim-cname3` | `PROTON_DKIM_CNAME3` | DKIM CNAME 3 target | `protonmail3.domainkey.abc123.domains.proton.ch` |
 
 ### Zoho Mail
 
