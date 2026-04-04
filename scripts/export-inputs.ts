@@ -3,12 +3,12 @@ import { getEmailInputDefs } from '../src/core.js'
 
 const output = {
   dnsProviders: Object.fromEntries(
-    Object.entries(DNS_PROVIDERS).map(([key, def]) => {
+    Object.entries(DNS_PROVIDERS).sort(([, a], [, b]) => a.name.localeCompare(b.name)).map(([key, def]) => {
       return [key, { name: def.name, inputs: def.inputs }]
     })
   ),
   emailProviders: Object.fromEntries(
-    Object.entries(EMAIL_PROVIDERS).map(([key, def]) => {
+    Object.entries(EMAIL_PROVIDERS).sort(([, a], [, b]) => a.name.localeCompare(b.name)).map(([key, def]) => {
       const template = def.type === 'template' ? def.template : undefined
       const records = template?.records
       const verificationPrefix = template?.verificationPrefix
