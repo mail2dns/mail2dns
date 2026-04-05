@@ -55,6 +55,11 @@ export const EMAIL_PROVIDERS: Record<string, EmailProviderDef> = {
     type: 'template',
     template: ms365Template
   },
+  outlook: {
+    name: 'Microsoft Outlook',
+    type: 'template',
+    template: ms365Template
+  },
   proton: {
     name: 'Proton Mail',
     type: 'template',
