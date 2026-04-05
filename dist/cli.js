@@ -31,9 +31,9 @@ async function confirm(question) {
   const answer = await ask(question);
   return answer.toLowerCase() === "y" || answer.toLowerCase() === "yes";
 }
-async function resolveInputs(inputs8, argv) {
+async function resolveInputs(inputs10, argv) {
   const result = {};
-  for (const input of inputs8) {
+  for (const input of inputs10) {
     let value = argv[input.flag];
     if (!value && input.env) value = process.env[input.env];
     if (!value) {
@@ -885,11 +885,285 @@ async function setupRecords6({ domain, records, verificationPrefix, confirm: con
   log.success("\nSetup complete.");
 }
 
+// src/dns-modules/vercel.ts
+var inputs7 = [
+  {
+    flag: "token",
+    name: "Vercel API token",
+    env: "VERCEL_TOKEN",
+    instructions: "Create a token at https://vercel.com/account/tokens"
+  },
+  {
+    flag: "team-id",
+    name: "Vercel team ID",
+    env: "VERCEL_TEAM_ID",
+    instructions: "Found in your team settings URL: vercel.com/teams/<team-slug>/settings",
+    optional: true
+  }
+];
+var BASE_URL5 = process.env.VERCEL_API_URL ?? "https://api.vercel.com";
+async function vrFetch(path, options, token, teamId) {
+  const url = new URL(`${BASE_URL5}${path}`);
+  if (teamId) url.searchParams.set("teamId", teamId);
+  const res = await fetch(url.toString(), {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      ...options?.headers
+    }
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(`Vercel API error: ${data.error?.message ?? res.statusText}`);
+  }
+  if (res.status === 204) return void 0;
+  return res.json();
+}
+async function listRecords6(domain, token, teamId) {
+  const data = await vrFetch(`/v4/domains/${domain}/records`, {}, token, teamId);
+  return data.records;
+}
+async function deleteRecord4(domain, recordId, token, teamId) {
+  await vrFetch(`/v2/domains/${domain}/records/${recordId}`, { method: "DELETE" }, token, teamId);
+}
+async function createRecord4(domain, record, token, teamId) {
+  const body = {
+    type: record.type,
+    name: record.name === "@" ? "" : record.name,
+    value: record.content,
+    ttl: record.ttl ?? 60
+  };
+  if (record.priority !== void 0) {
+    body.mxPriority = record.priority;
+  }
+  return vrFetch(`/v2/domains/${domain}/records`, {
+    method: "POST",
+    body: JSON.stringify(body)
+  }, token, teamId);
+}
+function normalizeName4(name) {
+  return name === "" ? "@" : name;
+}
+function findConflicts5(existing, records, verificationPrefix) {
+  const conflicts = [];
+  for (const record of records) {
+    const matches = existing.filter((e) => {
+      const eName = normalizeName4(e.name);
+      if (record.type === "MX" && e.type === "MX") return true;
+      if (record.type === "TXT" && e.type === "TXT") {
+        if (record.content.includes("v=spf1") && e.value.includes("v=spf1")) return true;
+        if (verificationPrefix && record.content.includes(verificationPrefix) && e.value.includes(verificationPrefix)) return true;
+        if (record.content.includes("v=DMARC1") && eName === record.name) return true;
+      }
+      if (record.name.includes("_domainkey") && (record.type === "CNAME" || record.type === "TXT")) {
+        if ((e.type === "CNAME" || e.type === "TXT") && eName === record.name) return true;
+      }
+      return false;
+    });
+    for (const m of matches) {
+      if (!conflicts.find((c2) => c2.id === m.id)) {
+        conflicts.push(m);
+      }
+    }
+  }
+  return conflicts;
+}
+function formatRecord7(r) {
+  const name = normalizeName4(r.name);
+  const priority = r.mxPriority !== void 0 ? ` (priority ${r.mxPriority})` : "";
+  return `  [${r.type.padEnd(5)}] ${name} \u2192 ${r.value}${priority}`;
+}
+async function setupRecords7({ domain, records, verificationPrefix, confirm: confirmFn }, { token, "team-id": teamId }) {
+  const confirm2 = confirmFn ?? confirm;
+  const existing = await listRecords6(domain, token, teamId);
+  log.success(`Zone found: ${domain}`);
+  const conflicts = findConflicts5(existing, records, verificationPrefix);
+  if (conflicts.length > 0) {
+    log.warn("\nThe following existing records will be removed:");
+    for (const r of conflicts) {
+      log.dim(formatRecord7(r));
+    }
+  } else {
+    log.info("\nNo conflicting records found.");
+  }
+  log.info("\nThe following records will be created:");
+  for (const r of records) {
+    log.dim(formatRecord7({ type: r.type, name: r.name, value: r.content, mxPriority: r.priority }));
+  }
+  console.log();
+  const ok = await confirm2("Proceed? (y/N) ");
+  if (!ok) {
+    log.warn("Aborted.");
+    return;
+  }
+  if (conflicts.length > 0) {
+    for (const r of conflicts) {
+      await deleteRecord4(domain, r.id, token, teamId);
+    }
+    log.info(`
+Removed ${conflicts.length} conflicting record${conflicts.length !== 1 ? "s" : ""}`);
+  }
+  const created = { verification: 0, mx: 0, spf: 0, dmarc: 0, dkim: 0 };
+  for (const record of records) {
+    await createRecord4(domain, record, token, teamId);
+    if (verificationPrefix && record.content.includes(verificationPrefix)) created.verification++;
+    else if (record.type === "MX") created.mx++;
+    else if (record.content.includes("v=spf1")) created.spf++;
+    else if (record.content.includes("v=DMARC1")) created.dmarc++;
+    else if (record.name.includes("_domainkey") && (record.type === "CNAME" || record.type === "TXT")) created.dkim++;
+  }
+  console.log();
+  if (created.verification) log.success("Created TXT verification record");
+  if (created.mx) log.success("Created MX records");
+  if (created.spf) log.success("Created SPF record");
+  if (created.dmarc) log.success("Created DMARC record");
+  if (created.dkim) log.success("Created DKIM CNAME records");
+  log.success("\nSetup complete.");
+}
+
+// src/dns-modules/hetzner.ts
+var inputs8 = [
+  {
+    flag: "token",
+    name: "Hetzner Cloud API token",
+    env: "HCLOUD_TOKEN",
+    instructions: "Create a token at https://console.hetzner.cloud/projects \u2192 select project \u2192 Security \u2192 API Tokens"
+  }
+];
+var BASE_URL6 = process.env.HETZNER_API_URL ?? "https://api.hetzner.cloud/v1";
+async function hzFetch(path, options, token) {
+  const res = await fetch(`${BASE_URL6}${path}`, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      ...options?.headers
+    }
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(`Hetzner API error: ${data.error?.message ?? res.statusText}`);
+  }
+  if (res.status === 204) return void 0;
+  return res.json();
+}
+async function listRRSets(zone, token) {
+  const data = await hzFetch(`/zones/${encodeURIComponent(zone)}/rrsets`, {}, token);
+  return data.rrsets;
+}
+async function deleteRRSet(zone, name, type, token) {
+  await hzFetch(
+    `/zones/${encodeURIComponent(zone)}/rrsets/${encodeURIComponent(name)}/${encodeURIComponent(type)}`,
+    { method: "DELETE" },
+    token
+  );
+}
+async function createRRSet(zone, name, type, records, ttl, token) {
+  await hzFetch(`/zones/${encodeURIComponent(zone)}/rrsets`, {
+    method: "POST",
+    body: JSON.stringify({ name, type, records, ttl })
+  }, token);
+}
+function recordValue(record) {
+  return record.type === "MX" ? `${record.priority ?? 10} ${record.content}` : record.content;
+}
+function groupRecords(records) {
+  const map = /* @__PURE__ */ new Map();
+  for (const r of records) {
+    const key = `${r.name}/${r.type}`;
+    const group = map.get(key) ?? [];
+    group.push(r);
+    map.set(key, group);
+  }
+  return map;
+}
+function findConflicts6(existing, records, verificationPrefix) {
+  const conflicts = [];
+  for (const record of records) {
+    const match = existing.find((e) => {
+      if (record.type === "MX" && e.type === "MX" && e.name === record.name) return true;
+      if (record.type === "TXT" && e.type === "TXT" && e.name === record.name) {
+        if (record.content.includes("v=spf1") && e.records.some((r) => r.value.includes("v=spf1"))) return true;
+        if (verificationPrefix && record.content.includes(verificationPrefix) && e.records.some((r) => r.value.includes(verificationPrefix))) return true;
+        if (record.content.includes("v=DMARC1")) return true;
+      }
+      if (record.name.includes("_domainkey") && (record.type === "CNAME" || record.type === "TXT")) {
+        if ((e.type === "CNAME" || e.type === "TXT") && e.name === record.name) return true;
+      }
+      return false;
+    });
+    if (match && !conflicts.find((c2) => c2.name === match.name && c2.type === match.type)) {
+      conflicts.push(match);
+    }
+  }
+  return conflicts;
+}
+function formatRRSet(r) {
+  const values = r.records.map((rec) => rec.value).join(", ");
+  return `  [${r.type.padEnd(5)}] ${r.name} \u2192 ${values}`;
+}
+function formatRecord8(r) {
+  return `  [${r.type.padEnd(5)}] ${r.name} \u2192 ${recordValue(r)}`;
+}
+async function setupRecords8({ domain, records, verificationPrefix, confirm: confirmFn }, { token }) {
+  const confirm2 = confirmFn ?? confirm;
+  const existing = await listRRSets(domain, token);
+  log.success(`Zone found: ${domain}`);
+  const conflicts = findConflicts6(existing, records, verificationPrefix);
+  if (conflicts.length > 0) {
+    log.warn("\nThe following existing RRSets will be removed:");
+    for (const r of conflicts) {
+      log.dim(formatRRSet(r));
+    }
+  } else {
+    log.info("\nNo conflicting records found.");
+  }
+  log.info("\nThe following records will be created:");
+  for (const r of records) {
+    log.dim(formatRecord8(r));
+  }
+  console.log();
+  const ok = await confirm2("Proceed? (y/N) ");
+  if (!ok) {
+    log.warn("Aborted.");
+    return;
+  }
+  if (conflicts.length > 0) {
+    for (const r of conflicts) {
+      await deleteRRSet(domain, r.name, r.type, token);
+    }
+    log.info(`
+Removed ${conflicts.length} conflicting RRSet${conflicts.length !== 1 ? "s" : ""}`);
+  }
+  const created = { verification: 0, mx: 0, spf: 0, dmarc: 0, dkim: 0 };
+  const groups = groupRecords(records);
+  for (const group of groups.values()) {
+    const first = group[0];
+    const rrRecords = group.map((r) => ({ value: recordValue(r) }));
+    await createRRSet(domain, first.name, first.type, rrRecords, first.ttl ?? 300, token);
+    for (const record of group) {
+      if (verificationPrefix && record.content.includes(verificationPrefix)) created.verification++;
+      else if (record.type === "MX") created.mx++;
+      else if (record.content.includes("v=spf1")) created.spf++;
+      else if (record.content.includes("v=DMARC1")) created.dmarc++;
+      else if (record.name.includes("_domainkey") && (record.type === "CNAME" || record.type === "TXT")) created.dkim++;
+    }
+  }
+  console.log();
+  if (created.verification) log.success("Created TXT verification record");
+  if (created.mx) log.success("Created MX records");
+  if (created.spf) log.success("Created SPF record");
+  if (created.dmarc) log.success("Created DMARC record");
+  if (created.dkim) log.success("Created DKIM CNAME records");
+  log.success("\nSetup complete.");
+}
+
 // src/email-modules/ses.ts
 import { execFile as execFile3 } from "child_process";
 import { promisify as promisify3 } from "util";
 var execFileAsync3 = promisify3(execFile3);
-var inputs7 = [
+var inputs9 = [
   {
     flag: "awsProfile",
     name: "AWS profile",
@@ -1027,6 +1301,40 @@ var ms365_default = {
   ]
 };
 
+// src/email-templates/fastmail.json
+var fastmail_default = {
+  records: [
+    { type: "MX", name: "@", value: "in1-smtp.messagingengine.com", priority: 10 },
+    { type: "MX", name: "@", value: "in2-smtp.messagingengine.com", priority: 20 },
+    { type: "TXT", name: "@", value: "v=spf1 include:spf.messagingengine.com ~all" },
+    { type: "TXT", name: "_dmarc", value: "v=DMARC1; p=none;" },
+    { type: "CNAME", name: "fm1._domainkey", value: "fm1.{DOMAIN}.dkim.fmhosted.com" },
+    { type: "CNAME", name: "fm2._domainkey", value: "fm2.{DOMAIN}.dkim.fmhosted.com" },
+    { type: "CNAME", name: "fm3._domainkey", value: "fm3.{DOMAIN}.dkim.fmhosted.com" }
+  ]
+};
+
+// src/email-templates/mailgun.json
+var mailgun_default = {
+  inputs: [
+    {
+      flag: "dkimTxt",
+      name: "DKIM TXT value",
+      env: "MAILGUN_DKIM_TXT",
+      example: "k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4...",
+      instructions: "In the Mailgun control panel, go to Sending > Domains > [your domain] > DNS Records, and copy the value for the 'mx._domainkey' TXT record."
+    }
+  ],
+  records: [
+    { type: "TXT", name: "@", value: "v=spf1 include:mailgun.org ~all" },
+    { type: "TXT", name: "mx._domainkey", value: "{DKIM_TXT}" },
+    { type: "TXT", name: "_dmarc", value: "v=DMARC1; p=none;" },
+    { type: "MX", name: "@", value: "mxa.mailgun.org", priority: 10 },
+    { type: "MX", name: "@", value: "mxb.mailgun.org", priority: 10 },
+    { type: "CNAME", name: "email", value: "mailgun.org" }
+  ]
+};
+
 // src/email-templates/proton.json
 var proton_default = {
   verificationPrefix: "protonmail-verification",
@@ -1133,6 +1441,16 @@ var DNS_PROVIDERS = {
     name: "Amazon Route 53",
     setupRecords: setupRecords6,
     inputs: inputs6
+  },
+  vercel: {
+    name: "Vercel",
+    setupRecords: setupRecords7,
+    inputs: inputs7
+  },
+  hetzner: {
+    name: "Hetzner",
+    setupRecords: setupRecords8,
+    inputs: inputs8
   }
 };
 var EMAIL_PROVIDERS = {
@@ -1156,6 +1474,16 @@ var EMAIL_PROVIDERS = {
     type: "template",
     template: ms365_default
   },
+  fastmail: {
+    name: "Fastmail",
+    type: "template",
+    template: fastmail_default
+  },
+  mailgun: {
+    name: "Mailgun",
+    type: "template",
+    template: mailgun_default
+  },
   proton: {
     name: "Proton Mail",
     type: "template",
@@ -1169,7 +1497,7 @@ var EMAIL_PROVIDERS = {
   ses: {
     name: "Amazon SES",
     type: "module",
-    inputs: inputs7,
+    inputs: inputs9,
     getRecords,
     records: [
       { type: "TXT", name: "_amazonses", value: "{VERIFY_TOKEN}" },
