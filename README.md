@@ -72,6 +72,7 @@ mail2dns setup example.com migadu cloudflare
 | [Google Cloud](#google-cloud) | `gcloud` |
 | [Netlify](#netlify) | `netlify` |
 | [Amazon Route 53](#amazon-route-53) | `route53` |
+| [Vercel](#vercel) | `vercel` |
 
 ## Email providers
 
@@ -201,5 +202,14 @@ mail2dns setup example.com migadu cloudflare
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
 | `--aws-profile` | `AWS_PROFILE` | AWS profile | `my-profile` |
+
+### Vercel
+
+#### Inputs
+
+| Flag | Env var | Description | Example |
+|------|---------|-------------|---------|
+| `--token` | `VERCEL_TOKEN` | Vercel API token |  |
+| `--team-id` | `VERCEL_TEAM_ID` | Vercel team ID |  |
 
 <!-- /generated -->
