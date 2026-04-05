@@ -67,6 +67,7 @@ mail2dns setup example.com migadu cloudflare
 | [Cloudflare](#cloudflare) | `cloudflare` |
 | [DigitalOcean](#digitalocean) | `digitalocean` |
 | [GoDaddy](#godaddy) | `godaddy` |
+| [Google Cloud](#google-cloud) | `gcloud` |
 | [Netlify](#netlify) | `netlify` |
 | [Amazon Route 53](#amazon-route-53) | `route53` |
 
@@ -163,6 +164,14 @@ mail2dns setup example.com migadu cloudflare
 |------|---------|-------------|---------|
 | `--key` | `GODADDY_API_KEY` | GoDaddy API key |  |
 | `--secret` | `GODADDY_API_SECRET` | GoDaddy API secret |  |
+
+### Google Cloud
+
+#### Inputs
+
+| Flag | Env var | Description | Example |
+|------|---------|-------------|---------|
+| `--project` | `CLOUDSDK_CORE_PROJECT` | Google Cloud project ID | `my-project-123` |
 
 ### Netlify
 

@@ -31,12 +31,13 @@ async function confirm(question) {
   const answer = await ask(question);
   return answer.toLowerCase() === "y" || answer.toLowerCase() === "yes";
 }
-async function resolveInputs(inputs5, argv) {
+async function resolveInputs(inputs8, argv) {
   const result = {};
-  for (const input of inputs5) {
+  for (const input of inputs8) {
     let value = argv[input.flag];
     if (!value && input.env) value = process.env[input.env];
     if (!value) {
+      if (input.optional) continue;
       if (input.instructions) log.dim(`
 ${input.instructions}`);
       value = await ask(`${input.name}: `);
@@ -135,7 +136,8 @@ function formatRecord(r, domain) {
   const priority = r.priority !== void 0 ? ` (priority ${r.priority})` : "";
   return `  [${r.type.padEnd(5)}] ${name} \u2192 ${r.content}${priority}`;
 }
-async function setupRecords({ domain, records, verificationPrefix }, { token }) {
+async function setupRecords({ domain, records, verificationPrefix, confirm: confirmFn }, { token }) {
+  const confirmCmd = confirmFn ?? confirm;
   const zoneId = await getZoneId(domain, token);
   log.success(`Zone found: ${domain}`);
   const existing = await listDnsRecords(zoneId, token);
@@ -153,7 +155,7 @@ async function setupRecords({ domain, records, verificationPrefix }, { token }) 
     log.dim(formatRecord(r, domain));
   }
   console.log();
-  const ok = await confirm("Proceed? (y/N) ");
+  const ok = await confirmCmd("Proceed? (y/N) ");
   if (!ok) {
     log.warn("Aborted.");
     return;
@@ -316,8 +318,281 @@ Removed ${conflictKeys.length} conflicting record group${conflictKeys.length !==
   log.success("\nSetup complete.");
 }
 
-// src/dns-modules/netlify.ts
+// src/dns-modules/digitalocean.ts
 var inputs3 = [
+  {
+    flag: "token",
+    name: "DigitalOcean API token",
+    env: "DIGITALOCEAN_TOKEN",
+    instructions: "Create a token at https://cloud.digitalocean.com/account/api/tokens with read and write scopes."
+  }
+];
+var BASE_URL3 = process.env.DIGITALOCEAN_API_URL ?? "https://api.digitalocean.com/v2";
+async function doFetch(path, options, token) {
+  const res = await fetch(`${BASE_URL3}${path}`, {
+    ...options,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      ...options?.headers
+    }
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(`DigitalOcean API error: ${data.message ?? res.statusText}`);
+  }
+  if (res.status === 204) return void 0;
+  return res.json();
+}
+async function checkDomainExists(domain, token) {
+  await doFetch(`/domains/${domain}`, {}, token);
+}
+async function listRecords2(domain, token) {
+  const data = await doFetch(`/domains/${domain}/records?per_page=200`, {}, token);
+  return data.domain_records;
+}
+async function deleteRecord2(domain, id, token) {
+  await doFetch(`/domains/${domain}/records/${id}`, { method: "DELETE" }, token);
+}
+async function createRecord2(domain, record, token) {
+  const body = {
+    type: record.type,
+    name: record.name,
+    data: record.content,
+    ttl: record.ttl ?? 3600
+  };
+  if (record.priority !== void 0) body.priority = record.priority;
+  const data = await doFetch(`/domains/${domain}/records`, {
+    method: "POST",
+    body: JSON.stringify(body)
+  }, token);
+  return data.domain_record;
+}
+function findConflicts3(existing, records, verificationPrefix) {
+  const conflicts = [];
+  for (const record of records) {
+    const matches = existing.filter((e) => {
+      if (record.type === "MX" && e.type === "MX") return true;
+      if (record.type === "TXT" && e.type === "TXT") {
+        if (record.content.includes("v=spf1") && e.data.includes("v=spf1")) return true;
+        if (verificationPrefix && record.content.includes(verificationPrefix) && e.data.includes(verificationPrefix)) return true;
+        if (record.content.includes("v=DMARC1") && e.name === record.name) return true;
+      }
+      if (record.name.includes("_domainkey") && (record.type === "CNAME" || record.type === "TXT")) {
+        if ((e.type === "CNAME" || e.type === "TXT") && e.name === record.name) return true;
+      }
+      return false;
+    });
+    for (const m of matches) {
+      if (!conflicts.find((c2) => c2.id === m.id)) conflicts.push(m);
+    }
+  }
+  return conflicts;
+}
+function formatRecord3(r) {
+  const priority = r.priority !== void 0 ? ` (priority ${r.priority})` : "";
+  return `  [${r.type.padEnd(5)}] ${r.name} \u2192 ${r.data}${priority}`;
+}
+async function setupRecords3({ domain, records, verificationPrefix, confirm: confirmFn }, { token }) {
+  const confirm2 = confirmFn ?? confirm;
+  await checkDomainExists(domain, token);
+  log.success(`Domain found: ${domain}`);
+  const existing = await listRecords2(domain, token);
+  const conflicts = findConflicts3(existing, records, verificationPrefix);
+  if (conflicts.length > 0) {
+    log.warn("\nThe following existing records will be removed:");
+    for (const r of conflicts) log.dim(formatRecord3(r));
+  } else {
+    log.info("\nNo conflicting records found.");
+  }
+  log.info("\nThe following records will be created:");
+  for (const r of records) {
+    log.dim(formatRecord3({ type: r.type, name: r.name, data: r.content, priority: r.priority }));
+  }
+  console.log();
+  const ok = await confirm2("Proceed? (y/N) ");
+  if (!ok) {
+    log.warn("Aborted.");
+    return;
+  }
+  if (conflicts.length > 0) {
+    for (const r of conflicts) await deleteRecord2(domain, r.id, token);
+    log.info(`
+Removed ${conflicts.length} conflicting record${conflicts.length !== 1 ? "s" : ""}`);
+  }
+  const created = { verification: 0, mx: 0, spf: 0, dmarc: 0, dkim: 0 };
+  for (const record of records) {
+    await createRecord2(domain, record, token);
+    if (verificationPrefix && record.content.includes(verificationPrefix)) created.verification++;
+    else if (record.type === "MX") created.mx++;
+    else if (record.content.includes("v=spf1")) created.spf++;
+    else if (record.content.includes("v=DMARC1")) created.dmarc++;
+    else if (record.name.includes("_domainkey") && (record.type === "CNAME" || record.type === "TXT")) created.dkim++;
+  }
+  console.log();
+  if (created.verification) log.success("Created TXT verification record");
+  if (created.mx) log.success("Created MX records");
+  if (created.spf) log.success("Created SPF record");
+  if (created.dmarc) log.success("Created DMARC record");
+  if (created.dkim) log.success("Created DKIM records");
+  log.success("\nSetup complete.");
+}
+
+// src/dns-modules/gcloud.ts
+import { execFile } from "child_process";
+import { promisify } from "util";
+var execFileAsync = promisify(execFile);
+var inputs4 = [
+  {
+    flag: "project",
+    name: "Google Cloud project ID",
+    env: "CLOUDSDK_CORE_PROJECT",
+    example: "my-project-123",
+    optional: true,
+    instructions: "Defaults to the active gcloud project if not set."
+  }
+];
+async function gcloud(args) {
+  const { stdout } = await execFileAsync("gcloud", [...args, "--format=json"]).catch((e) => {
+    throw new Error(`gcloud error: ${e.stderr?.trim() || e.message}
+Is the gcloud CLI installed and configured?`);
+  });
+  const text = stdout.trim();
+  return text ? JSON.parse(text) : null;
+}
+async function getManagedZone(domain, gcloudFn) {
+  const zones = await gcloudFn(["dns", "managed-zones", "list"]);
+  const zone = zones?.find((z) => z.dnsName === `${domain}.`);
+  if (!zone) throw new Error(`Managed zone not found for domain: ${domain}`);
+  return zone.name;
+}
+async function listRecords3(zone, gcloudFn) {
+  return await gcloudFn(["dns", "record-sets", "list", "--zone", zone]) ?? [];
+}
+async function upsertRecordSet(fqdn, type, rrdatas, zone, hasExisting, gcloudFn) {
+  const cmd = hasExisting ? "update" : "create";
+  await gcloudFn([
+    "dns",
+    "record-sets",
+    cmd,
+    fqdn,
+    "--type",
+    type,
+    "--ttl",
+    "300",
+    "--rrdatas",
+    rrdatas.join(","),
+    "--zone",
+    zone
+  ]);
+}
+function toFqdn(name, domain) {
+  return name === "@" ? `${domain}.` : `${name}.${domain}.`;
+}
+function normalizeName2(fqdn, domain) {
+  if (fqdn === `${domain}.`) return "@";
+  if (fqdn.endsWith(`.${domain}.`)) return fqdn.slice(0, -(domain.length + 2));
+  return fqdn;
+}
+function toGcpValue(record) {
+  if (record.type === "MX") {
+    const host = record.content.endsWith(".") ? record.content : `${record.content}.`;
+    return `${record.priority} ${host}`;
+  }
+  if (record.type === "TXT") return `"${record.content}"`;
+  if (record.type === "CNAME") return record.content.endsWith(".") ? record.content : `${record.content}.`;
+  return record.content;
+}
+function unquoteTxt(value) {
+  return value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1) : value;
+}
+function isConflictingValue(existingValue, newRecord, verificationPrefix) {
+  if (newRecord.type === "MX") return true;
+  const raw = unquoteTxt(existingValue);
+  if (newRecord.type === "TXT") {
+    if (newRecord.content.includes("v=spf1") && raw.includes("v=spf1")) return true;
+    if (verificationPrefix && newRecord.content.includes(verificationPrefix) && raw.includes(verificationPrefix)) return true;
+    if (newRecord.content.includes("v=DMARC1") && raw.includes("v=DMARC1")) return true;
+  }
+  if (newRecord.name.includes("_domainkey") && (newRecord.type === "CNAME" || newRecord.type === "TXT")) return true;
+  return false;
+}
+function formatRecord4(name, type, value) {
+  const display = type === "TXT" ? unquoteTxt(value) : value;
+  return `  [${type.padEnd(5)}] ${name} \u2192 ${display}`;
+}
+async function setupRecords4({ domain, records, verificationPrefix, confirm: confirmFn, gcloud: gcloudFn }, { project }) {
+  const confirmCmd = confirmFn ?? confirm;
+  const projectArgs = project ? ["--project", project] : [];
+  const gcloudBase = gcloudFn ?? gcloud;
+  const gcloudCmd = (args) => gcloudBase([...args, ...projectArgs]);
+  const zoneName = await getManagedZone(domain, gcloudCmd);
+  log.success(`Managed zone found: ${zoneName}`);
+  const existing = await listRecords3(zoneName, gcloudCmd);
+  const groups = /* @__PURE__ */ new Map();
+  for (const record of records) {
+    const key = `${record.name}|${record.type}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(record);
+  }
+  const toRemove = [];
+  const toAdd = [];
+  const ops = [];
+  for (const [key, newRecords] of groups) {
+    const [name, type] = key.split("|");
+    const fqdn = toFqdn(name, domain);
+    const existingSet = existing.find((e) => e.name === fqdn && e.type === type);
+    const existingValues = existingSet?.rrdatas ?? [];
+    const retained = [];
+    for (const value of existingValues) {
+      if (newRecords.some((r) => isConflictingValue(value, r, verificationPrefix))) {
+        toRemove.push(formatRecord4(normalizeName2(fqdn, domain), type, value));
+      } else {
+        retained.push(value);
+      }
+    }
+    const newValues = newRecords.map(toGcpValue);
+    for (const r of newRecords) {
+      toAdd.push(formatRecord4(r.name, r.type, toGcpValue(r)));
+    }
+    ops.push({ fqdn, type, rrdatas: [...retained, ...newValues], hasExisting: !!existingSet });
+  }
+  if (toRemove.length > 0) {
+    log.warn("\nThe following existing records will be removed:");
+    for (const r of toRemove) log.dim(r);
+  } else {
+    log.info("\nNo conflicting records found.");
+  }
+  log.info("\nThe following records will be created:");
+  for (const r of toAdd) log.dim(r);
+  console.log();
+  const ok = await confirmCmd("Proceed? (y/N) ");
+  if (!ok) {
+    log.warn("Aborted.");
+    return;
+  }
+  for (const op of ops) {
+    await upsertRecordSet(op.fqdn, op.type, op.rrdatas, zoneName, op.hasExisting, gcloudCmd);
+  }
+  const created = { verification: 0, mx: 0, spf: 0, dmarc: 0, dkim: 0 };
+  for (const record of records) {
+    if (verificationPrefix && record.content.includes(verificationPrefix)) created.verification++;
+    else if (record.type === "MX") created.mx++;
+    else if (record.content.includes("v=spf1")) created.spf++;
+    else if (record.content.includes("v=DMARC1")) created.dmarc++;
+    else if (record.name.includes("_domainkey") && (record.type === "CNAME" || record.type === "TXT")) created.dkim++;
+  }
+  console.log();
+  if (created.verification) log.success("Created TXT verification record");
+  if (created.mx) log.success("Created MX records");
+  if (created.spf) log.success("Created SPF record");
+  if (created.dmarc) log.success("Created DMARC record");
+  if (created.dkim) log.success("Created DKIM records");
+  log.success("\nSetup complete.");
+}
+
+// src/dns-modules/netlify.ts
+var inputs5 = [
   {
     flag: "token",
     name: "Netlify personal access token",
@@ -325,9 +600,9 @@ var inputs3 = [
     instructions: "Create a token at https://app.netlify.com/user/applications#personal-access-tokens"
   }
 ];
-var BASE_URL3 = process.env.NETLIFY_API_URL ?? "https://api.netlify.com/api/v1";
+var BASE_URL4 = process.env.NETLIFY_API_URL ?? "https://api.netlify.com/api/v1";
 async function nlFetch(path, options, token) {
-  const res = await fetch(`${BASE_URL3}${path}`, {
+  const res = await fetch(`${BASE_URL4}${path}`, {
     ...options,
     headers: {
       Authorization: `Bearer ${token}`,
@@ -350,13 +625,13 @@ async function getZoneId2(domain, token) {
   }
   return zone.id;
 }
-async function listRecords2(zoneId, token) {
+async function listRecords4(zoneId, token) {
   return nlFetch(`/dns_zones/${zoneId}/dns_records`, {}, token);
 }
-async function deleteRecord2(zoneId, recordId, token) {
+async function deleteRecord3(zoneId, recordId, token) {
   await nlFetch(`/dns_zones/${zoneId}/dns_records/${recordId}`, { method: "DELETE" }, token);
 }
-async function createRecord2(zoneId, record, domain, token) {
+async function createRecord3(zoneId, record, domain, token) {
   const hostname = record.name === "@" ? domain : `${record.name}.${domain}`;
   const body = {
     type: record.type,
@@ -372,16 +647,16 @@ async function createRecord2(zoneId, record, domain, token) {
     body: JSON.stringify(body)
   }, token);
 }
-function normalizeName2(hostname, domain) {
+function normalizeName3(hostname, domain) {
   if (hostname === domain) return "@";
   if (hostname.endsWith(`.${domain}`)) return hostname.slice(0, -(domain.length + 1));
   return hostname;
 }
-function findConflicts3(existing, records, domain, verificationPrefix) {
+function findConflicts4(existing, records, domain, verificationPrefix) {
   const conflicts = [];
   for (const record of records) {
     const matches = existing.filter((e) => {
-      const eName = normalizeName2(e.hostname, domain);
+      const eName = normalizeName3(e.hostname, domain);
       if (record.type === "MX" && e.type === "MX") return true;
       if (record.type === "TXT" && e.type === "TXT") {
         if (record.content.includes("v=spf1") && e.value.includes("v=spf1")) return true;
@@ -401,44 +676,45 @@ function findConflicts3(existing, records, domain, verificationPrefix) {
   }
   return conflicts;
 }
-function formatRecord3(r, domain) {
-  const name = normalizeName2(r.hostname, domain);
+function formatRecord5(r, domain) {
+  const name = normalizeName3(r.hostname, domain);
   const priority = r.priority !== void 0 ? ` (priority ${r.priority})` : "";
   return `  [${r.type.padEnd(5)}] ${name} \u2192 ${r.value}${priority}`;
 }
-async function setupRecords3({ domain, records, verificationPrefix }, { token }) {
+async function setupRecords5({ domain, records, verificationPrefix, confirm: confirmFn }, { token }) {
+  const confirm2 = confirmFn ?? confirm;
   const zoneId = await getZoneId2(domain, token);
   log.success(`Zone found: ${domain}`);
-  const existing = await listRecords2(zoneId, token);
-  const conflicts = findConflicts3(existing, records, domain, verificationPrefix);
+  const existing = await listRecords4(zoneId, token);
+  const conflicts = findConflicts4(existing, records, domain, verificationPrefix);
   if (conflicts.length > 0) {
     log.warn("\nThe following existing records will be removed:");
     for (const r of conflicts) {
-      log.dim(formatRecord3(r, domain));
+      log.dim(formatRecord5(r, domain));
     }
   } else {
     log.info("\nNo conflicting records found.");
   }
   log.info("\nThe following records will be created:");
   for (const r of records) {
-    log.dim(formatRecord3({ type: r.type, hostname: r.name, value: r.content, priority: r.priority }, domain));
+    log.dim(formatRecord5({ type: r.type, hostname: r.name, value: r.content, priority: r.priority }, domain));
   }
   console.log();
-  const ok = await confirm("Proceed? (y/N) ");
+  const ok = await confirm2("Proceed? (y/N) ");
   if (!ok) {
     log.warn("Aborted.");
     return;
   }
   if (conflicts.length > 0) {
     for (const r of conflicts) {
-      await deleteRecord2(zoneId, r.id, token);
+      await deleteRecord3(zoneId, r.id, token);
     }
     log.info(`
 Removed ${conflicts.length} conflicting record${conflicts.length !== 1 ? "s" : ""}`);
   }
   const created = { verification: 0, mx: 0, spf: 0, dmarc: 0, dkim: 0 };
   for (const record of records) {
-    await createRecord2(zoneId, record, domain, token);
+    await createRecord3(zoneId, record, domain, token);
     if (verificationPrefix && record.content.includes(verificationPrefix)) created.verification++;
     else if (record.type === "MX") created.mx++;
     else if (record.content.includes("v=spf1")) created.spf++;
@@ -454,30 +730,199 @@ Removed ${conflicts.length} conflicting record${conflicts.length !== 1 ? "s" : "
   log.success("\nSetup complete.");
 }
 
-// src/email-modules/ses.ts
-import { execFile } from "child_process";
-import { promisify } from "util";
-var execFileAsync = promisify(execFile);
-var inputs4 = [
+// src/dns-modules/route53.ts
+import { execFile as execFile2 } from "child_process";
+import { promisify as promisify2 } from "util";
+var execFileAsync2 = promisify2(execFile2);
+var inputs6 = [
   {
-    flag: "awsRegion",
-    name: "AWS region",
-    env: "AWS_REGION",
-    example: "us-east-1"
+    flag: "awsProfile",
+    name: "AWS profile",
+    env: "AWS_PROFILE",
+    example: "my-profile",
+    optional: true
   }
 ];
 async function aws(args) {
-  const { stdout } = await execFileAsync("aws", [...args, "--output", "json"]).catch((e) => {
+  const { stdout } = await execFileAsync2("aws", [...args, "--output", "json"]).catch((e) => {
     throw new Error(`AWS CLI error: ${e.stderr?.trim() || e.message}
 Is the AWS CLI installed and configured?`);
   });
   return JSON.parse(stdout);
 }
-async function getRecords({ domain, awsRegion }) {
-  const regionArgs = ["--region", awsRegion];
+async function getHostedZoneId(domain, awsFn) {
+  const result = await awsFn([
+    "route53",
+    "list-hosted-zones-by-name",
+    "--dns-name",
+    `${domain}.`,
+    "--max-items",
+    "1"
+  ]);
+  const zone = result.HostedZones.find((z) => z.Name === `${domain}.`);
+  if (!zone) throw new Error(`Hosted zone not found for domain: ${domain}`);
+  return zone.Id.split("/").pop();
+}
+async function listRecords5(zoneId, awsFn) {
+  const result = await awsFn([
+    "route53",
+    "list-resource-record-sets",
+    "--hosted-zone-id",
+    zoneId
+  ]);
+  return result.ResourceRecordSets;
+}
+async function applyChanges(zoneId, changes, awsFn) {
+  await awsFn([
+    "route53",
+    "change-resource-record-sets",
+    "--hosted-zone-id",
+    zoneId,
+    "--change-batch",
+    JSON.stringify({ Changes: changes })
+  ]);
+}
+function toFqdn2(name, domain) {
+  return name === "@" ? `${domain}.` : `${name}.${domain}.`;
+}
+function unquoteTxt2(value) {
+  return value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1) : value;
+}
+function toR53Value(record) {
+  if (record.type === "MX") return `${record.priority} ${record.content}.`;
+  if (record.type === "TXT") return `"${record.content}"`;
+  if (record.type === "CNAME") return record.content.endsWith(".") ? record.content : `${record.content}.`;
+  return record.content;
+}
+function isConflictingValue2(existingValue, newRecord, verificationPrefix) {
+  if (newRecord.type === "MX") return true;
+  const raw = unquoteTxt2(existingValue);
+  if (newRecord.type === "TXT") {
+    if (newRecord.content.includes("v=spf1") && raw.includes("v=spf1")) return true;
+    if (verificationPrefix && newRecord.content.includes(verificationPrefix) && raw.includes(verificationPrefix)) return true;
+    if (newRecord.content.includes("v=DMARC1") && raw.includes("v=DMARC1")) return true;
+  }
+  if (newRecord.name.includes("_domainkey") && (newRecord.type === "CNAME" || newRecord.type === "TXT")) return true;
+  return false;
+}
+function formatRecord6(name, type, value) {
+  const display = type === "TXT" ? unquoteTxt2(value) : value;
+  return `  [${type.padEnd(5)}] ${name} \u2192 ${display}`;
+}
+async function setupRecords6({ domain, records, verificationPrefix, confirm: confirmFn, aws: awsFn }, { awsProfile }) {
+  const profileArgs = awsProfile ? ["--profile", awsProfile] : [];
+  const awsBase = awsFn ?? aws;
+  const awsCmd = (args) => awsBase([...profileArgs, ...args]);
+  const confirmCmd = confirmFn ?? confirm;
+  const zoneId = await getHostedZoneId(domain, awsCmd);
+  log.success(`Hosted zone found: ${domain}`);
+  const existing = await listRecords5(zoneId, awsCmd);
+  const groups = /* @__PURE__ */ new Map();
+  for (const record of records) {
+    const key = `${record.name}|${record.type}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(record);
+  }
+  const changes = [];
+  const toRemove = [];
+  const toAdd = [];
+  for (const [key, newRecords] of groups) {
+    const [name, type] = key.split("|");
+    const fqdn = toFqdn2(name, domain);
+    const existingSet = existing.find((e) => e.Name === fqdn && e.Type === type);
+    const existingValues = existingSet?.ResourceRecords?.map((r) => r.Value) ?? [];
+    const retained = [];
+    for (const value of existingValues) {
+      if (newRecords.some((r) => isConflictingValue2(value, r, verificationPrefix))) {
+        toRemove.push(formatRecord6(name, type, value));
+      } else {
+        retained.push(value);
+      }
+    }
+    const newValues = newRecords.map(toR53Value);
+    for (const r of newRecords) {
+      toAdd.push(formatRecord6(r.name, r.type, toR53Value(r)));
+    }
+    changes.push({
+      Action: "UPSERT",
+      ResourceRecordSet: {
+        Name: fqdn,
+        Type: type,
+        TTL: 300,
+        ResourceRecords: [...retained, ...newValues].map((Value) => ({ Value }))
+      }
+    });
+  }
+  if (toRemove.length > 0) {
+    log.warn("\nThe following existing records will be removed:");
+    for (const r of toRemove) log.dim(r);
+  } else {
+    log.info("\nNo conflicting records found.");
+  }
+  log.info("\nThe following records will be created:");
+  for (const r of toAdd) log.dim(r);
+  console.log();
+  const ok = await confirmCmd("Proceed? (y/N) ");
+  if (!ok) {
+    log.warn("Aborted.");
+    return;
+  }
+  await applyChanges(zoneId, changes, awsCmd);
+  const created = { verification: 0, mx: 0, spf: 0, dmarc: 0, dkim: 0 };
+  for (const record of records) {
+    if (verificationPrefix && record.content.includes(verificationPrefix)) created.verification++;
+    else if (record.type === "MX") created.mx++;
+    else if (record.content.includes("v=spf1")) created.spf++;
+    else if (record.content.includes("v=DMARC1")) created.dmarc++;
+    else if (record.name.includes("_domainkey") && (record.type === "CNAME" || record.type === "TXT")) created.dkim++;
+  }
+  console.log();
+  if (created.verification) log.success("Created TXT verification record");
+  if (created.mx) log.success("Created MX records");
+  if (created.spf) log.success("Created SPF record");
+  if (created.dmarc) log.success("Created DMARC record");
+  if (created.dkim) log.success("Created DKIM records");
+  log.success("\nSetup complete.");
+}
+
+// src/email-modules/ses.ts
+import { execFile as execFile3 } from "child_process";
+import { promisify as promisify3 } from "util";
+var execFileAsync3 = promisify3(execFile3);
+var inputs7 = [
+  {
+    flag: "awsProfile",
+    name: "AWS profile",
+    env: "AWS_PROFILE",
+    example: "my-profile",
+    optional: true
+  }
+];
+function makeAws(profileArgs) {
+  return async function aws2(args) {
+    const { stdout } = await execFileAsync3("aws", [...profileArgs, ...args, "--output", "json"]).catch((e) => {
+      throw new Error(`AWS CLI error: ${e.stderr?.trim() || e.message}
+Is the AWS CLI installed and configured?`);
+    });
+    return JSON.parse(stdout);
+  };
+}
+async function getRegion(profileArgs) {
+  const { stdout } = await execFileAsync3("aws", [...profileArgs, "configure", "get", "region"]).catch((e) => {
+    throw new Error(`AWS CLI error: ${e.stderr?.trim() || e.message}
+Is the AWS CLI installed and configured?`);
+  });
+  const region = stdout.trim();
+  if (!region) throw new Error("Could not determine AWS region from profile. Ensure your AWS CLI profile has a default region configured.");
+  return region;
+}
+async function getRecords({ domain, awsProfile }) {
+  const profileArgs = awsProfile ? ["--profile", awsProfile] : [];
+  const aws2 = makeAws(profileArgs);
+  const region = await getRegion(profileArgs);
   const [identity, dkim] = await Promise.all([
-    aws(["ses", "verify-domain-identity", "--domain", domain, ...regionArgs]),
-    aws(["ses", "verify-domain-dkim", "--domain", domain, ...regionArgs])
+    aws2(["ses", "verify-domain-identity", "--domain", domain]),
+    aws2(["ses", "verify-domain-dkim", "--domain", domain])
   ]);
   const { VerificationToken } = identity;
   const { DkimTokens } = dkim;
@@ -485,7 +930,7 @@ async function getRecords({ domain, awsRegion }) {
   if (!DkimTokens || DkimTokens.length < 3) throw new Error("SES did not return 3 DKIM tokens");
   return [
     { type: "TXT", name: "_amazonses", content: VerificationToken, ttl: 1 },
-    { type: "MX", name: "@", content: `inbound-smtp.${awsRegion}.amazonaws.com`, ttl: 1, priority: 10 },
+    { type: "MX", name: "@", content: `inbound-smtp.${region}.amazonaws.com`, ttl: 1, priority: 10 },
     { type: "TXT", name: "@", content: "v=spf1 include:amazonses.com ~all", ttl: 1 },
     { type: "TXT", name: "_dmarc", content: "v=DMARC1; p=none;", ttl: 1 },
     { type: "CNAME", name: `${DkimTokens[0]}._domainkey`, content: `${DkimTokens[0]}.dkim.amazonses.com`, ttl: 1 },
@@ -493,44 +938,6 @@ async function getRecords({ domain, awsRegion }) {
     { type: "CNAME", name: `${DkimTokens[2]}._domainkey`, content: `${DkimTokens[2]}.dkim.amazonses.com`, ttl: 1 }
   ];
 }
-
-// src/providers.ts
-var DNS_PROVIDERS = {
-  cloudflare: {
-    name: "Cloudflare",
-    setupRecords,
-    inputs
-  },
-  godaddy: {
-    name: "GoDaddy",
-    setupRecords: setupRecords2,
-    inputs: inputs2
-  },
-  netlify: {
-    name: "Netlify",
-    setupRecords: setupRecords3,
-    inputs: inputs3
-  }
-};
-var EMAIL_PROVIDERS = {
-  migadu: {
-    name: "Migadu",
-    type: "template"
-  },
-  googleworkspace: {
-    name: "Google Workspace",
-    type: "template"
-  },
-  ses: {
-    name: "Amazon SES",
-    type: "template",
-    auto: {
-      explanation: "For fully automated SES setup pass the option `--ses-mode=auto`. This will use the AWS CLI to obtain the configuration values (AWS CLI installed on host machine is required).",
-      inputs: inputs4,
-      getRecords
-    }
-  }
-};
 
 // src/email-templates/migadu.json
 var migadu_default = {
@@ -549,7 +956,7 @@ var migadu_default = {
     { type: "MX", name: "@", value: "aspmx1.migadu.com", priority: 10 },
     { type: "MX", name: "@", value: "aspmx2.migadu.com", priority: 20 },
     { type: "TXT", name: "@", value: "v=spf1 include:spf.migadu.com -all" },
-    { type: "TXT", name: "_dmarc", value: "v=DMARC1; p=quarantine;" },
+    { type: "TXT", name: "_dmarc", value: "v=DMARC1; p=none;" },
     { type: "CNAME", name: "key1._domainkey", value: "key1.{DOMAIN}._domainkey.migadu.com" },
     { type: "CNAME", name: "key2._domainkey", value: "key2.{DOMAIN}._domainkey.migadu.com" },
     { type: "CNAME", name: "key3._domainkey", value: "key3.{DOMAIN}._domainkey.migadu.com" }
@@ -584,69 +991,202 @@ var googleworkspace_default = {
   ]
 };
 
-// src/email-templates/ses.json
-var ses_default = {
-  verificationPrefix: "_amazonses",
+// src/email-templates/ms365.json
+var ms365_default = {
   inputs: [
     {
       flag: "verifyTxt",
-      name: "Domain verification TXT value",
-      env: "SES_VERIFY_TXT",
-      example: "pmBGN/7MjnfhTKUZ06Enqq1PeGUaOkw8lGhcfwefcHU=",
-      instructions: "In the AWS SES console, go to Configuration > Verified identities > [your domain]. Under 'Domain verification', copy the TXT record value."
+      name: "Microsoft 365 domain verification TXT value",
+      env: "MS365_VERIFY_TXT",
+      example: "MS=ms12345678",
+      instructions: "In the Microsoft 365 admin center, go to Settings > Domains, select your domain, and copy the TXT value shown under 'Verify domain' (starts with MS=ms...)."
     },
     {
-      flag: "dkimToken1",
-      name: "DKIM token 1",
-      env: "SES_DKIM_TOKEN1",
-      instructions: "In the AWS SES console under 'DKIM authentication', copy the Name of the first CNAME record. Paste only the token prefix \u2014 the part before '._domainkey'."
+      flag: "dkimSelector1Target",
+      name: "DKIM selector1 CNAME target",
+      env: "MS365_DKIM_SELECTOR1",
+      example: "selector1-example-com._domainkey.example.onmicrosoft.com",
+      instructions: "In the Microsoft 365 admin center under DNS records, find the CNAME record for 'selector1._domainkey' and copy its target value."
     },
     {
-      flag: "dkimToken2",
-      name: "DKIM token 2",
-      env: "SES_DKIM_TOKEN2",
-      instructions: "Copy the token prefix for the second DKIM CNAME record."
-    },
-    {
-      flag: "dkimToken3",
-      name: "DKIM token 3",
-      env: "SES_DKIM_TOKEN3",
-      instructions: "Copy the token prefix for the third DKIM CNAME record."
-    },
-    {
-      flag: "awsRegion",
-      name: "AWS region",
-      env: "AWS_REGION",
-      example: "us-east-1",
-      instructions: "The AWS region where your SES is configured (e.g. us-east-1). Used to build the inbound MX endpoint."
+      flag: "dkimSelector2Target",
+      name: "DKIM selector2 CNAME target",
+      env: "MS365_DKIM_SELECTOR2",
+      example: "selector2-example-com._domainkey.example.onmicrosoft.com",
+      instructions: "Copy the target value for the 'selector2._domainkey' CNAME record."
     }
   ],
   records: [
-    { type: "TXT", name: "_amazonses", value: "{VERIFY_TXT}" },
-    { type: "MX", name: "@", value: "inbound-smtp.{AWS_REGION}.amazonaws.com", priority: 10 },
-    { type: "TXT", name: "@", value: "v=spf1 include:amazonses.com ~all" },
+    { type: "TXT", name: "@", value: "{VERIFY_TXT}" },
+    { type: "MX", name: "@", value: "{DOMAIN_DASHES}.mail.protection.outlook.com", priority: 0 },
+    { type: "TXT", name: "@", value: "v=spf1 include:spf.protection.outlook.com -all" },
     { type: "TXT", name: "_dmarc", value: "v=DMARC1; p=none;" },
-    { type: "CNAME", name: "{DKIM_TOKEN1}._domainkey", value: "{DKIM_TOKEN1}.dkim.amazonses.com" },
-    { type: "CNAME", name: "{DKIM_TOKEN2}._domainkey", value: "{DKIM_TOKEN2}.dkim.amazonses.com" },
-    { type: "CNAME", name: "{DKIM_TOKEN3}._domainkey", value: "{DKIM_TOKEN3}.dkim.amazonses.com" }
+    { type: "CNAME", name: "autodiscover", value: "autodiscover.outlook.com" },
+    { type: "CNAME", name: "selector1._domainkey", value: "{DKIM_SELECTOR1_TARGET}" },
+    { type: "CNAME", name: "selector2._domainkey", value: "{DKIM_SELECTOR2_TARGET}" }
   ]
 };
 
-// src/core.ts
-var TEMPLATES = {
-  migadu: migadu_default,
-  googleworkspace: googleworkspace_default,
-  ses: ses_default
+// src/email-templates/proton.json
+var proton_default = {
+  verificationPrefix: "protonmail-verification",
+  inputs: [
+    {
+      flag: "verifyTxt",
+      name: "Proton Mail domain verification TXT value",
+      env: "PROTON_VERIFY_TXT",
+      example: "protonmail-verification=abc123",
+      instructions: "In the Proton Mail admin panel, go to Settings > Domain names > Add domain, then copy the TXT verification value shown."
+    },
+    {
+      flag: "dkimCname1",
+      name: "DKIM CNAME 1 target",
+      env: "PROTON_DKIM_CNAME1",
+      example: "protonmail.domainkey.abc123.domains.proton.ch",
+      instructions: "In the Proton Mail admin panel under Domain names > [your domain] > DKIM, copy the target value for the 'protonmail._domainkey' CNAME record."
+    },
+    {
+      flag: "dkimCname2",
+      name: "DKIM CNAME 2 target",
+      env: "PROTON_DKIM_CNAME2",
+      example: "protonmail2.domainkey.abc123.domains.proton.ch",
+      instructions: "Copy the target value for the 'protonmail2._domainkey' CNAME record."
+    },
+    {
+      flag: "dkimCname3",
+      name: "DKIM CNAME 3 target",
+      env: "PROTON_DKIM_CNAME3",
+      example: "protonmail3.domainkey.abc123.domains.proton.ch",
+      instructions: "Copy the target value for the 'protonmail3._domainkey' CNAME record."
+    }
+  ],
+  records: [
+    { type: "TXT", name: "@", value: "{VERIFY_TXT}" },
+    { type: "MX", name: "@", value: "mail.protonmail.ch", priority: 10 },
+    { type: "MX", name: "@", value: "mailsec.protonmail.ch", priority: 20 },
+    { type: "TXT", name: "@", value: "v=spf1 include:_spf.protonmail.ch ~all" },
+    { type: "TXT", name: "_dmarc", value: "v=DMARC1; p=none;" },
+    { type: "CNAME", name: "protonmail._domainkey", value: "{DKIM_CNAME1}" },
+    { type: "CNAME", name: "protonmail2._domainkey", value: "{DKIM_CNAME2}" },
+    { type: "CNAME", name: "protonmail3._domainkey", value: "{DKIM_CNAME3}" }
+  ]
 };
-function readTemplate(name) {
-  const template = TEMPLATES[name];
-  if (!template) throw new Error(`Unknown email template: ${name}`);
-  return template;
-}
-function buildFromTemplate(templateName, domain, emailInputs) {
-  const template = readTemplate(templateName);
+
+// src/email-templates/zoho.json
+var zoho_default = {
+  verificationPrefix: "zoho-verification",
+  inputs: [
+    {
+      flag: "verifyTxt",
+      name: "Zoho Mail domain verification TXT value",
+      env: "ZOHO_VERIFY_TXT",
+      example: "zoho-verification=zb12345678.zmverify.zoho.com",
+      instructions: "In the Zoho Mail Admin Console, go to Domains > [your domain] > Domain Verification and copy the full TXT record value shown."
+    },
+    {
+      flag: "dkimKey",
+      name: "Zoho Mail DKIM TXT value",
+      env: "ZOHO_DKIM_KEY",
+      example: "v=DKIM1; k=rsa; p=...",
+      instructions: "In the Zoho Mail Admin Console, go to Domains > [your domain] > Email Authentication (DKIM) and copy the TXT record value shown."
+    }
+  ],
+  records: [
+    { type: "TXT", name: "@", value: "{VERIFY_TXT}" },
+    { type: "MX", name: "@", value: "mx.zoho.com", priority: 10 },
+    { type: "MX", name: "@", value: "mx2.zoho.com", priority: 20 },
+    { type: "MX", name: "@", value: "mx3.zoho.com", priority: 50 },
+    { type: "TXT", name: "@", value: "v=spf1 include:zoho.com ~all" },
+    { type: "TXT", name: "_dmarc", value: "v=DMARC1; p=none;" },
+    { type: "TXT", name: "zoho._domainkey", value: "{DKIM_KEY}" }
+  ]
+};
+
+// src/providers.ts
+var DNS_PROVIDERS = {
+  cloudflare: {
+    name: "Cloudflare",
+    setupRecords,
+    inputs
+  },
+  digitalocean: {
+    name: "DigitalOcean",
+    setupRecords: setupRecords3,
+    inputs: inputs3
+  },
+  godaddy: {
+    name: "GoDaddy",
+    setupRecords: setupRecords2,
+    inputs: inputs2
+  },
+  gcloud: {
+    name: "Google Cloud",
+    setupRecords: setupRecords4,
+    inputs: inputs4
+  },
+  netlify: {
+    name: "Netlify",
+    setupRecords: setupRecords5,
+    inputs: inputs5
+  },
+  route53: {
+    name: "Amazon Route 53",
+    setupRecords: setupRecords6,
+    inputs: inputs6
+  }
+};
+var EMAIL_PROVIDERS = {
+  migadu: {
+    name: "Migadu",
+    type: "template",
+    template: migadu_default
+  },
+  googleworkspace: {
+    name: "Google Workspace",
+    type: "template",
+    template: googleworkspace_default
+  },
+  ms365: {
+    name: "Microsoft 365",
+    type: "template",
+    template: ms365_default
+  },
+  outlook: {
+    name: "Microsoft Outlook",
+    type: "template",
+    template: ms365_default
+  },
+  proton: {
+    name: "Proton Mail",
+    type: "template",
+    template: proton_default
+  },
+  zoho: {
+    name: "Zoho Mail",
+    type: "template",
+    template: zoho_default
+  },
+  ses: {
+    name: "Amazon SES",
+    type: "module",
+    inputs: inputs7,
+    getRecords,
+    records: [
+      { type: "TXT", name: "_amazonses", value: "{VERIFY_TOKEN}" },
+      { type: "MX", name: "@", value: "inbound-smtp.{REGION}.amazonaws.com", priority: 10 },
+      { type: "TXT", name: "@", value: "v=spf1 include:amazonses.com ~all" },
+      { type: "TXT", name: "_dmarc", value: "v=DMARC1; p=none;" },
+      { type: "CNAME", name: "{DKIM_TOKEN_1}._domainkey", value: "{DKIM_TOKEN_1}.dkim.amazonses.com" },
+      { type: "CNAME", name: "{DKIM_TOKEN_2}._domainkey", value: "{DKIM_TOKEN_2}.dkim.amazonses.com" },
+      { type: "CNAME", name: "{DKIM_TOKEN_3}._domainkey", value: "{DKIM_TOKEN_3}.dkim.amazonses.com" }
+    ]
+  }
+};
+
+// src/core.ts
+function buildFromTemplate(template, domain, emailInputs) {
   const toScreamingSnake = (key) => key.replace(/([A-Z])/g, "_$1").toUpperCase();
-  const vars = { domain, ...emailInputs };
+  const vars = { domain, domainDashes: domain.replaceAll(".", "-"), ...emailInputs };
   const records = template.records.map((record) => {
     let name = record.name;
     let content = record.value;
@@ -661,25 +1201,15 @@ function buildFromTemplate(templateName, domain, emailInputs) {
   });
   return { records, verificationPrefix: template.verificationPrefix };
 }
-function templateInputDefs(templateName) {
-  const template = readTemplate(templateName);
-  return template.inputs ?? [];
-}
-function getEmailInputDefs(emailProvider, mode) {
+function getEmailInputDefs(emailProvider) {
   const emailDef = EMAIL_PROVIDERS[emailProvider];
-  if (emailDef.type === "template") {
-    return mode === "auto" && emailDef.auto ? emailDef.auto.inputs : templateInputDefs(emailProvider);
-  }
+  if (emailDef.type === "template") return emailDef.template.inputs ?? [];
   return emailDef.inputs;
 }
-async function buildRecords({ domain, emailProvider, emailInputs, mode }) {
+async function buildRecords({ domain, emailProvider, emailInputs }) {
   const emailDef = EMAIL_PROVIDERS[emailProvider];
   if (emailDef.type === "template") {
-    if (mode === "auto" && emailDef.auto) {
-      const records2 = await emailDef.auto.getRecords({ domain, ...emailInputs });
-      return { records: records2, verificationPrefix: void 0 };
-    }
-    return buildFromTemplate(emailProvider, domain, emailInputs);
+    return buildFromTemplate(emailDef.template, domain, emailInputs);
   }
   const records = await emailDef.getRecords({ domain, ...emailInputs });
   return { records, verificationPrefix: void 0 };
@@ -689,10 +1219,10 @@ async function buildRecords({ domain, emailProvider, emailInputs, mode }) {
 var program = new Command();
 program.name("mail2dns").description("Configure DNS records for email providers");
 function addEmailOptions(cmd) {
-  return cmd.option("--verify-txt <value>", "email verification TXT record value").option("--dkim-key <value>", "DKIM key (Google Workspace)").option("--aws-region <region>", "AWS region (SES)").option("--ses-mode <mode>", "SES setup mode: auto (AWS CLI) or manual (paste tokens)");
+  return cmd.option("--verify-txt <value>", "email verification TXT record value").option("--dkim-key <value>", "DKIM key (Google Workspace)");
 }
 function addDnsOptions(cmd) {
-  return cmd.option("--token <token>", "DNS provider API token (or CLOUDFLARE_API_TOKEN env)");
+  return cmd.option("--token <token>", "DNS provider API token (or CLOUDFLARE_API_TOKEN env)").option("--aws-profile <profile>", "AWS CLI profile to use (Route 53 and SES)");
 }
 function validateProviders(emailProvider, dnsProvider) {
   if (!EMAIL_PROVIDERS[emailProvider]) {
@@ -710,18 +1240,9 @@ addDnsOptions(addEmailOptions(
   program.command("setup").description("Create DNS records for an email provider").argument("<domain>").argument("<email-provider>", `(${Object.keys(EMAIL_PROVIDERS).join(", ")})`).argument("<dns-provider>", `(${Object.keys(DNS_PROVIDERS).join(", ")})`)
 )).action(async (domain, emailProvider, dnsProvider, opts) => {
   validateProviders(emailProvider, dnsProvider);
-  let mode;
-  if (EMAIL_PROVIDERS[emailProvider].type === "template" && EMAIL_PROVIDERS[emailProvider].auto) {
-    if (opts.sesMode === "auto" || opts.sesMode === "manual") {
-      mode = opts.sesMode;
-    } else {
-      const answer = await ask("SES setup \u2014 choose mode:\n  1) Automated (uses AWS CLI to fetch DKIM tokens)\n  2) Manual (paste DKIM tokens from AWS console)\nChoice [1/2]: ");
-      mode = answer === "2" ? "manual" : "auto";
-    }
-  }
-  const emailInputDefs = getEmailInputDefs(emailProvider, mode);
+  const emailInputDefs = getEmailInputDefs(emailProvider);
   const emailInputs = await resolveInputs(emailInputDefs, opts);
-  const { records, verificationPrefix } = await buildRecords({ domain, emailProvider, emailInputs, mode });
+  const { records, verificationPrefix } = await buildRecords({ domain, emailProvider, emailInputs });
   const dnsDef = DNS_PROVIDERS[dnsProvider];
   const dnsInputs = await resolveInputs(dnsDef.inputs, opts);
   await dnsDef.setupRecords({ domain, records, verificationPrefix }, dnsInputs);
