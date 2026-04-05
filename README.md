@@ -56,6 +56,7 @@ mail2dns setup example.com migadu cloudflare
 | [Google Workspace](#google-workspace) | `googleworkspace` |
 | [Microsoft 365](#microsoft-365) | `ms365` |
 | [Microsoft Outlook](#microsoft-outlook) | `outlook` |
+| [Fastmail](#fastmail) | `fastmail` |
 | [Proton Mail](#proton-mail) | `proton` |
 | [Zoho Mail](#zoho-mail) | `zoho` |
 | [Amazon SES](#amazon-ses) | `ses` |
@@ -109,6 +110,9 @@ mail2dns setup example.com migadu cloudflare
 | `--verify-txt` | `MS365_VERIFY_TXT` | Microsoft 365 domain verification TXT value | `MS=ms12345678` |
 | `--dkim-selector1-target` | `MS365_DKIM_SELECTOR1` | DKIM selector1 CNAME target | `selector1-example-com._domainkey.example.onmicrosoft.com` |
 | `--dkim-selector2-target` | `MS365_DKIM_SELECTOR2` | DKIM selector2 CNAME target | `selector2-example-com._domainkey.example.onmicrosoft.com` |
+
+### Fastmail
+
 
 ### Proton Mail
 

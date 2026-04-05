@@ -8,6 +8,7 @@ import { inputs as sesInputs, getRecords as sesGetRecords } from './email-module
 import migaduTemplate from './email-templates/migadu.json'
 import googleworkspaceTemplate from './email-templates/googleworkspace.json'
 import ms365Template from './email-templates/ms365.json'
+import fastmailTemplate from './email-templates/fastmail.json'
 import protonTemplate from './email-templates/proton.json'
 import zohoTemplate from './email-templates/zoho.json'
 import type { DnsProviderDef, EmailProviderDef } from './types.js'
@@ -65,6 +66,11 @@ export const EMAIL_PROVIDERS: Record<string, EmailProviderDef> = {
     name: 'Microsoft Outlook',
     type: 'template',
     template: ms365Template
+  },
+  fastmail: {
+    name: 'Fastmail',
+    type: 'template',
+    template: fastmailTemplate
   },
   proton: {
     name: 'Proton Mail',
