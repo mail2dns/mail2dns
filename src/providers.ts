@@ -9,6 +9,7 @@ import migaduTemplate from './email-templates/migadu.json'
 import googleworkspaceTemplate from './email-templates/googleworkspace.json'
 import ms365Template from './email-templates/ms365.json'
 import fastmailTemplate from './email-templates/fastmail.json'
+import mailgunTemplate from './email-templates/mailgun.json'
 import protonTemplate from './email-templates/proton.json'
 import zohoTemplate from './email-templates/zoho.json'
 import type { DnsProviderDef, EmailProviderDef } from './types.js'
@@ -71,6 +72,11 @@ export const EMAIL_PROVIDERS: Record<string, EmailProviderDef> = {
     name: 'Fastmail',
     type: 'template',
     template: fastmailTemplate
+  },
+  mailgun: {
+    name: 'Mailgun',
+    type: 'template',
+    template: mailgunTemplate
   },
   proton: {
     name: 'Proton Mail',

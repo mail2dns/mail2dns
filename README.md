@@ -57,6 +57,7 @@ mail2dns setup example.com migadu cloudflare
 | [Microsoft 365](#microsoft-365) | `ms365` |
 | [Microsoft Outlook](#microsoft-outlook) | `outlook` |
 | [Fastmail](#fastmail) | `fastmail` |
+| [Mailgun](#mailgun) | `mailgun` |
 | [Proton Mail](#proton-mail) | `proton` |
 | [Zoho Mail](#zoho-mail) | `zoho` |
 | [Amazon SES](#amazon-ses) | `ses` |
@@ -113,6 +114,14 @@ mail2dns setup example.com migadu cloudflare
 
 ### Fastmail
 
+
+### Mailgun
+
+#### Inputs
+
+| Flag | Env var | Description | Example |
+|------|---------|-------------|---------|
+| `--dkim-txt` | `MAILGUN_DKIM_TXT` | DKIM TXT value | `k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4...` |
 
 ### Proton Mail
 

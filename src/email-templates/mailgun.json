@@ -1,0 +1,19 @@
+{
+  "inputs": [
+    {
+      "flag": "dkimTxt",
+      "name": "DKIM TXT value",
+      "env": "MAILGUN_DKIM_TXT",
+      "example": "k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4...",
+      "instructions": "In the Mailgun control panel, go to Sending > Domains > [your domain] > DNS Records, and copy the value for the 'mx._domainkey' TXT record."
+    }
+  ],
+  "records": [
+    { "type": "TXT",   "name": "@",              "value": "v=spf1 include:mailgun.org ~all" },
+    { "type": "TXT",   "name": "mx._domainkey",  "value": "{DKIM_TXT}" },
+    { "type": "TXT",   "name": "_dmarc",          "value": "v=DMARC1; p=none;" },
+    { "type": "MX",    "name": "@",              "value": "mxa.mailgun.org", "priority": 10 },
+    { "type": "MX",    "name": "@",              "value": "mxb.mailgun.org", "priority": 10 },
+    { "type": "CNAME", "name": "email",           "value": "mailgun.org" }
+  ]
+}
