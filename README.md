@@ -60,6 +60,7 @@ mail2dns setup example.com migadu cloudflare
 | [Mailgun](#mailgun) | `mailgun` |
 | [Proton Mail](#proton-mail) | `proton` |
 | [Zoho Mail](#zoho-mail) | `zoho` |
+| [Twilio SendGrid](#twilio-sendgrid) | `sendgrid` |
 | [Amazon SES](#amazon-ses) | `ses` |
 
 ## Supported DNS providers
@@ -145,6 +146,15 @@ mail2dns setup example.com migadu cloudflare
 |------|---------|-------------|---------|
 | `--verify-txt` | `ZOHO_VERIFY_TXT` | Zoho Mail domain verification TXT value | `zoho-verification=zb12345678.zmverify.zoho.com` |
 | `--dkim-key` | `ZOHO_DKIM_KEY` | Zoho Mail DKIM TXT value | `v=DKIM1; k=rsa; p=...` |
+
+### Twilio SendGrid
+
+#### Inputs
+
+| Flag | Env var | Description | Example |
+|------|---------|-------------|---------|
+| `--dkim1` | `SENDGRID_DKIM1` | DKIM CNAME 1 value | `s1.domainkey.u12345.wl.sendgrid.net` |
+| `--dkim2` | `SENDGRID_DKIM2` | DKIM CNAME 2 value | `s2.domainkey.u12345.wl.sendgrid.net` |
 
 ### Amazon SES
 
