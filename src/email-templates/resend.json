@@ -1,0 +1,16 @@
+{
+  "inputs": [
+    {
+      "flag": "dkim",
+      "name": "DKIM CNAME value",
+      "env": "RESEND_DKIM",
+      "example": "p.resend.com",
+      "instructions": "In the Resend dashboard, go to Domains, add your domain, and copy the value for the 'resend._domainkey' CNAME record."
+    }
+  ],
+  "records": [
+    { "type": "TXT",   "name": "@",               "value": "v=spf1 include:spf.resend.com ~all" },
+    { "type": "TXT",   "name": "_dmarc",           "value": "v=DMARC1; p=none;" },
+    { "type": "CNAME", "name": "resend._domainkey", "value": "{DKIM}" }
+  ]
+}

@@ -61,6 +61,7 @@ mail2dns setup example.com migadu cloudflare
 | [Proton Mail](#proton-mail) | `proton` |
 | [Zoho Mail](#zoho-mail) | `zoho` |
 | [Twilio SendGrid](#twilio-sendgrid) | `sendgrid` |
+| [Resend](#resend) | `resend` |
 | [Amazon SES](#amazon-ses) | `ses` |
 
 ## Supported DNS providers
@@ -155,6 +156,14 @@ mail2dns setup example.com migadu cloudflare
 |------|---------|-------------|---------|
 | `--dkim1` | `SENDGRID_DKIM1` | DKIM CNAME 1 value | `s1.domainkey.u12345.wl.sendgrid.net` |
 | `--dkim2` | `SENDGRID_DKIM2` | DKIM CNAME 2 value | `s2.domainkey.u12345.wl.sendgrid.net` |
+
+### Resend
+
+#### Inputs
+
+| Flag | Env var | Description | Example |
+|------|---------|-------------|---------|
+| `--dkim` | `RESEND_DKIM` | DKIM CNAME value | `p.resend.com` |
 
 ### Amazon SES
 

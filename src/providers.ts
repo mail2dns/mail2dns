@@ -16,6 +16,7 @@ import mailgunTemplate from './email-templates/mailgun.json'
 import protonTemplate from './email-templates/proton.json'
 import zohoTemplate from './email-templates/zoho.json'
 import sendgridTemplate from './email-templates/sendgrid.json'
+import resendTemplate from './email-templates/resend.json'
 import type { DnsProviderDef, EmailProviderDef } from './types.js'
 
 export const DNS_PROVIDERS: Record<string, DnsProviderDef> = {
@@ -111,6 +112,11 @@ export const EMAIL_PROVIDERS: Record<string, EmailProviderDef> = {
     name: 'Twilio SendGrid',
     type: 'template',
     template: sendgridTemplate
+  },
+  resend: {
+    name: 'Resend',
+    type: 'template',
+    template: resendTemplate
   },
   ses: {
     name: 'Amazon SES',
