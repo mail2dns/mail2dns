@@ -8,7 +8,7 @@ for email providers across multiple DNS providers.**
 ⭐ Currently Supports 12 email providers and 10 DNS providers in any combination.
 
 
-🔗 [See website for setup guides for every provider combination](https://your-website.com)  
+🔗 [See website for setup guides for every provider combination](https://mail2dns.com)  
 
 
 ## Example
