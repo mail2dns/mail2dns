@@ -1,0 +1,16 @@
+{
+  "inputs": [
+    {
+      "flag": "dkim",
+      "name": "DKIM CNAME value",
+      "env": "POSTMARK_DKIM",
+      "example": "cm.mtasv.net",
+      "instructions": "In the Postmark dashboard, go to Sender Signatures or Domains, add your domain, and copy the value for the 'pm._domainkey' CNAME record."
+    }
+  ],
+  "records": [
+    { "type": "TXT",   "name": "@",            "value": "v=spf1 include:spf.mtasv.net ~all" },
+    { "type": "TXT",   "name": "_dmarc",        "value": "v=DMARC1; p=none;" },
+    { "type": "CNAME", "name": "pm._domainkey", "value": "{DKIM}" }
+  ]
+}

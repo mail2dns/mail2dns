@@ -1558,6 +1558,68 @@ var zoho_default = {
   ]
 };
 
+// src/email-templates/sendgrid.json
+var sendgrid_default = {
+  inputs: [
+    {
+      flag: "dkim1",
+      name: "DKIM CNAME 1 value",
+      env: "SENDGRID_DKIM1",
+      example: "s1.domainkey.u12345.wl.sendgrid.net",
+      instructions: "In the SendGrid dashboard, go to Settings > Sender Authentication > Domain Authentication, set up your domain, and copy the value for the 's1._domainkey' CNAME record."
+    },
+    {
+      flag: "dkim2",
+      name: "DKIM CNAME 2 value",
+      env: "SENDGRID_DKIM2",
+      example: "s2.domainkey.u12345.wl.sendgrid.net",
+      instructions: "In the SendGrid dashboard, go to Settings > Sender Authentication > Domain Authentication, and copy the value for the 's2._domainkey' CNAME record."
+    }
+  ],
+  records: [
+    { type: "TXT", name: "@", value: "v=spf1 include:sendgrid.net ~all" },
+    { type: "TXT", name: "_dmarc", value: "v=DMARC1; p=none;" },
+    { type: "CNAME", name: "s1._domainkey", value: "{DKIM1}" },
+    { type: "CNAME", name: "s2._domainkey", value: "{DKIM2}" }
+  ]
+};
+
+// src/email-templates/resend.json
+var resend_default = {
+  inputs: [
+    {
+      flag: "dkim",
+      name: "DKIM CNAME value",
+      env: "RESEND_DKIM",
+      example: "p.resend.com",
+      instructions: "In the Resend dashboard, go to Domains, add your domain, and copy the value for the 'resend._domainkey' CNAME record."
+    }
+  ],
+  records: [
+    { type: "TXT", name: "@", value: "v=spf1 include:spf.resend.com ~all" },
+    { type: "TXT", name: "_dmarc", value: "v=DMARC1; p=none;" },
+    { type: "CNAME", name: "resend._domainkey", value: "{DKIM}" }
+  ]
+};
+
+// src/email-templates/postmark.json
+var postmark_default = {
+  inputs: [
+    {
+      flag: "dkim",
+      name: "DKIM CNAME value",
+      env: "POSTMARK_DKIM",
+      example: "cm.mtasv.net",
+      instructions: "In the Postmark dashboard, go to Sender Signatures or Domains, add your domain, and copy the value for the 'pm._domainkey' CNAME record."
+    }
+  ],
+  records: [
+    { type: "TXT", name: "@", value: "v=spf1 include:spf.mtasv.net ~all" },
+    { type: "TXT", name: "_dmarc", value: "v=DMARC1; p=none;" },
+    { type: "CNAME", name: "pm._domainkey", value: "{DKIM}" }
+  ]
+};
+
 // src/providers.ts
 var DNS_PROVIDERS = {
   cloudflare: {
@@ -1647,6 +1709,21 @@ var EMAIL_PROVIDERS = {
     type: "template",
     template: zoho_default
   },
+  sendgrid: {
+    name: "Twilio SendGrid",
+    type: "template",
+    template: sendgrid_default
+  },
+  resend: {
+    name: "Resend",
+    type: "template",
+    template: resend_default
+  },
+  postmark: {
+    name: "Postmark",
+    type: "template",
+    template: postmark_default
+  },
   ses: {
     name: "Amazon SES",
     type: "module",
@@ -1687,13 +1764,17 @@ function getEmailInputDefs(emailProvider) {
   if (emailDef.type === "template") return emailDef.template.inputs ?? [];
   return emailDef.inputs;
 }
-async function buildRecords({ domain, emailProvider, emailInputs }) {
+async function buildRecords({ domain, emailProvider, emailInputs, noMx }) {
   const emailDef = EMAIL_PROVIDERS[emailProvider];
+  let result;
   if (emailDef.type === "template") {
-    return buildFromTemplate(emailDef.template, domain, emailInputs);
+    result = buildFromTemplate(emailDef.template, domain, emailInputs);
+  } else {
+    const records = await emailDef.getRecords({ domain, ...emailInputs });
+    result = { records, verificationPrefix: void 0 };
   }
-  const records = await emailDef.getRecords({ domain, ...emailInputs });
-  return { records, verificationPrefix: void 0 };
+  if (noMx) result.records = result.records.filter((r) => r.type !== "MX");
+  return result;
 }
 
 // src/cli.ts
@@ -1718,12 +1799,12 @@ Supported: ${Object.keys(DNS_PROVIDERS).join(", ")}`);
   }
 }
 addDnsOptions(addEmailOptions(
-  program.command("setup").description("Create DNS records for an email provider").argument("<domain>").argument("<email-provider>", `(${Object.keys(EMAIL_PROVIDERS).join(", ")})`).argument("<dns-provider>", `(${Object.keys(DNS_PROVIDERS).join(", ")})`)
+  program.command("setup").description("Create DNS records for an email provider").argument("<domain>").argument("<email-provider>", `(${Object.keys(EMAIL_PROVIDERS).join(", ")})`).argument("<dns-provider>", `(${Object.keys(DNS_PROVIDERS).join(", ")})`).option("--no-mx", "skip MX records (for outbound-only use)")
 )).action(async (domain, emailProvider, dnsProvider, opts) => {
   validateProviders(emailProvider, dnsProvider);
   const emailInputDefs = getEmailInputDefs(emailProvider);
   const emailInputs = await resolveInputs(emailInputDefs, opts);
-  const { records, verificationPrefix } = await buildRecords({ domain, emailProvider, emailInputs });
+  const { records, verificationPrefix } = await buildRecords({ domain, emailProvider, emailInputs, noMx: !!opts.noMx });
   const dnsDef = DNS_PROVIDERS[dnsProvider];
   const dnsInputs = await resolveInputs(dnsDef.inputs, opts);
   await dnsDef.setupRecords({ domain, records, verificationPrefix }, dnsInputs);

@@ -17,6 +17,7 @@ import protonTemplate from './email-templates/proton.json'
 import zohoTemplate from './email-templates/zoho.json'
 import sendgridTemplate from './email-templates/sendgrid.json'
 import resendTemplate from './email-templates/resend.json'
+import postmarkTemplate from './email-templates/postmark.json'
 import type { DnsProviderDef, EmailProviderDef } from './types.js'
 
 export const DNS_PROVIDERS: Record<string, DnsProviderDef> = {
@@ -117,6 +118,11 @@ export const EMAIL_PROVIDERS: Record<string, EmailProviderDef> = {
     name: 'Resend',
     type: 'template',
     template: resendTemplate
+  },
+  postmark: {
+    name: 'Postmark',
+    type: 'template',
+    template: postmarkTemplate
   },
   ses: {
     name: 'Amazon SES',

@@ -62,6 +62,7 @@ mail2dns setup example.com migadu cloudflare
 | [Zoho Mail](#zoho-mail) | `zoho` |
 | [Twilio SendGrid](#twilio-sendgrid) | `sendgrid` |
 | [Resend](#resend) | `resend` |
+| [Postmark](#postmark) | `postmark` |
 | [Amazon SES](#amazon-ses) | `ses` |
 
 ## Supported DNS providers
@@ -164,6 +165,14 @@ mail2dns setup example.com migadu cloudflare
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
 | `--dkim` | `RESEND_DKIM` | DKIM CNAME value | `p.resend.com` |
+
+### Postmark
+
+#### Inputs
+
+| Flag | Env var | Description | Example |
+|------|---------|-------------|---------|
+| `--dkim` | `POSTMARK_DKIM` | DKIM CNAME value | `cm.mtasv.net` |
 
 ### Amazon SES
 
