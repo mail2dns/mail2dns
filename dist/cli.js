@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // src/cli.ts
-import { Command } from "commander";
+import { Command, Option } from "commander";
 
 // src/utils.ts
 import readline from "readline";
@@ -18,6 +18,9 @@ var log = {
   info: (msg) => console.log(msg),
   dim: (msg) => console.log(c.dim(msg))
 };
+function camelToKebab(s) {
+  return s.replace(/([A-Z])/g, (c2) => `-${c2.toLowerCase()}`);
+}
 function ask(question) {
   const rl = readline.createInterface({ input: process.stdin, output: process.stderr });
   return new Promise((resolve) => {
@@ -31,13 +34,14 @@ async function confirm(question) {
   const answer = await ask(question);
   return answer.toLowerCase() === "y" || answer.toLowerCase() === "yes";
 }
-async function resolveInputs(inputs11, argv) {
+async function resolveInputs(inputs12, argv, nonInteractive = false) {
   const result = {};
-  for (const input of inputs11) {
+  for (const input of inputs12) {
     let value = argv[input.flag];
     if (!value && input.env) value = process.env[input.env];
     if (!value) {
       if (input.optional) continue;
+      if (nonInteractive) throw new Error(`${input.name} is required${input.env ? ` (or set ${input.env})` : ""}`);
       if (input.instructions) log.dim(`
 ${input.instructions}`);
       value = await ask(`${input.name}: `);
@@ -46,6 +50,14 @@ ${input.instructions}`);
     result[input.flag] = value;
   }
   return result;
+}
+function validateProviders(emailProvider, dnsProvider) {
+  if (!EMAIL_PROVIDERS[emailProvider])
+    throw new Error(`Unknown email provider: ${emailProvider}
+Supported: ${Object.keys(EMAIL_PROVIDERS).join(", ")}`);
+  if (!DNS_PROVIDERS[dnsProvider])
+    throw new Error(`Unknown DNS provider: ${dnsProvider}
+Supported: ${Object.keys(DNS_PROVIDERS).join(", ")}`);
 }
 
 // src/dns-modules/cloudflare.ts
@@ -1307,11 +1319,242 @@ Removed ${conflicts.length} conflicting record${conflicts.length !== 1 ? "s" : "
   log.success("\nSetup complete.");
 }
 
-// src/email-modules/ses.ts
+// src/dns-modules/azure.ts
 import { execFile as execFile3 } from "child_process";
 import { promisify as promisify3 } from "util";
 var execFileAsync3 = promisify3(execFile3);
 var inputs10 = [
+  {
+    flag: "subscription",
+    name: "Azure subscription ID",
+    env: "AZURE_SUBSCRIPTION_ID",
+    example: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+    optional: true,
+    instructions: "Defaults to the active Azure subscription if not set."
+  }
+];
+async function az(args) {
+  const { stdout } = await execFileAsync3("az", [...args, "--output", "json"]).catch((e) => {
+    throw new Error(`Azure CLI error: ${e.stderr?.trim() || e.message}
+Is the Azure CLI installed and configured? Run 'az login' to authenticate.`);
+  });
+  const text = stdout.trim();
+  return text ? JSON.parse(text) : null;
+}
+async function getZone(domain, azFn) {
+  const zones = await azFn(["network", "dns", "zone", "list"]);
+  const zone = zones?.find((z) => z.name === domain);
+  if (!zone) throw new Error(`DNS zone not found for domain: ${domain}`);
+  return zone;
+}
+async function listRecords8(rg, zone, azFn) {
+  return await azFn([
+    "network",
+    "dns",
+    "record-set",
+    "list",
+    "--resource-group",
+    rg,
+    "--zone-name",
+    zone
+  ]) ?? [];
+}
+function azRecordType(set) {
+  return set.type.split("/").pop();
+}
+function txtValue(r) {
+  return r.value.join("");
+}
+function mxValue(r) {
+  return `${r.preference} ${r.exchange}`;
+}
+function cnameValue(r) {
+  return r.cname;
+}
+function unquote(s) {
+  return s.startsWith('"') && s.endsWith('"') ? s.slice(1, -1) : s;
+}
+function isConflictingValue3(existing, newRecord, verificationPrefix) {
+  if (newRecord.type === "MX") return true;
+  const raw = unquote(existing);
+  if (newRecord.type === "TXT") {
+    if (newRecord.content.includes("v=spf1") && raw.includes("v=spf1")) return true;
+    if (verificationPrefix && newRecord.content.includes(verificationPrefix) && raw.includes(verificationPrefix)) return true;
+    if (newRecord.content.includes("v=DMARC1") && raw.includes("v=DMARC1")) return true;
+  }
+  if (newRecord.name.includes("_domainkey") && (newRecord.type === "CNAME" || newRecord.type === "TXT")) return true;
+  return false;
+}
+function formatRecord10(name, type, value) {
+  return `  [${type.padEnd(5)}] ${name} \u2192 ${value}`;
+}
+function buildRemoveArgs(rg, zone, name, type, existing, value) {
+  const base = [
+    "network",
+    "dns",
+    "record-set",
+    type.toLowerCase(),
+    "remove-record",
+    "--resource-group",
+    rg,
+    "--zone-name",
+    zone,
+    "--record-set-name",
+    name,
+    "--keep-empty-record-set"
+  ];
+  if (type === "TXT") {
+    return [...base, "--value", value];
+  }
+  if (type === "MX") {
+    const mx = existing.mxRecords?.find((r) => mxValue(r) === value);
+    if (!mx) return base;
+    return [...base, "--preference", String(mx.preference), "--exchange", mx.exchange];
+  }
+  return base;
+}
+function buildAddArgs(rg, zone, record) {
+  const name = record.name === "@" ? "@" : record.name;
+  if (record.type === "TXT") {
+    return [
+      "network",
+      "dns",
+      "record-set",
+      "txt",
+      "add-record",
+      "--resource-group",
+      rg,
+      "--zone-name",
+      zone,
+      "--record-set-name",
+      name,
+      "--value",
+      record.content
+    ];
+  }
+  if (record.type === "MX") {
+    const exchange = record.content.endsWith(".") ? record.content : `${record.content}.`;
+    return [
+      "network",
+      "dns",
+      "record-set",
+      "mx",
+      "add-record",
+      "--resource-group",
+      rg,
+      "--zone-name",
+      zone,
+      "--record-set-name",
+      name,
+      "--preference",
+      String(record.priority ?? 10),
+      "--exchange",
+      exchange
+    ];
+  }
+  if (record.type === "CNAME") {
+    const cname = record.content.endsWith(".") ? record.content : `${record.content}.`;
+    return [
+      "network",
+      "dns",
+      "record-set",
+      "cname",
+      "set-record",
+      "--resource-group",
+      rg,
+      "--zone-name",
+      zone,
+      "--record-set-name",
+      name,
+      "--cname",
+      cname
+    ];
+  }
+  return [];
+}
+async function setupRecords10({ domain, records, verificationPrefix, confirm: confirmFn, az: azFn }, { subscription }) {
+  const confirmCmd = confirmFn ?? confirm;
+  const subscriptionArgs = subscription ? ["--subscription", subscription] : [];
+  const azBase = azFn ?? az;
+  const azCmd = (args) => azBase([...subscriptionArgs, ...args]);
+  const zone = await getZone(domain, azCmd);
+  const { resourceGroup: rg } = zone;
+  log.success(`DNS zone found: ${domain} (resource group: ${rg})`);
+  const existing = await listRecords8(rg, domain, azCmd);
+  const groups = /* @__PURE__ */ new Map();
+  for (const record of records) {
+    const key = `${record.name}|${record.type}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(record);
+  }
+  const toRemove = [];
+  const toAdd = [];
+  const removeOps = [];
+  const addOps = [];
+  for (const [key, newRecords] of groups) {
+    const [name, type] = key.split("|");
+    const existingSet = existing.find((e) => e.name === name && azRecordType(e) === type);
+    const existingValues = [];
+    if (existingSet) {
+      if (type === "TXT") existingValues.push(...(existingSet.txtRecords ?? []).map(txtValue));
+      if (type === "MX") existingValues.push(...(existingSet.mxRecords ?? []).map(mxValue));
+      if (type === "CNAME" && existingSet.cnameRecord) existingValues.push(cnameValue(existingSet.cnameRecord));
+    }
+    for (const value of existingValues) {
+      if (newRecords.some((r) => isConflictingValue3(value, r, verificationPrefix))) {
+        toRemove.push(formatRecord10(name, type, value));
+        if (existingSet) {
+          const args = buildRemoveArgs(rg, domain, name, type, existingSet, value);
+          if (args.length) removeOps.push(args);
+        }
+      }
+    }
+    for (const record of newRecords) {
+      const args = buildAddArgs(rg, domain, record);
+      if (args.length) {
+        addOps.push(args);
+        toAdd.push(formatRecord10(record.name, record.type, record.content));
+      }
+    }
+  }
+  if (toRemove.length > 0) {
+    log.warn("\nThe following existing records will be removed:");
+    for (const r of toRemove) log.dim(r);
+  } else {
+    log.info("\nNo conflicting records found.");
+  }
+  log.info("\nThe following records will be created:");
+  for (const r of toAdd) log.dim(r);
+  console.log();
+  const ok = await confirmCmd("Proceed? (y/N) ");
+  if (!ok) {
+    log.warn("Aborted.");
+    return;
+  }
+  for (const args of removeOps) await azCmd(args);
+  for (const args of addOps) await azCmd(args);
+  const created = { verification: 0, mx: 0, spf: 0, dmarc: 0, dkim: 0 };
+  for (const record of records) {
+    if (verificationPrefix && record.content.includes(verificationPrefix)) created.verification++;
+    else if (record.type === "MX") created.mx++;
+    else if (record.content.includes("v=spf1")) created.spf++;
+    else if (record.content.includes("v=DMARC1")) created.dmarc++;
+    else if (record.name.includes("_domainkey") && (record.type === "CNAME" || record.type === "TXT")) created.dkim++;
+  }
+  console.log();
+  if (created.verification) log.success("Created TXT verification record");
+  if (created.mx) log.success("Created MX records");
+  if (created.spf) log.success("Created SPF record");
+  if (created.dmarc) log.success("Created DMARC record");
+  if (created.dkim) log.success("Created DKIM records");
+  log.success("\nSetup complete.");
+}
+
+// src/email-modules/ses.ts
+import { execFile as execFile4 } from "child_process";
+import { promisify as promisify4 } from "util";
+var execFileAsync4 = promisify4(execFile4);
+var inputs11 = [
   {
     flag: "awsProfile",
     name: "AWS profile",
@@ -1322,7 +1565,7 @@ var inputs10 = [
 ];
 function makeAws(profileArgs) {
   return async function aws2(args) {
-    const { stdout } = await execFileAsync3("aws", [...profileArgs, ...args, "--output", "json"]).catch((e) => {
+    const { stdout } = await execFileAsync4("aws", [...profileArgs, ...args, "--output", "json"]).catch((e) => {
       throw new Error(`AWS CLI error: ${e.stderr?.trim() || e.message}
 Is the AWS CLI installed and configured?`);
     });
@@ -1330,7 +1573,7 @@ Is the AWS CLI installed and configured?`);
   };
 }
 async function getRegion(profileArgs) {
-  const { stdout } = await execFileAsync3("aws", [...profileArgs, "configure", "get", "region"]).catch((e) => {
+  const { stdout } = await execFileAsync4("aws", [...profileArgs, "configure", "get", "region"]).catch((e) => {
     throw new Error(`AWS CLI error: ${e.stderr?.trim() || e.message}
 Is the AWS CLI installed and configured?`);
   });
@@ -1666,6 +1909,11 @@ var DNS_PROVIDERS = {
     name: "Spaceship",
     setupRecords: setupRecords9,
     inputs: inputs9
+  },
+  azure: {
+    name: "Azure DNS",
+    setupRecords: setupRecords10,
+    inputs: inputs10
   }
 };
 var EMAIL_PROVIDERS = {
@@ -1727,7 +1975,7 @@ var EMAIL_PROVIDERS = {
   ses: {
     name: "Amazon SES",
     type: "module",
-    inputs: inputs10,
+    inputs: inputs11,
     getRecords,
     records: [
       { type: "TXT", name: "_amazonses", value: "{VERIFY_TOKEN}" },
@@ -1780,48 +2028,78 @@ async function buildRecords({ domain, emailProvider, emailInputs, noMx }) {
 // src/cli.ts
 var program = new Command();
 program.name("mail2dns").description("Configure DNS records for email providers");
-function addEmailOptions(cmd) {
-  return cmd.option("--verify-txt <value>", "email verification TXT record value").option("--dkim-key <value>", "DKIM key (Google Workspace)");
-}
-function addDnsOptions(cmd) {
-  return cmd.option("--token <token>", "DNS provider API token (or CLOUDFLARE_API_TOKEN env)").option("--aws-profile <profile>", "AWS CLI profile to use (Route 53 and SES)");
-}
-function validateProviders(emailProvider, dnsProvider) {
-  if (!EMAIL_PROVIDERS[emailProvider]) {
-    log.error(`Unknown email provider: ${emailProvider}
-Supported: ${Object.keys(EMAIL_PROVIDERS).join(", ")}`);
-    process.exit(1);
-  }
-  if (!DNS_PROVIDERS[dnsProvider]) {
-    log.error(`Unknown DNS provider: ${dnsProvider}
-Supported: ${Object.keys(DNS_PROVIDERS).join(", ")}`);
-    process.exit(1);
+function registerProviderOptions(cmd) {
+  const seen = /* @__PURE__ */ new Set();
+  const allInputs = [
+    ...Object.values(EMAIL_PROVIDERS).flatMap(
+      (p) => p.type === "template" ? p.template.inputs ?? [] : p.inputs
+    ),
+    ...Object.values(DNS_PROVIDERS).flatMap((p) => p.inputs)
+  ];
+  for (const input of allInputs) {
+    if (seen.has(input.flag)) continue;
+    seen.add(input.flag);
+    cmd.addOption(new Option(`--${camelToKebab(input.flag)} <value>`, input.name).hideHelp());
   }
 }
-addDnsOptions(addEmailOptions(
-  program.command("setup").description("Create DNS records for an email provider").argument("<domain>").argument("<email-provider>", `(${Object.keys(EMAIL_PROVIDERS).join(", ")})`).argument("<dns-provider>", `(${Object.keys(DNS_PROVIDERS).join(", ")})`).option("--no-mx", "skip MX records (for outbound-only use)")
-)).action(async (domain, emailProvider, dnsProvider, opts) => {
+function formatInputLine(input) {
+  const flag = `--${camelToKebab(input.flag)} <value>`;
+  const env = input.env ? `  [env: ${input.env}]` : "";
+  const optional = input.optional ? " (optional)" : "";
+  return `    ${flag.padEnd(38)} ${input.name}${optional}${env}`;
+}
+function buildEmailHelpText() {
+  const identityToNames = /* @__PURE__ */ new Map();
+  const identityToInputs = /* @__PURE__ */ new Map();
+  for (const [key, def] of Object.entries(EMAIL_PROVIDERS)) {
+    const identity = def.type === "template" ? def.template : def.inputs;
+    const inputs12 = def.type === "template" ? def.template.inputs ?? [] : def.inputs;
+    if (!identityToNames.has(identity)) {
+      identityToNames.set(identity, []);
+      identityToInputs.set(identity, inputs12);
+    }
+    identityToNames.get(identity).push(key);
+  }
+  const lines = ["\nEmail provider options:"];
+  for (const [identity, names] of identityToNames) {
+    const inputs12 = identityToInputs.get(identity);
+    if (inputs12.length === 0) continue;
+    lines.push(`
+  ${names.join(", ")}:`);
+    for (const input of inputs12) lines.push(formatInputLine(input));
+  }
+  return lines.join("\n");
+}
+function buildDnsHelpText() {
+  const lines = ["\nDNS provider options:"];
+  for (const [key, def] of Object.entries(DNS_PROVIDERS)) {
+    if (def.inputs.length === 0) continue;
+    lines.push(`
+  ${key}:`);
+    for (const input of def.inputs) lines.push(formatInputLine(input));
+  }
+  return lines.join("\n");
+}
+var setupCmd = program.command("setup").description("Create DNS records for an email provider").argument("<domain>").argument("<email-provider>", `(${Object.keys(EMAIL_PROVIDERS).join(", ")})`).argument("<dns-provider>", `(${Object.keys(DNS_PROVIDERS).join(", ")})`).option("--no-mx", "skip MX records (for outbound-only use)").option("-y, --yes", "skip confirmation prompt (error if any required inputs are missing)");
+registerProviderOptions(setupCmd);
+setupCmd.addHelpText("after", buildEmailHelpText() + "\n" + buildDnsHelpText()).action(async (domain, emailProvider, dnsProvider, opts) => {
   validateProviders(emailProvider, dnsProvider);
+  const yes = !!opts.yes;
   const emailInputDefs = getEmailInputDefs(emailProvider);
-  const emailInputs = await resolveInputs(emailInputDefs, opts);
+  const emailInputs = await resolveInputs(emailInputDefs, opts, yes);
   const { records, verificationPrefix } = await buildRecords({ domain, emailProvider, emailInputs, noMx: !!opts.noMx });
   const dnsDef = DNS_PROVIDERS[dnsProvider];
-  const dnsInputs = await resolveInputs(dnsDef.inputs, opts);
-  await dnsDef.setupRecords({ domain, records, verificationPrefix }, dnsInputs);
+  const dnsInputs = await resolveInputs(dnsDef.inputs, opts, yes);
+  const confirm2 = yes ? async () => true : void 0;
+  await dnsDef.setupRecords({ domain, records, verificationPrefix, confirm: confirm2 }, dnsInputs);
 });
-addEmailOptions(
-  program.command("preview").description("Show DNS records that would be created without applying them").argument("<domain>").argument("<email-provider>", `(${Object.keys(EMAIL_PROVIDERS).join(", ")})`)
-).action(async (_domain, _emailProvider) => {
+program.command("preview").description("Show DNS records that would be created without applying them").argument("<domain>").argument("<email-provider>", `(${Object.keys(EMAIL_PROVIDERS).join(", ")})`).action(async (_domain, _emailProvider) => {
   log.warn("preview not yet implemented");
 });
-addDnsOptions(
-  program.command("list").description("Show existing DNS records for a domain").argument("<domain>").argument("<dns-provider>", `(${Object.keys(DNS_PROVIDERS).join(", ")})`)
-).action(async (_domain, _dnsProvider) => {
+program.command("list").description("Show existing DNS records for a domain").argument("<domain>").argument("<dns-provider>", `(${Object.keys(DNS_PROVIDERS).join(", ")})`).action(async (_domain, _dnsProvider) => {
   log.warn("list not yet implemented");
 });
-addDnsOptions(addEmailOptions(
-  program.command("verify").description("Check that expected DNS records are in place").argument("<domain>").argument("<email-provider>", `(${Object.keys(EMAIL_PROVIDERS).join(", ")})`).argument("<dns-provider>", `(${Object.keys(DNS_PROVIDERS).join(", ")})`)
-)).action(async (_domain, _emailProvider, _dnsProvider) => {
+program.command("verify").description("Check that expected DNS records are in place").argument("<domain>").argument("<email-provider>", `(${Object.keys(EMAIL_PROVIDERS).join(", ")})`).argument("<dns-provider>", `(${Object.keys(DNS_PROVIDERS).join(", ")})`).action(async (_domain, _emailProvider, _dnsProvider) => {
   log.warn("verify not yet implemented");
 });
 try {

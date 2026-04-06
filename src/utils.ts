@@ -1,4 +1,5 @@
 import readline from 'readline'
+import { EMAIL_PROVIDERS, DNS_PROVIDERS } from './providers.js'
 import type { InputDef } from './types.js'
 
 const c = {
@@ -16,6 +17,10 @@ export const log = {
   dim:     (msg: string) => console.log(c.dim(msg)),
 }
 
+export function camelToKebab(s: string): string {
+  return s.replace(/([A-Z])/g, (c) => `-${c.toLowerCase()}`)
+}
+
 export function ask(question: string): Promise<string> {
   const rl = readline.createInterface({ input: process.stdin, output: process.stderr })
   return new Promise(resolve => {
@@ -31,13 +36,14 @@ export async function confirm(question: string): Promise<boolean> {
   return answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes'
 }
 
-export async function resolveInputs(inputs: InputDef[], argv: Record<string, string | undefined>): Promise<Record<string, string>> {
+export async function resolveInputs(inputs: InputDef[], argv: Record<string, string | undefined>, nonInteractive = false): Promise<Record<string, string>> {
   const result: Record<string, string> = {}
   for (const input of inputs) {
     let value = argv[input.flag]
     if (!value && input.env) value = process.env[input.env]
     if (!value) {
       if (input.optional) continue
+      if (nonInteractive) throw new Error(`${input.name} is required${input.env ? ` (or set ${input.env})` : ''}`)
       if (input.instructions) log.dim(`\n${input.instructions}`)
       value = await ask(`${input.name}: `)
     }
@@ -45,4 +51,11 @@ export async function resolveInputs(inputs: InputDef[], argv: Record<string, str
     result[input.flag] = value
   }
   return result
+}
+
+export function validateProviders(emailProvider: string, dnsProvider: string): void {
+  if (!EMAIL_PROVIDERS[emailProvider])
+    throw new Error(`Unknown email provider: ${emailProvider}\nSupported: ${Object.keys(EMAIL_PROVIDERS).join(', ')}`)
+  if (!DNS_PROVIDERS[dnsProvider])
+    throw new Error(`Unknown DNS provider: ${dnsProvider}\nSupported: ${Object.keys(DNS_PROVIDERS).join(', ')}`)
 }
