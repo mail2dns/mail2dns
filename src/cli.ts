@@ -1,6 +1,6 @@
 import { Command, Option } from 'commander'
 import { EMAIL_PROVIDERS, DNS_PROVIDERS } from './providers.js'
-import { resolveInputs, camelToKebab, validateProviders, SETUP_OPTIONS, log } from './utils.js'
+import { resolveInputs, camelToKebab, validateProviders, COMMANDS, log } from './utils.js'
 import { buildRecords, getEmailInputDefs } from './core.js'
 import type { InputDef } from './types.js'
 
@@ -71,13 +71,13 @@ function buildDnsHelpText(): string {
 
 const setupCmd = program
   .command('setup')
-  .description('Create DNS records for an email provider')
+  .description(COMMANDS.setup.description)
   .argument('<domain>')
   .argument('<email-provider>', `(${Object.keys(EMAIL_PROVIDERS).join(', ')})`)
   .argument('<dns-provider>',   `(${Object.keys(DNS_PROVIDERS).join(', ')})`)
 
 registerProviderOptions(setupCmd)
-for (const o of SETUP_OPTIONS) {
+for (const o of COMMANDS.setup.options) {
   const kebab = camelToKebab(o.flag)
   const flags = o.short ? `-${o.short}, --${kebab}` : `--${kebab}`
   setupCmd.option(flags, o.description)
@@ -101,7 +101,7 @@ setupCmd
 
 program
   .command('preview')
-  .description('Show DNS records that would be created without applying them')
+  .description(COMMANDS.preview.description)
   .argument('<domain>')
   .argument('<email-provider>', `(${Object.keys(EMAIL_PROVIDERS).join(', ')})`)
   .action(async (_domain: string, _emailProvider: string) => {
@@ -110,7 +110,7 @@ program
 
 program
   .command('list')
-  .description('Show existing DNS records for a domain')
+  .description(COMMANDS.list.description)
   .argument('<domain>')
   .argument('<dns-provider>', `(${Object.keys(DNS_PROVIDERS).join(', ')})`)
   .action(async (_domain: string, _dnsProvider: string) => {
@@ -119,7 +119,7 @@ program
 
 program
   .command('verify')
-  .description('Check that expected DNS records are in place')
+  .description(COMMANDS.verify.description)
   .argument('<domain>')
   .argument('<email-provider>', `(${Object.keys(EMAIL_PROVIDERS).join(', ')})`)
   .argument('<dns-provider>',   `(${Object.keys(DNS_PROVIDERS).join(', ')})`)

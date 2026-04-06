@@ -5,10 +5,18 @@ import { Command, Option } from "commander";
 
 // src/utils.ts
 import readline from "readline";
-var SETUP_OPTIONS = [
-  { flag: "noMx", description: "skip MX records (for outbound-only use)", default: false },
-  { flag: "yes", short: "y", description: "skip confirmation prompt (error if any required inputs are missing)", default: false }
-];
+var COMMANDS = {
+  setup: {
+    description: "Create DNS records for an email provider",
+    options: [
+      { flag: "noMx", description: "skip MX records (for outbound-only use)", default: false },
+      { flag: "yes", short: "y", description: "skip confirmation prompt (error if any required inputs are missing)", default: false }
+    ]
+  },
+  verify: { description: "Check that expected DNS records are in place", options: [] },
+  list: { description: "Show existing DNS records for a domain", options: [] },
+  preview: { description: "Show DNS records that would be created without applying them", options: [] }
+};
 var c = {
   green: (s) => `\x1B[32m${s}\x1B[0m`,
   red: (s) => `\x1B[31m${s}\x1B[0m`,
@@ -2084,9 +2092,9 @@ function buildDnsHelpText() {
   }
   return lines.join("\n");
 }
-var setupCmd = program.command("setup").description("Create DNS records for an email provider").argument("<domain>").argument("<email-provider>", `(${Object.keys(EMAIL_PROVIDERS).join(", ")})`).argument("<dns-provider>", `(${Object.keys(DNS_PROVIDERS).join(", ")})`);
+var setupCmd = program.command("setup").description(COMMANDS.setup.description).argument("<domain>").argument("<email-provider>", `(${Object.keys(EMAIL_PROVIDERS).join(", ")})`).argument("<dns-provider>", `(${Object.keys(DNS_PROVIDERS).join(", ")})`);
 registerProviderOptions(setupCmd);
-for (const o of SETUP_OPTIONS) {
+for (const o of COMMANDS.setup.options) {
   const kebab = camelToKebab(o.flag);
   const flags = o.short ? `-${o.short}, --${kebab}` : `--${kebab}`;
   setupCmd.option(flags, o.description);
@@ -2102,13 +2110,13 @@ setupCmd.addHelpText("after", buildEmailHelpText() + "\n" + buildDnsHelpText()).
   const confirm2 = yes ? async () => true : void 0;
   await dnsDef.setupRecords({ domain, records, verificationPrefix, confirm: confirm2 }, dnsInputs);
 });
-program.command("preview").description("Show DNS records that would be created without applying them").argument("<domain>").argument("<email-provider>", `(${Object.keys(EMAIL_PROVIDERS).join(", ")})`).action(async (_domain, _emailProvider) => {
+program.command("preview").description(COMMANDS.preview.description).argument("<domain>").argument("<email-provider>", `(${Object.keys(EMAIL_PROVIDERS).join(", ")})`).action(async (_domain, _emailProvider) => {
   log.warn("preview not yet implemented");
 });
-program.command("list").description("Show existing DNS records for a domain").argument("<domain>").argument("<dns-provider>", `(${Object.keys(DNS_PROVIDERS).join(", ")})`).action(async (_domain, _dnsProvider) => {
+program.command("list").description(COMMANDS.list.description).argument("<domain>").argument("<dns-provider>", `(${Object.keys(DNS_PROVIDERS).join(", ")})`).action(async (_domain, _dnsProvider) => {
   log.warn("list not yet implemented");
 });
-program.command("verify").description("Check that expected DNS records are in place").argument("<domain>").argument("<email-provider>", `(${Object.keys(EMAIL_PROVIDERS).join(", ")})`).argument("<dns-provider>", `(${Object.keys(DNS_PROVIDERS).join(", ")})`).action(async (_domain, _emailProvider, _dnsProvider) => {
+program.command("verify").description(COMMANDS.verify.description).argument("<domain>").argument("<email-provider>", `(${Object.keys(EMAIL_PROVIDERS).join(", ")})`).argument("<dns-provider>", `(${Object.keys(DNS_PROVIDERS).join(", ")})`).action(async (_domain, _emailProvider, _dnsProvider) => {
   log.warn("verify not yet implemented");
 });
 try {

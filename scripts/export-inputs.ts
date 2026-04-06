@@ -1,9 +1,9 @@
 import { DNS_PROVIDERS, EMAIL_PROVIDERS } from '../src/providers.js'
 import { getEmailInputDefs } from '../src/core.js'
-import { SETUP_OPTIONS } from '../src/utils.js'
+import { COMMANDS } from '../src/utils.js'
 
 const output = {
-  options: SETUP_OPTIONS,
+  options: COMMANDS.setup.options,
   dnsProviders: Object.fromEntries(
     Object.entries(DNS_PROVIDERS).sort(([, a], [, b]) => a.name.localeCompare(b.name)).map(([key, def]) => {
       return [key, { name: def.name, inputs: def.inputs }]

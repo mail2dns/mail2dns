@@ -1,6 +1,24 @@
 # mail2dns
 
-Automates the process of creating email DNS records for MX, SPF, DMARC, DKIM, and verification.
+**CLI that automatically creates MX, SPF, DKIM, DMARC and verification DNS records
+for email providers across multiple DNS providers.**
+
+Currently Supports 12 email providers and 10 DNS providers in any combination.
+
+The aim of this project is to stop developers from needing to manually copy-paste DNS records when setting up email for their domains.
+
+## Example
+
+```bash
+mail2dns setup example.com googleworkspace cloudflare
+```
+
+Creates:
+- MX records
+- SPF record
+- DKIM records
+- DMARC record
+- Domain verification records
 
 ## Install
 
@@ -10,22 +28,54 @@ Requires Node.js 18+.
 npm install -g mail2dns
 ```
 
+<!-- generated-usage -->
+
 ## Usage
 
-### Create new DNS records for an email provider
+### Setup
+
+Create DNS records for an email provider
+
 ```bash
 mail2dns setup [options] <domain> <email-provider> <dns-provider>
 ```
-Inputs specific to each provider are prompted interactively if not provided.
-### Verify existing records for an email provider
+
+#### [Supported Email Providers](#supported-email-providers)
+
+migadu, googleworkspace, ms365, outlook, fastmail, mailgun, proton, zoho, sendgrid, resend, postmark, ses
+
+#### [Supported DNS Providers](#supported-dns-providers)
+
+cloudflare, digitalocean, godaddy, gcloud, netlify, route53, vercel, hetzner, spaceship, azure
+
+#### Provider Options
+
+Provider-specific options are prompted interactively if not provided via flag or environment variable. See the providers reference below.
+
+#### General Options
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| <nobr>`--no-mx`</nobr> | skip MX records (for outbound-only use) | `false` |
+| <nobr>`-y`, `--yes`</nobr> | skip confirmation prompt (error if any required inputs are missing) | `false` |
+
+### Verify
+
+Check that expected DNS records are in place
+
 ```bash
-mail2dns verify [options] <domain> <email-provider>
+mail2dns verify <domain> <email-provider> <dns-provider>
 ```
 
-### List required records for an email provider
+### List
+
+Show existing DNS records for a domain
+
 ```bash
-mail2dns list-records [options] <email-provider>
+mail2dns list <domain> <dns-provider>
 ```
+
+<!-- /generated-usage -->
 
 ## Examples
 
@@ -46,7 +96,7 @@ MIGADU_VERIFY_TXT="hosted-email-verify=YOUR_KEY" \
 CLOUDFLARE_API_TOKEN=YOUR_CF_TOKEN \
 mail2dns setup example.com migadu cloudflare
 ```
-<!-- generated -->
+<!-- generated-providers-reference -->
 
 ## Supported Email providers
 
@@ -88,7 +138,7 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| `--verify-txt` | `MIGADU_VERIFY_TXT` | Migadu verification TXT value | `hosted-email-verify=abc123` |
+| <nobr>`--verify-txt`</nobr> | `MIGADU_VERIFY_TXT` | Migadu verification TXT value | `hosted-email-verify=abc123` |
 
 ### Google Workspace
 
@@ -96,8 +146,8 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| `--verify-txt` | `GOOGLE_VERIFY_TXT` | Google Workspace verification TXT value | `google-site-verification=abc123` |
-| `--dkim-key` | `GOOGLE_DKIM_KEY` | Google Workspace DKIM key | `v=DKIM1; k=rsa; p=...` |
+| <nobr>`--verify-txt`</nobr> | `GOOGLE_VERIFY_TXT` | Google Workspace verification TXT value | `google-site-verification=abc123` |
+| <nobr>`--dkim-key`</nobr> | `GOOGLE_DKIM_KEY` | Google Workspace DKIM key | `v=DKIM1; k=rsa; p=...` |
 
 ### Microsoft 365
 
@@ -105,9 +155,9 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| `--verify-txt` | `MS365_VERIFY_TXT` | Microsoft 365 domain verification TXT value | `MS=ms12345678` |
-| `--dkim-selector1-target` | `MS365_DKIM_SELECTOR1` | DKIM selector1 CNAME target | `selector1-example-com._domainkey.example.onmicrosoft.com` |
-| `--dkim-selector2-target` | `MS365_DKIM_SELECTOR2` | DKIM selector2 CNAME target | `selector2-example-com._domainkey.example.onmicrosoft.com` |
+| <nobr>`--verify-txt`</nobr> | `MS365_VERIFY_TXT` | Microsoft 365 domain verification TXT value | `MS=ms12345678` |
+| <nobr>`--dkim-selector1-target`</nobr> | `MS365_DKIM_SELECTOR1` | DKIM selector1 CNAME target | `selector1-example-com._domainkey.example.onmicrosoft.com` |
+| <nobr>`--dkim-selector2-target`</nobr> | `MS365_DKIM_SELECTOR2` | DKIM selector2 CNAME target | `selector2-example-com._domainkey.example.onmicrosoft.com` |
 
 ### Microsoft Outlook
 
@@ -115,9 +165,9 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| `--verify-txt` | `MS365_VERIFY_TXT` | Microsoft 365 domain verification TXT value | `MS=ms12345678` |
-| `--dkim-selector1-target` | `MS365_DKIM_SELECTOR1` | DKIM selector1 CNAME target | `selector1-example-com._domainkey.example.onmicrosoft.com` |
-| `--dkim-selector2-target` | `MS365_DKIM_SELECTOR2` | DKIM selector2 CNAME target | `selector2-example-com._domainkey.example.onmicrosoft.com` |
+| <nobr>`--verify-txt`</nobr> | `MS365_VERIFY_TXT` | Microsoft 365 domain verification TXT value | `MS=ms12345678` |
+| <nobr>`--dkim-selector1-target`</nobr> | `MS365_DKIM_SELECTOR1` | DKIM selector1 CNAME target | `selector1-example-com._domainkey.example.onmicrosoft.com` |
+| <nobr>`--dkim-selector2-target`</nobr> | `MS365_DKIM_SELECTOR2` | DKIM selector2 CNAME target | `selector2-example-com._domainkey.example.onmicrosoft.com` |
 
 ### Fastmail
 
@@ -128,7 +178,7 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| `--dkim-txt` | `MAILGUN_DKIM_TXT` | DKIM TXT value | `k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4...` |
+| <nobr>`--dkim-txt`</nobr> | `MAILGUN_DKIM_TXT` | DKIM TXT value | `k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4...` |
 
 ### Proton Mail
 
@@ -136,10 +186,10 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| `--verify-txt` | `PROTON_VERIFY_TXT` | Proton Mail domain verification TXT value | `protonmail-verification=abc123` |
-| `--dkim-cname1` | `PROTON_DKIM_CNAME1` | DKIM CNAME 1 target | `protonmail.domainkey.abc123.domains.proton.ch` |
-| `--dkim-cname2` | `PROTON_DKIM_CNAME2` | DKIM CNAME 2 target | `protonmail2.domainkey.abc123.domains.proton.ch` |
-| `--dkim-cname3` | `PROTON_DKIM_CNAME3` | DKIM CNAME 3 target | `protonmail3.domainkey.abc123.domains.proton.ch` |
+| <nobr>`--verify-txt`</nobr> | `PROTON_VERIFY_TXT` | Proton Mail domain verification TXT value | `protonmail-verification=abc123` |
+| <nobr>`--dkim-cname1`</nobr> | `PROTON_DKIM_CNAME1` | DKIM CNAME 1 target | `protonmail.domainkey.abc123.domains.proton.ch` |
+| <nobr>`--dkim-cname2`</nobr> | `PROTON_DKIM_CNAME2` | DKIM CNAME 2 target | `protonmail2.domainkey.abc123.domains.proton.ch` |
+| <nobr>`--dkim-cname3`</nobr> | `PROTON_DKIM_CNAME3` | DKIM CNAME 3 target | `protonmail3.domainkey.abc123.domains.proton.ch` |
 
 ### Zoho Mail
 
@@ -147,8 +197,8 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| `--verify-txt` | `ZOHO_VERIFY_TXT` | Zoho Mail domain verification TXT value | `zoho-verification=zb12345678.zmverify.zoho.com` |
-| `--dkim-key` | `ZOHO_DKIM_KEY` | Zoho Mail DKIM TXT value | `v=DKIM1; k=rsa; p=...` |
+| <nobr>`--verify-txt`</nobr> | `ZOHO_VERIFY_TXT` | Zoho Mail domain verification TXT value | `zoho-verification=zb12345678.zmverify.zoho.com` |
+| <nobr>`--dkim-key`</nobr> | `ZOHO_DKIM_KEY` | Zoho Mail DKIM TXT value | `v=DKIM1; k=rsa; p=...` |
 
 ### Twilio SendGrid
 
@@ -156,8 +206,8 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| `--dkim1` | `SENDGRID_DKIM1` | DKIM CNAME 1 value | `s1.domainkey.u12345.wl.sendgrid.net` |
-| `--dkim2` | `SENDGRID_DKIM2` | DKIM CNAME 2 value | `s2.domainkey.u12345.wl.sendgrid.net` |
+| <nobr>`--dkim1`</nobr> | `SENDGRID_DKIM1` | DKIM CNAME 1 value | `s1.domainkey.u12345.wl.sendgrid.net` |
+| <nobr>`--dkim2`</nobr> | `SENDGRID_DKIM2` | DKIM CNAME 2 value | `s2.domainkey.u12345.wl.sendgrid.net` |
 
 ### Resend
 
@@ -165,7 +215,7 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| `--dkim` | `RESEND_DKIM` | DKIM CNAME value | `p.resend.com` |
+| <nobr>`--dkim`</nobr> | `RESEND_DKIM` | DKIM CNAME value | `p.resend.com` |
 
 ### Postmark
 
@@ -173,7 +223,7 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| `--dkim` | `POSTMARK_DKIM` | DKIM CNAME value | `cm.mtasv.net` |
+| <nobr>`--dkim`</nobr> | `POSTMARK_DKIM` | DKIM CNAME value | `cm.mtasv.net` |
 
 ### Amazon SES
 
@@ -181,7 +231,7 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| `--aws-profile` | `AWS_PROFILE` | AWS profile | `my-profile` |
+| <nobr>`--aws-profile`</nobr> | `AWS_PROFILE` | AWS profile | `my-profile` |
 
 ## DNS providers
 
@@ -191,7 +241,7 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| `--token` | `CLOUDFLARE_API_TOKEN` | Cloudflare API token |  |
+| <nobr>`--token`</nobr> | `CLOUDFLARE_API_TOKEN` | Cloudflare API token |  |
 
 ### DigitalOcean
 
@@ -199,7 +249,7 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| `--token` | `DIGITALOCEAN_TOKEN` | DigitalOcean API token |  |
+| <nobr>`--token`</nobr> | `DIGITALOCEAN_TOKEN` | DigitalOcean API token |  |
 
 ### GoDaddy
 
@@ -207,8 +257,8 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| `--key` | `GODADDY_API_KEY` | GoDaddy API key |  |
-| `--secret` | `GODADDY_API_SECRET` | GoDaddy API secret |  |
+| <nobr>`--key`</nobr> | `GODADDY_API_KEY` | GoDaddy API key |  |
+| <nobr>`--secret`</nobr> | `GODADDY_API_SECRET` | GoDaddy API secret |  |
 
 ### Google Cloud
 
@@ -216,7 +266,7 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| `--project` | `CLOUDSDK_CORE_PROJECT` | Google Cloud project ID | `my-project-123` |
+| <nobr>`--project`</nobr> | `CLOUDSDK_CORE_PROJECT` | Google Cloud project ID | `my-project-123` |
 
 ### Netlify
 
@@ -224,7 +274,7 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| `--token` | `NETLIFY_AUTH_TOKEN` | Netlify personal access token |  |
+| <nobr>`--token`</nobr> | `NETLIFY_AUTH_TOKEN` | Netlify personal access token |  |
 
 ### Amazon Route 53
 
@@ -232,7 +282,7 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| `--aws-profile` | `AWS_PROFILE` | AWS profile | `my-profile` |
+| <nobr>`--aws-profile`</nobr> | `AWS_PROFILE` | AWS profile | `my-profile` |
 
 ### Vercel
 
@@ -240,8 +290,8 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| `--token` | `VERCEL_TOKEN` | Vercel API token |  |
-| `--team-id` | `VERCEL_TEAM_ID` | Vercel team ID |  |
+| <nobr>`--token`</nobr> | `VERCEL_TOKEN` | Vercel API token |  |
+| <nobr>`--team-id`</nobr> | `VERCEL_TEAM_ID` | Vercel team ID |  |
 
 ### Hetzner
 
@@ -249,7 +299,7 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| `--token` | `HCLOUD_TOKEN` | Hetzner Cloud API token |  |
+| <nobr>`--token`</nobr> | `HCLOUD_TOKEN` | Hetzner Cloud API token |  |
 
 ### Spaceship
 
@@ -257,8 +307,8 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| `--api-key` | `SPACESHIP_API_KEY` | Spaceship API key |  |
-| `--api-secret` | `SPACESHIP_API_SECRET` | Spaceship API secret |  |
+| <nobr>`--api-key`</nobr> | `SPACESHIP_API_KEY` | Spaceship API key |  |
+| <nobr>`--api-secret`</nobr> | `SPACESHIP_API_SECRET` | Spaceship API secret |  |
 
 ### Azure DNS
 
@@ -266,6 +316,6 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| `--subscription` | `AZURE_SUBSCRIPTION_ID` | Azure subscription ID | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
+| <nobr>`--subscription`</nobr> | `AZURE_SUBSCRIPTION_ID` | Azure subscription ID | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
 
-<!-- /generated -->
+<!-- /generated-providers-reference -->

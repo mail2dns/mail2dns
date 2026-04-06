@@ -2,10 +2,18 @@ import readline from 'readline'
 import { EMAIL_PROVIDERS, DNS_PROVIDERS } from './providers.js'
 import type { InputDef, OptionDef } from './types.js'
 
-export const SETUP_OPTIONS: OptionDef[] = [
-  { flag: 'noMx', description: 'skip MX records (for outbound-only use)', default: false },
-  { flag: 'yes', short: 'y', description: 'skip confirmation prompt (error if any required inputs are missing)', default: false },
-]
+export const COMMANDS: Record<string, { description: string; options: OptionDef[] }> = {
+  setup: {
+    description: 'Create DNS records for an email provider',
+    options: [
+      { flag: 'noMx', description: 'skip MX records (for outbound-only use)', default: false },
+      { flag: 'yes', short: 'y', description: 'skip confirmation prompt (error if any required inputs are missing)', default: false },
+    ],
+  },
+  verify:  { description: 'Check that expected DNS records are in place', options: [] },
+  list:    { description: 'Show existing DNS records for a domain', options: [] },
+  preview: { description: 'Show DNS records that would be created without applying them', options: [] },
+}
 
 const c = {
   green:  (s: string) => `\x1b[32m${s}\x1b[0m`,
@@ -24,6 +32,10 @@ export const log = {
 
 export function camelToKebab(s: string): string {
   return s.replace(/([A-Z])/g, (c) => `-${c.toLowerCase()}`)
+}
+
+export function ucfirst(s: string): string {
+  return s.charAt(0).toUpperCase() + s.slice(1)
 }
 
 export function ask(question: string): Promise<string> {
