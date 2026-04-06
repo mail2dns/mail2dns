@@ -39,12 +39,13 @@ addDnsOptions(addEmailOptions(
     .argument('<domain>')
     .argument('<email-provider>', `(${Object.keys(EMAIL_PROVIDERS).join(', ')})`)
     .argument('<dns-provider>',   `(${Object.keys(DNS_PROVIDERS).join(', ')})`)
+    .option('--no-mx', 'skip MX records (for outbound-only use)')
 )).action(async (domain: string, emailProvider: string, dnsProvider: string, opts: Record<string, string | undefined>) => {
   validateProviders(emailProvider, dnsProvider)
 
   const emailInputDefs = getEmailInputDefs(emailProvider)
   const emailInputs = await resolveInputs(emailInputDefs, opts)
-  const { records, verificationPrefix } = await buildRecords({ domain, emailProvider, emailInputs })
+  const { records, verificationPrefix } = await buildRecords({ domain, emailProvider, emailInputs, noMx: !!opts.noMx })
 
   const dnsDef = DNS_PROVIDERS[dnsProvider]
   const dnsInputs = await resolveInputs(dnsDef.inputs, opts)

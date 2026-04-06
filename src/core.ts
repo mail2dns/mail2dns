@@ -25,17 +25,22 @@ export function getEmailInputDefs(emailProvider: string): InputDef[] {
   return emailDef.inputs
 }
 
-export async function buildRecords({ domain, emailProvider, emailInputs }: {
+export async function buildRecords({ domain, emailProvider, emailInputs, noMx }: {
   domain: string
   emailProvider: string
   emailInputs: Record<string, string>
+  noMx?: boolean
 }): Promise<{ records: DnsRecord[]; verificationPrefix?: string }> {
   const emailDef = EMAIL_PROVIDERS[emailProvider]
 
+  let result: { records: DnsRecord[]; verificationPrefix?: string }
   if (emailDef.type === 'template') {
-    return buildFromTemplate(emailDef.template, domain, emailInputs)
+    result = buildFromTemplate(emailDef.template, domain, emailInputs)
+  } else {
+    const records = await emailDef.getRecords({ domain, ...emailInputs })
+    result = { records, verificationPrefix: undefined }
   }
 
-  const records = await emailDef.getRecords({ domain, ...emailInputs })
-  return { records, verificationPrefix: undefined }
+  if (noMx) result.records = result.records.filter(r => r.type !== 'MX')
+  return result
 }
