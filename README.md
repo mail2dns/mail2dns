@@ -74,6 +74,7 @@ mail2dns setup example.com migadu cloudflare
 | [Amazon Route 53](#amazon-route-53) | `route53` |
 | [Vercel](#vercel) | `vercel` |
 | [Hetzner](#hetzner) | `hetzner` |
+| [Spaceship](#spaceship) | `spaceship` |
 
 ## Email providers
 
@@ -220,5 +221,14 @@ mail2dns setup example.com migadu cloudflare
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
 | `--token` | `HCLOUD_TOKEN` | Hetzner Cloud API token |  |
+
+### Spaceship
+
+#### Inputs
+
+| Flag | Env var | Description | Example |
+|------|---------|-------------|---------|
+| `--api-key` | `SPACESHIP_API_KEY` | Spaceship API key |  |
+| `--api-secret` | `SPACESHIP_API_SECRET` | Spaceship API secret |  |
 
 <!-- /generated -->

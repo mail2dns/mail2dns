@@ -31,9 +31,9 @@ async function confirm(question) {
   const answer = await ask(question);
   return answer.toLowerCase() === "y" || answer.toLowerCase() === "yes";
 }
-async function resolveInputs(inputs10, argv) {
+async function resolveInputs(inputs11, argv) {
   const result = {};
-  for (const input of inputs10) {
+  for (const input of inputs11) {
     let value = argv[input.flag];
     if (!value && input.env) value = process.env[input.env];
     if (!value) {
@@ -1159,11 +1159,159 @@ Removed ${conflicts.length} conflicting RRSet${conflicts.length !== 1 ? "s" : ""
   log.success("\nSetup complete.");
 }
 
+// src/dns-modules/spaceship.ts
+var inputs9 = [
+  {
+    flag: "api-key",
+    name: "Spaceship API key",
+    env: "SPACESHIP_API_KEY",
+    instructions: "Create an API key at https://www.spaceship.com/account/api-management/"
+  },
+  {
+    flag: "api-secret",
+    name: "Spaceship API secret",
+    env: "SPACESHIP_API_SECRET",
+    instructions: "Shown when creating an API key at https://www.spaceship.com/account/api-management/"
+  }
+];
+var BASE_URL7 = process.env.SPACESHIP_API_URL ?? "https://spaceship.dev/api/v1";
+async function spFetch(path, options, apiKey, apiSecret) {
+  const res = await fetch(`${BASE_URL7}${path}`, {
+    ...options,
+    headers: {
+      "X-API-Key": apiKey,
+      "X-API-Secret": apiSecret,
+      "Content-Type": "application/json",
+      ...options?.headers
+    }
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(`Spaceship API error: ${data.message ?? res.statusText}`);
+  }
+  if (res.status === 204) return void 0;
+  return res.json();
+}
+async function listRecords7(domain, apiKey, apiSecret) {
+  const data = await spFetch(
+    `/domains/${encodeURIComponent(domain)}/dns`,
+    {},
+    apiKey,
+    apiSecret
+  );
+  return data.records ?? [];
+}
+async function deleteRecords2(domain, records, apiKey, apiSecret) {
+  await spFetch(
+    `/domains/${encodeURIComponent(domain)}/dns`,
+    {
+      method: "DELETE",
+      body: JSON.stringify({ records })
+    },
+    apiKey,
+    apiSecret
+  );
+}
+async function createRecords(domain, records, apiKey, apiSecret) {
+  await spFetch(
+    `/domains/${encodeURIComponent(domain)}/dns`,
+    {
+      method: "PUT",
+      body: JSON.stringify({ records })
+    },
+    apiKey,
+    apiSecret
+  );
+}
+function findConflicts7(existing, records, verificationPrefix) {
+  const conflicts = [];
+  for (const record of records) {
+    const matches = existing.filter((e) => {
+      if (record.type === "MX" && e.type === "MX") return true;
+      if (record.type === "TXT" && e.type === "TXT" && e.name === record.name) {
+        if (record.content.includes("v=spf1") && e.value.includes("v=spf1")) return true;
+        if (verificationPrefix && record.content.includes(verificationPrefix) && e.value.includes(verificationPrefix)) return true;
+        if (record.content.includes("v=DMARC1")) return true;
+      }
+      if (record.name.includes("_domainkey") && (record.type === "CNAME" || record.type === "TXT")) {
+        if ((e.type === "CNAME" || e.type === "TXT") && e.name === record.name) return true;
+      }
+      return false;
+    });
+    for (const m of matches) {
+      if (!conflicts.find((c2) => c2.name === m.name && c2.type === m.type && c2.value === m.value)) {
+        conflicts.push(m);
+      }
+    }
+  }
+  return conflicts;
+}
+function formatExisting(r) {
+  const priority = r.priority !== void 0 ? ` (priority ${r.priority})` : "";
+  return `  [${r.type.padEnd(5)}] ${r.name} \u2192 ${r.value}${priority}`;
+}
+function formatRecord9(r) {
+  const priority = r.priority !== void 0 ? ` (priority ${r.priority})` : "";
+  return `  [${r.type.padEnd(5)}] ${r.name} \u2192 ${r.content}${priority}`;
+}
+async function setupRecords9({ domain, records, verificationPrefix, confirm: confirmFn }, { "api-key": apiKey, "api-secret": apiSecret }) {
+  const confirm2 = confirmFn ?? confirm;
+  const existing = await listRecords7(domain, apiKey, apiSecret);
+  log.success(`Zone found: ${domain}`);
+  const conflicts = findConflicts7(existing, records, verificationPrefix);
+  if (conflicts.length > 0) {
+    log.warn("\nThe following existing records will be removed:");
+    for (const r of conflicts) {
+      log.dim(formatExisting(r));
+    }
+  } else {
+    log.info("\nNo conflicting records found.");
+  }
+  log.info("\nThe following records will be created:");
+  for (const r of records) {
+    log.dim(formatRecord9(r));
+  }
+  console.log();
+  const ok = await confirm2("Proceed? (y/N) ");
+  if (!ok) {
+    log.warn("Aborted.");
+    return;
+  }
+  if (conflicts.length > 0) {
+    await deleteRecords2(domain, conflicts, apiKey, apiSecret);
+    log.info(`
+Removed ${conflicts.length} conflicting record${conflicts.length !== 1 ? "s" : ""}`);
+  }
+  const spRecords = records.map((r) => ({
+    name: r.name,
+    type: r.type,
+    ttl: r.ttl ?? 300,
+    value: r.content,
+    ...r.priority !== void 0 && { priority: r.priority }
+  }));
+  await createRecords(domain, spRecords, apiKey, apiSecret);
+  const created = { verification: 0, mx: 0, spf: 0, dmarc: 0, dkim: 0 };
+  for (const record of records) {
+    if (verificationPrefix && record.content.includes(verificationPrefix)) created.verification++;
+    else if (record.type === "MX") created.mx++;
+    else if (record.content.includes("v=spf1")) created.spf++;
+    else if (record.content.includes("v=DMARC1")) created.dmarc++;
+    else if (record.name.includes("_domainkey") && (record.type === "CNAME" || record.type === "TXT")) created.dkim++;
+  }
+  console.log();
+  if (created.verification) log.success("Created TXT verification record");
+  if (created.mx) log.success("Created MX records");
+  if (created.spf) log.success("Created SPF record");
+  if (created.dmarc) log.success("Created DMARC record");
+  if (created.dkim) log.success("Created DKIM CNAME records");
+  log.success("\nSetup complete.");
+}
+
 // src/email-modules/ses.ts
 import { execFile as execFile3 } from "child_process";
 import { promisify as promisify3 } from "util";
 var execFileAsync3 = promisify3(execFile3);
-var inputs9 = [
+var inputs10 = [
   {
     flag: "awsProfile",
     name: "AWS profile",
@@ -1451,6 +1599,11 @@ var DNS_PROVIDERS = {
     name: "Hetzner",
     setupRecords: setupRecords8,
     inputs: inputs8
+  },
+  spaceship: {
+    name: "Spaceship",
+    setupRecords: setupRecords9,
+    inputs: inputs9
   }
 };
 var EMAIL_PROVIDERS = {
@@ -1497,7 +1650,7 @@ var EMAIL_PROVIDERS = {
   ses: {
     name: "Amazon SES",
     type: "module",
-    inputs: inputs9,
+    inputs: inputs10,
     getRecords,
     records: [
       { type: "TXT", name: "_amazonses", value: "{VERIFY_TOKEN}" },
