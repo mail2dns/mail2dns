@@ -5,6 +5,10 @@ import { Command, Option } from "commander";
 
 // src/utils.ts
 import readline from "readline";
+var SETUP_OPTIONS = [
+  { flag: "noMx", description: "skip MX records (for outbound-only use)", default: false },
+  { flag: "yes", short: "y", description: "skip confirmation prompt (error if any required inputs are missing)", default: false }
+];
 var c = {
   green: (s) => `\x1B[32m${s}\x1B[0m`,
   red: (s) => `\x1B[31m${s}\x1B[0m`,
@@ -2080,8 +2084,13 @@ function buildDnsHelpText() {
   }
   return lines.join("\n");
 }
-var setupCmd = program.command("setup").description("Create DNS records for an email provider").argument("<domain>").argument("<email-provider>", `(${Object.keys(EMAIL_PROVIDERS).join(", ")})`).argument("<dns-provider>", `(${Object.keys(DNS_PROVIDERS).join(", ")})`).option("--no-mx", "skip MX records (for outbound-only use)").option("-y, --yes", "skip confirmation prompt (error if any required inputs are missing)");
+var setupCmd = program.command("setup").description("Create DNS records for an email provider").argument("<domain>").argument("<email-provider>", `(${Object.keys(EMAIL_PROVIDERS).join(", ")})`).argument("<dns-provider>", `(${Object.keys(DNS_PROVIDERS).join(", ")})`);
 registerProviderOptions(setupCmd);
+for (const o of SETUP_OPTIONS) {
+  const kebab = camelToKebab(o.flag);
+  const flags = o.short ? `-${o.short}, --${kebab}` : `--${kebab}`;
+  setupCmd.option(flags, o.description);
+}
 setupCmd.addHelpText("after", buildEmailHelpText() + "\n" + buildDnsHelpText()).action(async (domain, emailProvider, dnsProvider, opts) => {
   validateProviders(emailProvider, dnsProvider);
   const yes = !!opts.yes;

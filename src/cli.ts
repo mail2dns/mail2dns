@@ -1,6 +1,6 @@
 import { Command, Option } from 'commander'
 import { EMAIL_PROVIDERS, DNS_PROVIDERS } from './providers.js'
-import { resolveInputs, camelToKebab, validateProviders, log } from './utils.js'
+import { resolveInputs, camelToKebab, validateProviders, SETUP_OPTIONS, log } from './utils.js'
 import { buildRecords, getEmailInputDefs } from './core.js'
 import type { InputDef } from './types.js'
 
@@ -75,10 +75,13 @@ const setupCmd = program
   .argument('<domain>')
   .argument('<email-provider>', `(${Object.keys(EMAIL_PROVIDERS).join(', ')})`)
   .argument('<dns-provider>',   `(${Object.keys(DNS_PROVIDERS).join(', ')})`)
-  .option('--no-mx', 'skip MX records (for outbound-only use)')
-  .option('-y, --yes', 'skip confirmation prompt (error if any required inputs are missing)')
 
 registerProviderOptions(setupCmd)
+for (const o of SETUP_OPTIONS) {
+  const kebab = camelToKebab(o.flag)
+  const flags = o.short ? `-${o.short}, --${kebab}` : `--${kebab}`
+  setupCmd.option(flags, o.description)
+}
 setupCmd
   .addHelpText('after', buildEmailHelpText() + '\n' + buildDnsHelpText())
   .action(async (domain: string, emailProvider: string, dnsProvider: string, opts: Record<string, string | undefined>) => {

@@ -1,6 +1,11 @@
 import readline from 'readline'
 import { EMAIL_PROVIDERS, DNS_PROVIDERS } from './providers.js'
-import type { InputDef } from './types.js'
+import type { InputDef, OptionDef } from './types.js'
+
+export const SETUP_OPTIONS: OptionDef[] = [
+  { flag: 'noMx', description: 'skip MX records (for outbound-only use)', default: false },
+  { flag: 'yes', short: 'y', description: 'skip confirmation prompt (error if any required inputs are missing)', default: false },
+]
 
 const c = {
   green:  (s: string) => `\x1b[32m${s}\x1b[0m`,
