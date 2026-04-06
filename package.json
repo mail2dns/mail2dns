@@ -1,7 +1,7 @@
 {
   "name": "mail2dns",
   "version": "1.0.0",
-  "description": "CLI tool to configure DNS records for email providers",
+  "description": "CLI to automatically create MX, SPF, DKIM, DMARC and email verification DNS records for multiple email and DNS providers.",
   "main": "dist/cli.js",
   "bin": {
     "mail2dns": "./dist/cli.js"
@@ -28,5 +28,45 @@
     "tsup": "^8.5.1",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2"
-  }
+  },
+  "keywords": [
+    "dns",
+    "email",
+    "cli",
+    "mx",
+    "spf",
+    "dkim",
+    "dmarc",
+    "devops",
+    "email dns",
+    "dns records",
+    "dns automation",
+    "email setup",
+    "transactional email",
+    "domain email",
+    "dns tool",
+    "dns cli",
+    "ses",
+    "fastmail",
+    "google workspace",
+    "mailgun",
+    "microsoft 365",
+    "outlook",
+    "migadu",
+    "postmark",
+    "proton mail",
+    "resend",
+    "sendgrid",
+    "zoho mail",
+    "route53",
+    "azure dns",
+    "cloudflare",
+    "digital ocean",
+    "godaddy",
+    "google cloud",
+    "hetzner",
+    "netlify",
+    "spaceship",
+    "vercel"
+  ]
 }
