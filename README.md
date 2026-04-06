@@ -40,11 +40,11 @@ Create DNS records for an email provider
 mail2dns setup [options] <domain> <email-provider> <dns-provider>
 ```
 
-#### [Supported Email Providers](#supported-email-providers)
+#### [Email Providers](#supported-email-providers)
 
 migadu, googleworkspace, ms365, outlook, fastmail, mailgun, proton, zoho, sendgrid, resend, postmark, ses
 
-#### [Supported DNS Providers](#supported-dns-providers)
+#### [DNS Providers](#supported-dns-providers)
 
 cloudflare, digitalocean, godaddy, gcloud, netlify, route53, vercel, hetzner, spaceship, azure
 
