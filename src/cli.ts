@@ -2,6 +2,7 @@ import { Command, Option } from 'commander'
 import { EMAIL_PROVIDERS, DNS_PROVIDERS } from './providers.js'
 import { resolveInputs, camelToKebab, validateProviders, COMMANDS, log } from './utils.js'
 import { buildRecords, getEmailInputDefs } from './core.js'
+import buildInfo from './buildInfo.js'
 import type { InputDef } from './types.js'
 
 const program = new Command()
@@ -9,6 +10,7 @@ const program = new Command()
 program
   .name('mail2dns')
   .description('Configure DNS records for email providers')
+  .version(buildInfo.version, '-v, --version', 'output the version number')
 
 /** Register all provider input flags as hidden options so Commander parses them */
 function registerProviderOptions(cmd: Command): void {

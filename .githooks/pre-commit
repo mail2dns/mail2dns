@@ -2,3 +2,4 @@
 npm run typecheck
 npm run docs
 git add README.md
+npm run generate:buildinfo
