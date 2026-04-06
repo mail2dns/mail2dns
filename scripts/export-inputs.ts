@@ -11,7 +11,16 @@ const output = {
     Object.entries(EMAIL_PROVIDERS).sort(([, a], [, b]) => a.name.localeCompare(b.name)).map(([key, def]) => {
       const records = def.type === 'template' ? def.template.records : def.records
       const verificationPrefix = def.type === 'template' ? def.template.verificationPrefix : undefined
-      return [key, { name: def.name, inputs: getEmailInputDefs(key), records, verificationPrefix }]
+      return [
+          key,
+          {
+              name: def.name,
+              inputs: getEmailInputDefs(key),
+              records,
+              hasMx: records?.some(r => r.type === 'MX') || false,
+              verificationPrefix
+          }
+      ]
     })
   )
 }

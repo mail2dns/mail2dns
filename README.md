@@ -78,6 +78,7 @@ mail2dns setup example.com migadu cloudflare
 | [Vercel](#vercel) | `vercel` |
 | [Hetzner](#hetzner) | `hetzner` |
 | [Spaceship](#spaceship) | `spaceship` |
+| [Azure DNS](#azure-dns) | `azure` |
 
 ## Email providers
 
@@ -258,5 +259,13 @@ mail2dns setup example.com migadu cloudflare
 |------|---------|-------------|---------|
 | `--api-key` | `SPACESHIP_API_KEY` | Spaceship API key |  |
 | `--api-secret` | `SPACESHIP_API_SECRET` | Spaceship API secret |  |
+
+### Azure DNS
+
+#### Inputs
+
+| Flag | Env var | Description | Example |
+|------|---------|-------------|---------|
+| `--subscription` | `AZURE_SUBSCRIPTION_ID` | Azure subscription ID | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
 
 <!-- /generated -->

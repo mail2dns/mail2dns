@@ -7,6 +7,7 @@ import { setupRecords as route53SetupRecords, inputs as route53Inputs } from './
 import { setupRecords as vercelSetupRecords, inputs as vercelInputs } from './dns-modules/vercel.js'
 import { setupRecords as hetznerSetupRecords, inputs as hetznerInputs } from './dns-modules/hetzner.js'
 import { setupRecords as spaceshipSetupRecords, inputs as spaceshipInputs } from './dns-modules/spaceship.js'
+import { setupRecords as azureSetupRecords, inputs as azureInputs } from './dns-modules/azure.js'
 import { inputs as sesInputs, getRecords as sesGetRecords } from './email-modules/ses.js'
 import migaduTemplate from './email-templates/migadu.json'
 import googleworkspaceTemplate from './email-templates/googleworkspace.json'
@@ -65,6 +66,11 @@ export const DNS_PROVIDERS: Record<string, DnsProviderDef> = {
     name: 'Spaceship',
     setupRecords: spaceshipSetupRecords,
     inputs: spaceshipInputs
+  },
+  azure: {
+    name: 'Azure DNS',
+    setupRecords: azureSetupRecords,
+    inputs: azureInputs
   }
 }
 
