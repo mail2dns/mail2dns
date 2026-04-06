@@ -1,11 +1,15 @@
-# mail2dns
+# 🚀 mail2dns
 
 **CLI that automatically creates MX, SPF, DKIM, DMARC and verification DNS records
 for email providers across multiple DNS providers.**
 
-Currently Supports 12 email providers and 10 DNS providers in any combination.
+🚀 Stop manually copy-pasting DNS records for email!
 
-The aim of this project is to stop developers from needing to manually copy-paste DNS records when setting up email for their domains.
+⭐ Currently Supports 12 email providers and 10 DNS providers in any combination.
+
+
+🔗 [See website for setup guides for every provider combination](https://your-website.com)  
+
 
 ## Example
 
@@ -20,7 +24,7 @@ Creates:
 - DMARC record
 - Domain verification records
 
-## Install
+## 📦 Installation
 
 Requires Node.js 18+.
 
@@ -30,7 +34,7 @@ npm install -g mail2dns
 
 <!-- generated-usage -->
 
-## Usage
+## ⚙️ Usage
 
 ### Setup
 
@@ -77,7 +81,7 @@ mail2dns list <domain> <dns-provider>
 
 <!-- /generated-usage -->
 
-## Examples
+## 💻 Examples
 
 
 ### Interactive — prompts for any required inputs
@@ -98,7 +102,7 @@ mail2dns setup example.com migadu cloudflare
 ```
 <!-- generated-providers-reference -->
 
-## Supported Email providers
+## ✅  Supported Email providers
 
 | Provider | Key |
 |----------|-----|
@@ -115,7 +119,7 @@ mail2dns setup example.com migadu cloudflare
 | [Postmark](#postmark) | `postmark` |
 | [Amazon SES](#amazon-ses) | `ses` |
 
-## Supported DNS providers
+## ✅ Supported DNS providers
 
 | Provider | Key |
 |----------|-----|
@@ -130,7 +134,7 @@ mail2dns setup example.com migadu cloudflare
 | [Spaceship](#spaceship) | `spaceship` |
 | [Azure DNS](#azure-dns) | `azure` |
 
-## Email providers
+## 📧 Email providers
 
 ### Migadu
 
@@ -233,7 +237,7 @@ mail2dns setup example.com migadu cloudflare
 |------|---------|-------------|---------|
 | <nobr>`--aws-profile`</nobr> | `AWS_PROFILE` | AWS profile | `my-profile` |
 
-## DNS providers
+## ⬛ DNS providers
 
 ### Cloudflare
 

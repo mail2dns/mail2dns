@@ -46,7 +46,7 @@ const dnsProviderKeys = Object.keys(DNS_PROVIDERS).join(', ')
 const usageLines: string[] = []
 usageLines.push('<!-- generated-usage -->')
 usageLines.push('')
-usageLines.push('## Usage')
+usageLines.push('## ⚙️ Usage')
 usageLines.push('')
 
 // Setup
@@ -114,7 +114,7 @@ const refLines: string[] = []
 refLines.push('<!-- generated-providers-reference -->')
 refLines.push('')
 
-refLines.push('## Supported Email providers')
+refLines.push('## ✅  Supported Email providers')
 refLines.push('')
 refLines.push('| Provider | Key |')
 refLines.push('|----------|-----|')
@@ -123,7 +123,7 @@ for (const [key, def] of Object.entries(EMAIL_PROVIDERS)) {
 }
 refLines.push('')
 
-refLines.push('## Supported DNS providers')
+refLines.push('## ✅ Supported DNS providers')
 refLines.push('')
 refLines.push('| Provider | Key |')
 refLines.push('|----------|-----|')
@@ -132,7 +132,7 @@ for (const [key, def] of Object.entries(DNS_PROVIDERS)) {
 }
 refLines.push('')
 
-refLines.push('## Email providers')
+refLines.push('## 📧 Email providers')
 refLines.push('')
 for (const [key, def] of Object.entries(EMAIL_PROVIDERS)) {
   refLines.push(`### ${def.name}`)
@@ -160,7 +160,7 @@ for (const [key, def] of Object.entries(EMAIL_PROVIDERS)) {
   refLines.push('')
 }
 
-refLines.push('## DNS providers')
+refLines.push('## ⬛ DNS providers')
 refLines.push('')
 for (const [key, def] of Object.entries(DNS_PROVIDERS)) {
   refLines.push(`### ${def.name}`)
