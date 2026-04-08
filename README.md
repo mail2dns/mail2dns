@@ -67,11 +67,16 @@ Provider-specific options are prompted interactively if not provided via flag or
 
 ### Verify
 
-Check that expected DNS records are in place
+Check whether expected DNS records for an email provider are present at the indicated domain. This is useful for confirming whether DNS changes have propagated.
 
 ```bash
-mail2dns verify <domain> <email-provider> <dns-provider>
+mail2dns verify [options] <domain> <email-provider>
 ```
+
+#### Options
+| Flag | Description                                          | Default |
+|------|------------------------------------------------------|---------|
+| <nobr>`-o`, `--no-mx`</nobr> | Skip MX records (verify DNS for outbound email only) | `false` |
 
 ### List
 

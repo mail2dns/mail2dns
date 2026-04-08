@@ -1,12 +1,12 @@
 import { Command, Option } from 'commander'
 import { EMAIL_PROVIDERS, DNS_PROVIDERS } from './providers.js'
-import { resolveInputs, camelToKebab, log, formatDnsRecord } from './utils.js'
+import { camelToKebab, log } from './utils.js'
 import { COMMANDS } from './commands.js'
-import { validateDomain, validateEmailProvider, validateDnsProvider } from './validate.js'
-import { buildRecords, getEmailInputDefs, buildVerifyRecords, toFullName, checkDnsRecord } from './core.js'
-import type { VerifyRecord } from './types.js'
 import buildInfo from './buildInfo.js'
 import type { InputDef } from './types.js'
+import { setup } from './actions/setup.js'
+import { list } from './actions/list.js'
+import { verify } from './actions/verify.js'
 
 const program = new Command()
 
@@ -89,23 +89,9 @@ for (const o of COMMANDS.setup.options) {
 }
 setupCmd
   .addHelpText('after', buildEmailHelpText() + '\n' + buildDnsHelpText())
-  .action(async (domain: string, emailProvider: string, dnsProvider: string, opts: Record<string, string | undefined>) => {
-    validateDomain(domain)
-    validateEmailProvider(emailProvider)
-    validateDnsProvider(dnsProvider)
-
-    const yes = !!opts.yes
-    const dryRun = !!opts.dryRun
-    const emailInputDefs = getEmailInputDefs(emailProvider)
-    const emailInputs = await resolveInputs(emailInputDefs, opts, yes)
-    const { records, verificationPrefix } = await buildRecords({ domain, emailProvider, emailInputs, noMx: !!opts.noMx })
-
-    const dnsDef = DNS_PROVIDERS[dnsProvider]
-    const dnsInputs = await resolveInputs(dnsDef.inputs, opts, yes)
-
-    const confirm = yes ? async () => true : undefined
-    await dnsDef.setupRecords({ domain, records, verificationPrefix, confirm, dryRun }, dnsInputs)
-  })
+  .action((domain: string, emailProvider: string, dnsProvider: string, opts: Record<string, string | undefined>) =>
+    setup(domain, emailProvider, dnsProvider, opts)
+  )
 
 const listCmd = program
   .command('list')
@@ -116,19 +102,9 @@ const listCmd = program
 registerProviderOptions(listCmd)
 listCmd
   .addHelpText('after', buildDnsHelpText())
-  .action(async (domain: string, dnsProvider: string, opts: Record<string, string | undefined>) => {
-    validateDomain(domain)
-    validateDnsProvider(dnsProvider)
-    const dnsDef = DNS_PROVIDERS[dnsProvider]
-    const dnsInputs = await resolveInputs(dnsDef.inputs, opts, false)
-    const records = await dnsDef.listRecords(domain, dnsInputs)
-    if (records.length === 0) {
-      log.warn('No DNS records found.')
-      return
-    }
-    log.info(`\nDNS records for ${domain} (${dnsDef.name}):\n`)
-    for (const r of records) log.dim(formatDnsRecord(r))
-  })
+  .action((domain: string, dnsProvider: string, opts: Record<string, string | undefined>) =>
+    list(domain, dnsProvider, opts)
+  )
 
 const verifyCmd = program
   .command('verify')
@@ -144,48 +120,9 @@ for (const o of COMMANDS.verify.options) {
 }
 verifyCmd
   .addHelpText('after', buildEmailHelpText())
-  .action(async (domain: string, emailProvider: string, opts: Record<string, string | undefined>) => {
-    validateDomain(domain)
-    validateEmailProvider(emailProvider)
-
-    const emailDef = EMAIL_PROVIDERS[emailProvider]
-    let verifyRecords: VerifyRecord[]
-
-    if (emailDef.type === 'template') {
-      verifyRecords = buildVerifyRecords(emailDef.template, domain)
-      if (opts.noMx) verifyRecords = verifyRecords.filter(r => r.type !== 'MX')
-    } else {
-      const emailInputs = await resolveInputs(emailDef.inputs, opts, false)
-      const records = await emailDef.getRecords({ domain, ...emailInputs })
-      verifyRecords = records
-        .filter(r => !opts.noMx || r.type !== 'MX')
-        .map(r => ({ ...r, match: 'exact' as const }))
-    }
-
-    log.info(`\nVerifying DNS records for ${domain}:\n`)
-
-    let missing = 0
-    for (const vr of verifyRecords) {
-      const fullName = toFullName(vr.name, domain)
-      const found = await checkDnsRecord(vr, fullName)
-      const label = vr.match === 'exact' ? vr.content : vr.display
-      const line = `  [${vr.type.padEnd(5)}] ${vr.name} → ${label}`
-      if (found) {
-        log.success(`  ✓${line}`)
-      } else {
-        log.error(`  ✗${line}`)
-        missing++
-      }
-    }
-
-    log.info('')
-    if (missing === 0) {
-      log.success(`All ${verifyRecords.length} records present.`)
-    } else {
-      log.warn(`${verifyRecords.length - missing} of ${verifyRecords.length} records present. ${missing} missing.`)
-      process.exit(1)
-    }
-  })
+  .action((domain: string, emailProvider: string, opts: Record<string, string | undefined>) =>
+    verify(domain, emailProvider, opts)
+  )
 
 try {
   await program.parseAsync()

@@ -1,1 +1,1 @@
-export default { version: "1.0.0", date: new Date(1775691760959) }
+export default { version: "1.0.0", date: new Date(1775692783122) }
