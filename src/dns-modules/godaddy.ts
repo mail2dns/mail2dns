@@ -1,4 +1,5 @@
 import { confirm as utilsConfirm, log } from '../utils.js'
+import { isMailDnsType } from '../types.js'
 import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
 
 export const inputs: InputDef[] = [
@@ -42,8 +43,21 @@ async function gdFetch<T>(path: string, options: RequestInit, key: string, secre
   return res.json() as Promise<T>
 }
 
-async function listRecords(domain: string, key: string, secret: string): Promise<GdRecord[]> {
+async function fetchRecords(domain: string, key: string, secret: string): Promise<GdRecord[]> {
   return gdFetch<GdRecord[]>(`/v1/domains/${encodeURIComponent(domain)}/records`, {}, key, secret)
+}
+
+export async function listRecords(domain: string, { key, secret }: Record<string, string>): Promise<DnsRecord[]> {
+  const records = await fetchRecords(domain, key, secret)
+  return records
+    .filter(r => isMailDnsType(r.type))
+    .map(r => ({
+      type: r.type,
+      name: r.name,
+      content: r.data,
+      ...(r.priority !== undefined && { priority: r.priority }),
+      ...(r.ttl !== undefined && { ttl: r.ttl })
+    }))
 }
 
 async function deleteRecords(domain: string, type: string, name: string, key: string, secret: string): Promise<void> {
@@ -114,7 +128,7 @@ export async function setupRecords(
 ): Promise<void> {
   const doConfirm = confirmFn ?? utilsConfirm
 
-  const existing = await listRecords(domain, key, secret)
+  const existing = await fetchRecords(domain, key, secret)
   const conflictKeys = findConflicts(existing, records, verificationPrefix)
   const conflictRecords = existing.filter(e => conflictKeys.find(c => c.type === e.type && c.name === e.name))
 

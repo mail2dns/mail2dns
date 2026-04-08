@@ -1,4 +1,5 @@
 import { confirm as utilsConfirm, log } from '../utils.js'
+import { isMailDnsType } from '../types.js'
 import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
 
 export const inputs: InputDef[] = [
@@ -12,7 +13,7 @@ export const inputs: InputDef[] = [
 
 const BASE_URL = process.env.HETZNER_API_URL ?? 'https://api.hetzner.cloud/v1'
 
-interface HzRRSet {
+export interface HzRRSet {
   name: string
   type: string
   ttl: number | null
@@ -54,6 +55,33 @@ async function createRRSet(zone: string, name: string, type: string, records: { 
     method: 'POST',
     body: JSON.stringify({ name, type, records, ttl })
   }, token)
+}
+
+export function normalizeRecords(rrsets: HzRRSet[]): DnsRecord[] {
+  const result: DnsRecord[] = []
+  for (const rrset of rrsets) {
+    if (!isMailDnsType(rrset.type)) continue
+    const type = rrset.type
+    const ttl = rrset.ttl !== null ? { ttl: rrset.ttl } : {}
+    for (const r of rrset.records) {
+      if (type === 'MX') {
+        const spaceIdx = r.value.indexOf(' ')
+        const priority = parseInt(r.value.slice(0, spaceIdx), 10)
+        const content = r.value.slice(spaceIdx + 1).replace(/\.$/, '')
+        result.push({ type, name: rrset.name, content, priority, ...ttl })
+      } else if (type === 'TXT') {
+        const content = r.value.startsWith('"') && r.value.endsWith('"') ? r.value.slice(1, -1) : r.value
+        result.push({ type, name: rrset.name, content, ...ttl })
+      } else {
+        result.push({ type, name: rrset.name, content: r.value.replace(/\.$/, ''), ...ttl })
+      }
+    }
+  }
+  return result
+}
+
+export async function listRecords(domain: string, { token }: Record<string, string>): Promise<DnsRecord[]> {
+  return normalizeRecords(await listRRSets(domain, token))
 }
 
 function recordValue(record: DnsRecord): string {

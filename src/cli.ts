@@ -1,6 +1,6 @@
 import { Command, Option } from 'commander'
 import { EMAIL_PROVIDERS, DNS_PROVIDERS } from './providers.js'
-import { resolveInputs, camelToKebab, COMMANDS, log } from './utils.js'
+import { resolveInputs, camelToKebab, COMMANDS, log, formatDnsRecord } from './utils.js'
 import { validateDomain, validateEmailProvider, validateDnsProvider } from './validate.js'
 import { buildRecords, getEmailInputDefs } from './core.js'
 import buildInfo from './buildInfo.js'
@@ -113,13 +113,27 @@ program
     log.warn('preview not yet implemented')
   })
 
-program
+const listCmd = program
   .command('list')
   .description(COMMANDS.list.description)
   .argument('<domain>')
   .argument('<dns-provider>', `(${Object.keys(DNS_PROVIDERS).join(', ')})`)
-  .action(async (_domain: string, _dnsProvider: string) => {
-    log.warn('list not yet implemented')
+
+registerProviderOptions(listCmd)
+listCmd
+  .addHelpText('after', buildDnsHelpText())
+  .action(async (domain: string, dnsProvider: string, opts: Record<string, string | undefined>) => {
+    validateDomain(domain)
+    validateDnsProvider(dnsProvider)
+    const dnsDef = DNS_PROVIDERS[dnsProvider]
+    const dnsInputs = await resolveInputs(dnsDef.inputs, opts, false)
+    const records = await dnsDef.listRecords(domain, dnsInputs)
+    if (records.length === 0) {
+      log.warn('No DNS records found.')
+      return
+    }
+    log.info(`\nDNS records for ${domain} (${dnsDef.name}):\n`)
+    for (const r of records) log.dim(formatDnsRecord(r))
   })
 
 program

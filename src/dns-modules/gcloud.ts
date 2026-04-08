@@ -1,6 +1,7 @@
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { confirm as utilsConfirm, log } from '../utils.js'
+import { isMailDnsType } from '../types.js'
 import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
 
 const execFileAsync = promisify(execFile) as (file: string, args: string[]) => Promise<{ stdout: string; stderr: string }>
@@ -21,7 +22,7 @@ interface GcpZone {
   dnsName: string
 }
 
-interface GcpRecord {
+export interface GcpRecord {
   name: string
   type: string
   ttl: number
@@ -46,8 +47,41 @@ async function getManagedZone(domain: string, gcloudFn: GcloudFn): Promise<strin
   return zone.name
 }
 
-async function listRecords(zone: string, gcloudFn: GcloudFn): Promise<GcpRecord[]> {
+async function fetchRecords(zone: string, gcloudFn: GcloudFn): Promise<GcpRecord[]> {
   return await gcloudFn<GcpRecord[]>(['dns', 'record-sets', 'list', '--zone', zone]) ?? []
+}
+
+function makeGcloudCmd(project: string | undefined, gcloudFn: GcloudFn = gcloud): GcloudFn {
+  const projectArgs = project ? ['--project', project] : []
+  return (args) => gcloudFn([...args, ...projectArgs])
+}
+
+export function normalizeRecords(sets: GcpRecord[], domain: string): DnsRecord[] {
+  const result: DnsRecord[] = []
+  for (const set of sets) {
+    if (!isMailDnsType(set.type)) continue
+    const type = set.type
+    const name = normalizeName(set.name, domain)
+    for (const rrdata of set.rrdatas) {
+      if (type === 'MX') {
+        const spaceIdx = rrdata.indexOf(' ')
+        const priority = parseInt(rrdata.slice(0, spaceIdx), 10)
+        const content = rrdata.slice(spaceIdx + 1).replace(/\.$/, '')
+        result.push({ type, name, content, priority, ttl: set.ttl })
+      } else if (type === 'TXT') {
+        result.push({ type, name, content: unquoteTxt(rrdata), ttl: set.ttl })
+      } else {
+        result.push({ type, name, content: rrdata.replace(/\.$/, ''), ttl: set.ttl })
+      }
+    }
+  }
+  return result
+}
+
+export async function listRecords(domain: string, { project }: Record<string, string>): Promise<DnsRecord[]> {
+  const gcloudCmd = makeGcloudCmd(project)
+  const zoneName = await getManagedZone(domain, gcloudCmd)
+  return normalizeRecords(await fetchRecords(zoneName, gcloudCmd), domain)
 }
 
 async function upsertRecordSet(
@@ -114,14 +148,12 @@ export async function setupRecords(
   { project }: Record<string, string>
 ): Promise<void> {
   const confirmCmd = confirmFn ?? utilsConfirm
-  const projectArgs = project ? ['--project', project] : []
-  const gcloudBase = gcloudFn ?? gcloud
-  const gcloudCmd: GcloudFn = (args) => gcloudBase([...args, ...projectArgs])
+  const gcloudCmd = makeGcloudCmd(project, gcloudFn ?? gcloud)
 
   const zoneName = await getManagedZone(domain, gcloudCmd)
   log.success(`Managed zone found: ${zoneName}`)
 
-  const existing = await listRecords(zoneName, gcloudCmd)
+  const existing = await fetchRecords(zoneName, gcloudCmd)
 
   // Group incoming records by name+type
   const groups = new Map<string, DnsRecord[]>()

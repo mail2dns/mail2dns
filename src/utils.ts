@@ -1,5 +1,5 @@
 import readline from 'readline'
-import type { InputDef, OptionDef } from './types.js'
+import type { InputDef, OptionDef, DnsRecord } from './types.js'
 
 export const COMMANDS: Record<string, { description: string; options: OptionDef[] }> = {
   setup: {
@@ -50,6 +50,11 @@ export function ask(question: string): Promise<string> {
 export async function confirm(question: string): Promise<boolean> {
   const answer = await ask(question)
   return answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes'
+}
+
+export function formatDnsRecord(r: DnsRecord): string {
+  const priority = r.priority !== undefined ? ` (priority ${r.priority})` : ''
+  return `  [${r.type.padEnd(5)}] ${r.name} → ${r.content}${priority}`
 }
 
 export async function resolveInputs(inputs: InputDef[], argv: Record<string, string | undefined>, nonInteractive = false): Promise<Record<string, string>> {

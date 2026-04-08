@@ -32,11 +32,11 @@ interface AzZone {
   resourceGroup: string
 }
 
-interface AzTxtRecord { value: string[] }
-interface AzMxRecord  { preference: number; exchange: string }
-interface AzCnameRecord { cname: string }
+export interface AzTxtRecord { value: string[] }
+export interface AzMxRecord  { preference: number; exchange: string }
+export interface AzCnameRecord { cname: string }
 
-interface AzRecordSet {
+export interface AzRecordSet {
   name: string
   type: string   // e.g. "Microsoft.Network/dnszones/TXT"
   ttl: number
@@ -52,12 +52,42 @@ async function getZone(domain: string, azFn: AzFn): Promise<AzZone> {
   return zone
 }
 
-async function listRecords(rg: string, zone: string, azFn: AzFn): Promise<AzRecordSet[]> {
+async function fetchRecords(rg: string, zone: string, azFn: AzFn): Promise<AzRecordSet[]> {
   return await azFn<AzRecordSet[]>([
     'network', 'dns', 'record-set', 'list',
     '--resource-group', rg,
     '--zone-name', zone
   ]) ?? []
+}
+
+function makeAzCmd(subscription: string | undefined, azFn: AzFn = az): AzFn {
+  const subscriptionArgs = subscription ? ['--subscription', subscription] : []
+  return (args) => azFn([...subscriptionArgs, ...args])
+}
+
+export function normalizeRecords(sets: AzRecordSet[]): DnsRecord[] {
+  const result: DnsRecord[] = []
+  for (const set of sets) {
+    const type = azRecordType(set)
+    if (type === 'TXT') {
+      for (const r of set.txtRecords ?? []) {
+        result.push({ type: 'TXT', name: set.name, content: txtValue(r), ttl: set.ttl })
+      }
+    } else if (type === 'MX') {
+      for (const r of set.mxRecords ?? []) {
+        result.push({ type: 'MX', name: set.name, content: r.exchange.replace(/\.$/, ''), priority: r.preference, ttl: set.ttl })
+      }
+    } else if (type === 'CNAME' && set.cnameRecord) {
+      result.push({ type: 'CNAME', name: set.name, content: cnameValue(set.cnameRecord).replace(/\.$/, ''), ttl: set.ttl })
+    }
+  }
+  return result
+}
+
+export async function listRecords(domain: string, { subscription }: Record<string, string>): Promise<DnsRecord[]> {
+  const azCmd = makeAzCmd(subscription)
+  const zone = await getZone(domain, azCmd)
+  return normalizeRecords(await fetchRecords(zone.resourceGroup, domain, azCmd))
 }
 
 function azRecordType(set: AzRecordSet): string {
@@ -141,15 +171,13 @@ export async function setupRecords(
   { subscription }: Record<string, string>
 ): Promise<void> {
   const confirmCmd = confirmFn ?? utilsConfirm
-  const subscriptionArgs = subscription ? ['--subscription', subscription] : []
-  const azBase = azFn ?? az
-  const azCmd: AzFn = (args) => azBase([...subscriptionArgs, ...args])
+  const azCmd = makeAzCmd(subscription, azFn ?? az)
 
   const zone = await getZone(domain, azCmd)
   const { resourceGroup: rg } = zone
   log.success(`DNS zone found: ${domain} (resource group: ${rg})`)
 
-  const existing = await listRecords(rg, domain, azCmd)
+  const existing = await fetchRecords(rg, domain, azCmd)
 
   // Group incoming records by name+type
   const groups = new Map<string, DnsRecord[]>()

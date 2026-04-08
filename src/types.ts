@@ -1,3 +1,7 @@
+export function isMailDnsType(type: string): type is DnsRecord['type'] {
+  return ['MX', 'TXT', 'CNAME', 'SRV'].includes(type)
+}
+
 export interface DnsRecord {
   type: 'MX' | 'TXT' | 'CNAME' | 'SRV'
   name: string
@@ -32,6 +36,7 @@ export interface SetupRecordsOptions {
 export interface DnsProviderDef {
   name: string
   setupRecords: (opts: SetupRecordsOptions, inputs: Record<string, string>) => Promise<void>
+  listRecords: (domain: string, inputs: Record<string, string>) => Promise<DnsRecord[]>
   inputs: InputDef[]
 }
 

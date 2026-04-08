@@ -1,4 +1,5 @@
 import { confirm as utilsConfirm, log } from '../utils.js'
+import { isMailDnsType } from '../types.js'
 import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
 
 export const inputs: InputDef[] = [
@@ -44,7 +45,7 @@ async function spFetch<T>(path: string, options: RequestInit, apiKey: string, ap
   return res.json() as Promise<T>
 }
 
-async function listRecords(domain: string, apiKey: string, apiSecret: string): Promise<SpRecord[]> {
+async function fetchRecords(domain: string, apiKey: string, apiSecret: string): Promise<SpRecord[]> {
   const data = await spFetch<{ records: SpRecord[] }>(
     `/domains/${encodeURIComponent(domain)}/dns`,
     {},
@@ -52,6 +53,19 @@ async function listRecords(domain: string, apiKey: string, apiSecret: string): P
     apiSecret
   )
   return data.records ?? []
+}
+
+export async function listRecords(domain: string, { 'api-key': apiKey, 'api-secret': apiSecret }: Record<string, string>): Promise<DnsRecord[]> {
+  const records = await fetchRecords(domain, apiKey, apiSecret)
+  return records
+    .filter(r => isMailDnsType(r.type))
+    .map(r => ({
+      type: r.type,
+      name: r.name,
+      content: r.value,
+      ...(r.priority !== undefined && { priority: r.priority }),
+      ...(r.ttl !== undefined && { ttl: r.ttl })
+    }))
 }
 
 async function deleteRecords(domain: string, records: SpRecord[], apiKey: string, apiSecret: string): Promise<void> {
@@ -126,7 +140,7 @@ export async function setupRecords(
 ): Promise<void> {
   const confirm = confirmFn ?? utilsConfirm
 
-  const existing = await listRecords(domain, apiKey, apiSecret)
+  const existing = await fetchRecords(domain, apiKey, apiSecret)
   log.success(`Zone found: ${domain}`)
 
   const conflicts = findConflicts(existing, records, verificationPrefix)

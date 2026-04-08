@@ -1,4 +1,5 @@
 import { confirm as utilsConfirm, log } from '../utils.js'
+import { isMailDnsType } from '../types.js'
 import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
 
 export const inputs: InputDef[] = [
@@ -42,9 +43,22 @@ async function checkDomainExists(domain: string, token: string): Promise<void> {
   await doFetch<unknown>(`/domains/${domain}`, {}, token)
 }
 
-async function listRecords(domain: string, token: string): Promise<DoRecord[]> {
+async function fetchRecords(domain: string, token: string): Promise<DoRecord[]> {
   const data = await doFetch<{ domain_records: DoRecord[] }>(`/domains/${domain}/records?per_page=200`, {}, token)
   return data.domain_records
+}
+
+export async function listRecords(domain: string, { token }: Record<string, string>): Promise<DnsRecord[]> {
+  const records = await fetchRecords(domain, token)
+  return records
+    .filter(r => isMailDnsType(r.type))
+    .map(r => ({
+      type: r.type,
+      name: r.name,
+      content: r.data,
+      ...(r.priority !== undefined && { priority: r.priority }),
+      ...(r.ttl !== undefined && { ttl: r.ttl })
+    }))
 }
 
 async function deleteRecord(domain: string, id: number, token: string): Promise<void> {
@@ -110,7 +124,7 @@ export async function setupRecords(
   await checkDomainExists(domain, token)
   log.success(`Domain found: ${domain}`)
 
-  const existing = await listRecords(domain, token)
+  const existing = await fetchRecords(domain, token)
   const conflicts = findConflicts(existing, records, verificationPrefix)
 
   if (conflicts.length > 0) {

@@ -1,4 +1,5 @@
 import { confirm as utilsConfirm, log } from '../utils.js'
+import { isMailDnsType } from '../types.js'
 import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
 
 export const inputs: InputDef[] = [
@@ -47,9 +48,22 @@ async function vrFetch<T>(path: string, options: RequestInit, token: string, tea
   return res.json() as Promise<T>
 }
 
-async function listRecords(domain: string, token: string, teamId?: string): Promise<VrRecord[]> {
+async function fetchRecords(domain: string, token: string, teamId?: string): Promise<VrRecord[]> {
   const data = await vrFetch<{ records: VrRecord[] }>(`/v4/domains/${domain}/records`, {}, token, teamId)
   return data.records
+}
+
+export async function listRecords(domain: string, { token, 'team-id': teamId }: Record<string, string>): Promise<DnsRecord[]> {
+  const records = await fetchRecords(domain, token, teamId)
+  return records
+    .filter(r => isMailDnsType(r.type))
+    .map(r => ({
+      type: r.type,
+      name: normalizeName(r.name),
+      content: r.value,
+      ...(r.mxPriority !== undefined && { priority: r.mxPriority }),
+      ...(r.ttl !== undefined && { ttl: r.ttl })
+    }))
 }
 
 async function deleteRecord(domain: string, recordId: string, token: string, teamId?: string): Promise<void> {
@@ -122,7 +136,7 @@ export async function setupRecords(
 ): Promise<void> {
   const confirm = confirmFn ?? utilsConfirm
 
-  const existing = await listRecords(domain, token, teamId)
+  const existing = await fetchRecords(domain, token, teamId)
   log.success(`Zone found: ${domain}`)
 
   const conflicts = findConflicts(existing, records, verificationPrefix)

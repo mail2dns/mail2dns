@@ -1,6 +1,7 @@
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { confirm, log } from '../utils.js'
+import { isMailDnsType } from '../types.js'
 import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
 
 const execFileAsync = promisify(execFile) as (file: string, args: string[]) => Promise<{ stdout: string; stderr: string }>
@@ -23,7 +24,7 @@ async function aws<T>(args: string[]): Promise<T> {
   return JSON.parse(stdout) as T
 }
 
-interface R53RecordSet {
+export interface R53RecordSet {
   Name: string
   Type: string
   TTL?: number
@@ -46,11 +47,45 @@ async function getHostedZoneId(domain: string, awsFn: AwsFn): Promise<string> {
   return zone.Id.split('/').pop()!
 }
 
-async function listRecords(zoneId: string, awsFn: AwsFn): Promise<R53RecordSet[]> {
+async function fetchRecords(zoneId: string, awsFn: AwsFn): Promise<R53RecordSet[]> {
   const result = await awsFn<{ ResourceRecordSets: R53RecordSet[] }>([
     'route53', 'list-resource-record-sets', '--hosted-zone-id', zoneId
   ])
   return result.ResourceRecordSets
+}
+
+function makeAwsCmd(awsProfile: string | undefined, awsFn: AwsFn = aws): AwsFn {
+  const profileArgs = awsProfile ? ['--profile', awsProfile] : []
+  return (args) => awsFn([...profileArgs, ...args])
+}
+
+export function normalizeRecords(sets: R53RecordSet[], domain: string): DnsRecord[] {
+  const result: DnsRecord[] = []
+  for (const set of sets) {
+    if (!isMailDnsType(set.Type)) continue
+    const type = set.Type
+    const name = normalizeName(set.Name, domain)
+    const ttl = set.TTL !== undefined ? { ttl: set.TTL } : {}
+    for (const rr of set.ResourceRecords ?? []) {
+      if (type === 'MX') {
+        const spaceIdx = rr.Value.indexOf(' ')
+        const priority = parseInt(rr.Value.slice(0, spaceIdx), 10)
+        const content = rr.Value.slice(spaceIdx + 1).replace(/\.$/, '')
+        result.push({ type, name, content, priority, ...ttl })
+      } else if (type === 'TXT') {
+        result.push({ type, name, content: unquoteTxt(rr.Value), ...ttl })
+      } else {
+        result.push({ type, name, content: rr.Value.replace(/\.$/, ''), ...ttl })
+      }
+    }
+  }
+  return result
+}
+
+export async function listRecords(domain: string, { awsProfile }: Record<string, string>): Promise<DnsRecord[]> {
+  const awsCmd = makeAwsCmd(awsProfile)
+  const zoneId = await getHostedZoneId(domain, awsCmd)
+  return normalizeRecords(await fetchRecords(zoneId, awsCmd), domain)
 }
 
 async function applyChanges(zoneId: string, changes: R53Change[], awsFn: AwsFn): Promise<void> {
@@ -108,14 +143,12 @@ export async function setupRecords(
   { domain, records, verificationPrefix, confirm: confirmFn, aws: awsFn }: Opts,
   { awsProfile }: Record<string, string>
 ): Promise<void> {
-  const profileArgs = awsProfile ? ['--profile', awsProfile] : []
-  const awsBase = awsFn ?? aws
-  const awsCmd: AwsFn = (args) => awsBase([...profileArgs, ...args])
+  const awsCmd = makeAwsCmd(awsProfile, awsFn ?? aws)
   const confirmCmd = confirmFn ?? confirm
   const zoneId = await getHostedZoneId(domain, awsCmd)
   log.success(`Hosted zone found: ${domain}`)
 
-  const existing = await listRecords(zoneId, awsCmd)
+  const existing = await fetchRecords(zoneId, awsCmd)
 
   // Group incoming records by name+type
   const groups = new Map<string, DnsRecord[]>()

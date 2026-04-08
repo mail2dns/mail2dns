@@ -1,4 +1,5 @@
 import { confirm as utilsConfirm, log } from '../utils.js'
+import { isMailDnsType } from '../types.js'
 import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
 
 export const inputs: InputDef[] = [
@@ -47,8 +48,22 @@ async function getZoneId(domain: string, token: string): Promise<string> {
   return zone.id
 }
 
-async function listRecords(zoneId: string, token: string): Promise<NlRecord[]> {
+async function fetchRecords(zoneId: string, token: string): Promise<NlRecord[]> {
   return nlFetch<NlRecord[]>(`/dns_zones/${zoneId}/dns_records`, {}, token)
+}
+
+export async function listRecords(domain: string, { token }: Record<string, string>): Promise<DnsRecord[]> {
+  const zoneId = await getZoneId(domain, token)
+  const records = await fetchRecords(zoneId, token)
+  return records
+    .filter(r => isMailDnsType(r.type))
+    .map(r => ({
+      type: r.type,
+      name: normalizeName(r.hostname, domain),
+      content: r.value,
+      ...(r.priority !== undefined && { priority: r.priority }),
+      ...(r.ttl !== undefined && { ttl: r.ttl })
+    }))
 }
 
 async function deleteRecord(zoneId: string, recordId: string, token: string): Promise<void> {
@@ -126,7 +141,7 @@ export async function setupRecords(
   const zoneId = await getZoneId(domain, token)
   log.success(`Zone found: ${domain}`)
 
-  const existing = await listRecords(zoneId, token)
+  const existing = await fetchRecords(zoneId, token)
   const conflicts = findConflicts(existing, records, domain, verificationPrefix)
 
   if (conflicts.length > 0) {

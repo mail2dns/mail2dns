@@ -1,4 +1,5 @@
 import { confirm, log } from '../utils.js'
+import { isMailDnsType } from '../types.js'
 import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
 
 
@@ -118,6 +119,19 @@ function formatRecord(r: { type: string; name: string; content: string; priority
   const name = normalizeName(r.name, domain)
   const priority = r.priority !== undefined ? ` (priority ${r.priority})` : ''
   return `  [${r.type.padEnd(5)}] ${name} → ${r.content}${priority}`
+}
+
+export async function listRecords(domain: string, { token }: Record<string, string>): Promise<DnsRecord[]> {
+  const zoneId = await getZoneId(domain, token)
+  const records = await listDnsRecords(zoneId, token)
+  return records
+    .filter(r => isMailDnsType(r.type))
+    .map(r => ({
+      type: r.type,
+      name: normalizeName(r.name, domain),
+      content: r.content,
+      ...(r.priority !== undefined && { priority: r.priority })
+    }))
 }
 
 type Opts = SetupRecordsOptions & { confirm?: (q: string) => Promise<boolean> }
