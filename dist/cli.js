@@ -9,8 +9,10 @@ var COMMANDS = {
   setup: {
     description: "Create DNS records for an email provider",
     options: [
-      { flag: "noMx", description: "skip MX records (for outbound-only use)", default: false },
-      { flag: "yes", short: "y", description: "skip confirmation prompt (error if any required inputs are missing)", default: false }
+      { flag: "noMx", short: "o", description: "Skip MX records (set up DNS for outbound email only)", default: false },
+      { flag: "yes", short: "y", description: "Skip confirmation prompts (the command will error if any required inputs are missing)", default: false },
+      { flag: "allowInsecureFlags", description: "Allow secrets to be passed via command-line flags (not recommended)", default: false },
+      { flag: "dryRun", short: "d", description: "show records that would be created without applying them", default: false }
     ]
   },
   verify: { description: "Check that expected DNS records are in place", options: [] },
@@ -46,6 +48,10 @@ async function confirm(question) {
   const answer = await ask(question);
   return answer.toLowerCase() === "y" || answer.toLowerCase() === "yes";
 }
+function formatDnsRecord(r) {
+  const priority = r.priority !== void 0 ? ` (priority ${r.priority})` : "";
+  return `  [${r.type.padEnd(5)}] ${r.name} \u2192 ${r.content}${priority}`;
+}
 async function resolveInputs(inputs12, argv, nonInteractive = false) {
   const result = {};
   for (const input of inputs12) {
@@ -63,13 +69,10 @@ ${input.instructions}`);
   }
   return result;
 }
-function validateProviders(emailProvider, dnsProvider) {
-  if (!EMAIL_PROVIDERS[emailProvider])
-    throw new Error(`Unknown email provider: ${emailProvider}
-Supported: ${Object.keys(EMAIL_PROVIDERS).join(", ")}`);
-  if (!DNS_PROVIDERS[dnsProvider])
-    throw new Error(`Unknown DNS provider: ${dnsProvider}
-Supported: ${Object.keys(DNS_PROVIDERS).join(", ")}`);
+
+// src/types.ts
+function isMailDnsType(type) {
+  return ["MX", "TXT", "CNAME", "SRV"].includes(type);
 }
 
 // src/dns-modules/cloudflare.ts
@@ -160,6 +163,16 @@ function formatRecord(r, domain) {
   const priority = r.priority !== void 0 ? ` (priority ${r.priority})` : "";
   return `  [${r.type.padEnd(5)}] ${name} \u2192 ${r.content}${priority}`;
 }
+async function listRecords(domain, { token }) {
+  const zoneId = await getZoneId(domain, token);
+  const records = await listDnsRecords(zoneId, token);
+  return records.filter((r) => isMailDnsType(r.type)).map((r) => ({
+    type: r.type,
+    name: normalizeName(r.name, domain),
+    content: r.content,
+    ...r.priority !== void 0 && { priority: r.priority }
+  }));
+}
 async function setupRecords({ domain, records, verificationPrefix, confirm: confirmFn }, { token }) {
   const confirmCmd = confirmFn ?? confirm;
   const zoneId = await getZoneId(domain, token);
@@ -240,8 +253,18 @@ async function gdFetch(path, options, key, secret) {
   if (res.status === 204) return void 0;
   return res.json();
 }
-async function listRecords(domain, key, secret) {
+async function fetchRecords(domain, key, secret) {
   return gdFetch(`/v1/domains/${encodeURIComponent(domain)}/records`, {}, key, secret);
+}
+async function listRecords2(domain, { key, secret }) {
+  const records = await fetchRecords(domain, key, secret);
+  return records.filter((r) => isMailDnsType(r.type)).map((r) => ({
+    type: r.type,
+    name: r.name,
+    content: r.data,
+    ...r.priority !== void 0 && { priority: r.priority },
+    ...r.ttl !== void 0 && { ttl: r.ttl }
+  }));
 }
 async function deleteRecords(domain, type, name, key, secret) {
   await gdFetch(
@@ -296,7 +319,7 @@ function formatRecord2(r) {
 }
 async function setupRecords2({ domain, records, verificationPrefix, confirm: confirmFn }, { key, secret }) {
   const doConfirm = confirmFn ?? confirm;
-  const existing = await listRecords(domain, key, secret);
+  const existing = await fetchRecords(domain, key, secret);
   const conflictKeys = findConflicts2(existing, records, verificationPrefix);
   const conflictRecords = existing.filter((e) => conflictKeys.find((c2) => c2.type === e.type && c2.name === e.name));
   if (conflictRecords.length > 0) {
@@ -371,9 +394,19 @@ async function doFetch(path, options, token) {
 async function checkDomainExists(domain, token) {
   await doFetch(`/domains/${domain}`, {}, token);
 }
-async function listRecords2(domain, token) {
+async function fetchRecords2(domain, token) {
   const data = await doFetch(`/domains/${domain}/records?per_page=200`, {}, token);
   return data.domain_records;
+}
+async function listRecords3(domain, { token }) {
+  const records = await fetchRecords2(domain, token);
+  return records.filter((r) => isMailDnsType(r.type)).map((r) => ({
+    type: r.type,
+    name: r.name,
+    content: r.data,
+    ...r.priority !== void 0 && { priority: r.priority },
+    ...r.ttl !== void 0 && { ttl: r.ttl }
+  }));
 }
 async function deleteRecord2(domain, id, token) {
   await doFetch(`/domains/${domain}/records/${id}`, { method: "DELETE" }, token);
@@ -421,7 +454,7 @@ async function setupRecords3({ domain, records, verificationPrefix, confirm: con
   const confirm2 = confirmFn ?? confirm;
   await checkDomainExists(domain, token);
   log.success(`Domain found: ${domain}`);
-  const existing = await listRecords2(domain, token);
+  const existing = await fetchRecords2(domain, token);
   const conflicts = findConflicts3(existing, records, verificationPrefix);
   if (conflicts.length > 0) {
     log.warn("\nThe following existing records will be removed:");
@@ -469,7 +502,7 @@ var execFileAsync = promisify(execFile);
 var inputs4 = [
   {
     flag: "project",
-    name: "Google Cloud project ID",
+    name: "Google Cloud project ID to use",
     env: "CLOUDSDK_CORE_PROJECT",
     example: "my-project-123",
     optional: true,
@@ -490,8 +523,38 @@ async function getManagedZone(domain, gcloudFn) {
   if (!zone) throw new Error(`Managed zone not found for domain: ${domain}`);
   return zone.name;
 }
-async function listRecords3(zone, gcloudFn) {
+async function fetchRecords3(zone, gcloudFn) {
   return await gcloudFn(["dns", "record-sets", "list", "--zone", zone]) ?? [];
+}
+function makeGcloudCmd(project, gcloudFn = gcloud) {
+  const projectArgs = project ? ["--project", project] : [];
+  return (args) => gcloudFn([...args, ...projectArgs]);
+}
+function normalizeRecords(sets, domain) {
+  const result = [];
+  for (const set of sets) {
+    if (!isMailDnsType(set.type)) continue;
+    const type = set.type;
+    const name = normalizeName2(set.name, domain);
+    for (const rrdata of set.rrdatas) {
+      if (type === "MX") {
+        const spaceIdx = rrdata.indexOf(" ");
+        const priority = parseInt(rrdata.slice(0, spaceIdx), 10);
+        const content = rrdata.slice(spaceIdx + 1).replace(/\.$/, "");
+        result.push({ type, name, content, priority, ttl: set.ttl });
+      } else if (type === "TXT") {
+        result.push({ type, name, content: unquoteTxt(rrdata), ttl: set.ttl });
+      } else {
+        result.push({ type, name, content: rrdata.replace(/\.$/, ""), ttl: set.ttl });
+      }
+    }
+  }
+  return result;
+}
+async function listRecords4(domain, { project }) {
+  const gcloudCmd = makeGcloudCmd(project);
+  const zoneName = await getManagedZone(domain, gcloudCmd);
+  return normalizeRecords(await fetchRecords3(zoneName, gcloudCmd), domain);
 }
 async function upsertRecordSet(fqdn, type, rrdatas, zone, hasExisting, gcloudFn) {
   const cmd = hasExisting ? "update" : "create";
@@ -547,12 +610,10 @@ function formatRecord4(name, type, value) {
 }
 async function setupRecords4({ domain, records, verificationPrefix, confirm: confirmFn, gcloud: gcloudFn }, { project }) {
   const confirmCmd = confirmFn ?? confirm;
-  const projectArgs = project ? ["--project", project] : [];
-  const gcloudBase = gcloudFn ?? gcloud;
-  const gcloudCmd = (args) => gcloudBase([...args, ...projectArgs]);
+  const gcloudCmd = makeGcloudCmd(project, gcloudFn ?? gcloud);
   const zoneName = await getManagedZone(domain, gcloudCmd);
   log.success(`Managed zone found: ${zoneName}`);
-  const existing = await listRecords3(zoneName, gcloudCmd);
+  const existing = await fetchRecords3(zoneName, gcloudCmd);
   const groups = /* @__PURE__ */ new Map();
   for (const record of records) {
     const key = `${record.name}|${record.type}`;
@@ -649,8 +710,19 @@ async function getZoneId2(domain, token) {
   }
   return zone.id;
 }
-async function listRecords4(zoneId, token) {
+async function fetchRecords4(zoneId, token) {
   return nlFetch(`/dns_zones/${zoneId}/dns_records`, {}, token);
+}
+async function listRecords5(domain, { token }) {
+  const zoneId = await getZoneId2(domain, token);
+  const records = await fetchRecords4(zoneId, token);
+  return records.filter((r) => isMailDnsType(r.type)).map((r) => ({
+    type: r.type,
+    name: normalizeName3(r.hostname, domain),
+    content: r.value,
+    ...r.priority !== void 0 && { priority: r.priority },
+    ...r.ttl !== void 0 && { ttl: r.ttl }
+  }));
 }
 async function deleteRecord3(zoneId, recordId, token) {
   await nlFetch(`/dns_zones/${zoneId}/dns_records/${recordId}`, { method: "DELETE" }, token);
@@ -709,7 +781,7 @@ async function setupRecords5({ domain, records, verificationPrefix, confirm: con
   const confirm2 = confirmFn ?? confirm;
   const zoneId = await getZoneId2(domain, token);
   log.success(`Zone found: ${domain}`);
-  const existing = await listRecords4(zoneId, token);
+  const existing = await fetchRecords4(zoneId, token);
   const conflicts = findConflicts4(existing, records, domain, verificationPrefix);
   if (conflicts.length > 0) {
     log.warn("\nThe following existing records will be removed:");
@@ -761,7 +833,7 @@ var execFileAsync2 = promisify2(execFile2);
 var inputs6 = [
   {
     flag: "awsProfile",
-    name: "AWS profile",
+    name: "AWS profile to use",
     env: "AWS_PROFILE",
     example: "my-profile",
     optional: true
@@ -787,7 +859,7 @@ async function getHostedZoneId(domain, awsFn) {
   if (!zone) throw new Error(`Hosted zone not found for domain: ${domain}`);
   return zone.Id.split("/").pop();
 }
-async function listRecords5(zoneId, awsFn) {
+async function fetchRecords5(zoneId, awsFn) {
   const result = await awsFn([
     "route53",
     "list-resource-record-sets",
@@ -795,6 +867,37 @@ async function listRecords5(zoneId, awsFn) {
     zoneId
   ]);
   return result.ResourceRecordSets;
+}
+function makeAwsCmd(awsProfile, awsFn = aws) {
+  const profileArgs = awsProfile ? ["--profile", awsProfile] : [];
+  return (args) => awsFn([...profileArgs, ...args]);
+}
+function normalizeRecords2(sets, domain) {
+  const result = [];
+  for (const set of sets) {
+    if (!isMailDnsType(set.Type)) continue;
+    const type = set.Type;
+    const name = normalizeName4(set.Name, domain);
+    const ttl = set.TTL !== void 0 ? { ttl: set.TTL } : {};
+    for (const rr of set.ResourceRecords ?? []) {
+      if (type === "MX") {
+        const spaceIdx = rr.Value.indexOf(" ");
+        const priority = parseInt(rr.Value.slice(0, spaceIdx), 10);
+        const content = rr.Value.slice(spaceIdx + 1).replace(/\.$/, "");
+        result.push({ type, name, content, priority, ...ttl });
+      } else if (type === "TXT") {
+        result.push({ type, name, content: unquoteTxt2(rr.Value), ...ttl });
+      } else {
+        result.push({ type, name, content: rr.Value.replace(/\.$/, ""), ...ttl });
+      }
+    }
+  }
+  return result;
+}
+async function listRecords6(domain, { awsProfile }) {
+  const awsCmd = makeAwsCmd(awsProfile);
+  const zoneId = await getHostedZoneId(domain, awsCmd);
+  return normalizeRecords2(await fetchRecords5(zoneId, awsCmd), domain);
 }
 async function applyChanges(zoneId, changes, awsFn) {
   await awsFn([
@@ -808,6 +911,11 @@ async function applyChanges(zoneId, changes, awsFn) {
 }
 function toFqdn2(name, domain) {
   return name === "@" ? `${domain}.` : `${name}.${domain}.`;
+}
+function normalizeName4(fqdn, domain) {
+  if (fqdn === `${domain}.`) return "@";
+  if (fqdn.endsWith(`.${domain}.`)) return fqdn.slice(0, -(domain.length + 2));
+  return fqdn;
 }
 function unquoteTxt2(value) {
   return value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1) : value;
@@ -834,13 +942,11 @@ function formatRecord6(name, type, value) {
   return `  [${type.padEnd(5)}] ${name} \u2192 ${display}`;
 }
 async function setupRecords6({ domain, records, verificationPrefix, confirm: confirmFn, aws: awsFn }, { awsProfile }) {
-  const profileArgs = awsProfile ? ["--profile", awsProfile] : [];
-  const awsBase = awsFn ?? aws;
-  const awsCmd = (args) => awsBase([...profileArgs, ...args]);
+  const awsCmd = makeAwsCmd(awsProfile, awsFn ?? aws);
   const confirmCmd = confirmFn ?? confirm;
   const zoneId = await getHostedZoneId(domain, awsCmd);
   log.success(`Hosted zone found: ${domain}`);
-  const existing = await listRecords5(zoneId, awsCmd);
+  const existing = await fetchRecords5(zoneId, awsCmd);
   const groups = /* @__PURE__ */ new Map();
   for (const record of records) {
     const key = `${record.name}|${record.type}`;
@@ -944,9 +1050,19 @@ async function vrFetch(path, options, token, teamId) {
   if (res.status === 204) return void 0;
   return res.json();
 }
-async function listRecords6(domain, token, teamId) {
+async function fetchRecords6(domain, token, teamId) {
   const data = await vrFetch(`/v4/domains/${domain}/records`, {}, token, teamId);
   return data.records;
+}
+async function listRecords7(domain, { token, "team-id": teamId }) {
+  const records = await fetchRecords6(domain, token, teamId);
+  return records.filter((r) => isMailDnsType(r.type)).map((r) => ({
+    type: r.type,
+    name: normalizeName5(r.name),
+    content: r.value,
+    ...r.mxPriority !== void 0 && { priority: r.mxPriority },
+    ...r.ttl !== void 0 && { ttl: r.ttl }
+  }));
 }
 async function deleteRecord4(domain, recordId, token, teamId) {
   await vrFetch(`/v2/domains/${domain}/records/${recordId}`, { method: "DELETE" }, token, teamId);
@@ -966,14 +1082,14 @@ async function createRecord4(domain, record, token, teamId) {
     body: JSON.stringify(body)
   }, token, teamId);
 }
-function normalizeName4(name) {
+function normalizeName5(name) {
   return name === "" ? "@" : name;
 }
 function findConflicts5(existing, records, verificationPrefix) {
   const conflicts = [];
   for (const record of records) {
     const matches = existing.filter((e) => {
-      const eName = normalizeName4(e.name);
+      const eName = normalizeName5(e.name);
       if (record.type === "MX" && e.type === "MX") return true;
       if (record.type === "TXT" && e.type === "TXT") {
         if (record.content.includes("v=spf1") && e.value.includes("v=spf1")) return true;
@@ -994,13 +1110,13 @@ function findConflicts5(existing, records, verificationPrefix) {
   return conflicts;
 }
 function formatRecord7(r) {
-  const name = normalizeName4(r.name);
+  const name = normalizeName5(r.name);
   const priority = r.mxPriority !== void 0 ? ` (priority ${r.mxPriority})` : "";
   return `  [${r.type.padEnd(5)}] ${name} \u2192 ${r.value}${priority}`;
 }
 async function setupRecords7({ domain, records, verificationPrefix, confirm: confirmFn }, { token, "team-id": teamId }) {
   const confirm2 = confirmFn ?? confirm;
-  const existing = await listRecords6(domain, token, teamId);
+  const existing = await fetchRecords6(domain, token, teamId);
   log.success(`Zone found: ${domain}`);
   const conflicts = findConflicts5(existing, records, verificationPrefix);
   if (conflicts.length > 0) {
@@ -1088,6 +1204,31 @@ async function createRRSet(zone, name, type, records, ttl, token) {
     method: "POST",
     body: JSON.stringify({ name, type, records, ttl })
   }, token);
+}
+function normalizeRecords3(rrsets) {
+  const result = [];
+  for (const rrset of rrsets) {
+    if (!isMailDnsType(rrset.type)) continue;
+    const type = rrset.type;
+    const ttl = rrset.ttl !== null ? { ttl: rrset.ttl } : {};
+    for (const r of rrset.records) {
+      if (type === "MX") {
+        const spaceIdx = r.value.indexOf(" ");
+        const priority = parseInt(r.value.slice(0, spaceIdx), 10);
+        const content = r.value.slice(spaceIdx + 1).replace(/\.$/, "");
+        result.push({ type, name: rrset.name, content, priority, ...ttl });
+      } else if (type === "TXT") {
+        const content = r.value.startsWith('"') && r.value.endsWith('"') ? r.value.slice(1, -1) : r.value;
+        result.push({ type, name: rrset.name, content, ...ttl });
+      } else {
+        result.push({ type, name: rrset.name, content: r.value.replace(/\.$/, ""), ...ttl });
+      }
+    }
+  }
+  return result;
+}
+async function listRecords8(domain, { token }) {
+  return normalizeRecords3(await listRRSets(domain, token));
 }
 function recordValue(record) {
   return record.type === "MX" ? `${record.priority ?? 10} ${record.content}` : record.content;
@@ -1216,7 +1357,7 @@ async function spFetch(path, options, apiKey, apiSecret) {
   if (res.status === 204) return void 0;
   return res.json();
 }
-async function listRecords7(domain, apiKey, apiSecret) {
+async function fetchRecords7(domain, apiKey, apiSecret) {
   const data = await spFetch(
     `/domains/${encodeURIComponent(domain)}/dns`,
     {},
@@ -1224,6 +1365,16 @@ async function listRecords7(domain, apiKey, apiSecret) {
     apiSecret
   );
   return data.records ?? [];
+}
+async function listRecords9(domain, { "api-key": apiKey, "api-secret": apiSecret }) {
+  const records = await fetchRecords7(domain, apiKey, apiSecret);
+  return records.filter((r) => isMailDnsType(r.type)).map((r) => ({
+    type: r.type,
+    name: r.name,
+    content: r.value,
+    ...r.priority !== void 0 && { priority: r.priority },
+    ...r.ttl !== void 0 && { ttl: r.ttl }
+  }));
 }
 async function deleteRecords2(domain, records, apiKey, apiSecret) {
   await spFetch(
@@ -1280,7 +1431,7 @@ function formatRecord9(r) {
 }
 async function setupRecords9({ domain, records, verificationPrefix, confirm: confirmFn }, { "api-key": apiKey, "api-secret": apiSecret }) {
   const confirm2 = confirmFn ?? confirm;
-  const existing = await listRecords7(domain, apiKey, apiSecret);
+  const existing = await fetchRecords7(domain, apiKey, apiSecret);
   log.success(`Zone found: ${domain}`);
   const conflicts = findConflicts7(existing, records, verificationPrefix);
   if (conflicts.length > 0) {
@@ -1338,7 +1489,7 @@ var execFileAsync3 = promisify3(execFile3);
 var inputs10 = [
   {
     flag: "subscription",
-    name: "Azure subscription ID",
+    name: "Azure subscription ID to use",
     env: "AZURE_SUBSCRIPTION_ID",
     example: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
     optional: true,
@@ -1359,7 +1510,7 @@ async function getZone(domain, azFn) {
   if (!zone) throw new Error(`DNS zone not found for domain: ${domain}`);
   return zone;
 }
-async function listRecords8(rg, zone, azFn) {
+async function fetchRecords8(rg, zone, azFn) {
   return await azFn([
     "network",
     "dns",
@@ -1370,6 +1521,33 @@ async function listRecords8(rg, zone, azFn) {
     "--zone-name",
     zone
   ]) ?? [];
+}
+function makeAzCmd(subscription, azFn = az) {
+  const subscriptionArgs = subscription ? ["--subscription", subscription] : [];
+  return (args) => azFn([...subscriptionArgs, ...args]);
+}
+function normalizeRecords4(sets) {
+  const result = [];
+  for (const set of sets) {
+    const type = azRecordType(set);
+    if (type === "TXT") {
+      for (const r of set.txtRecords ?? []) {
+        result.push({ type: "TXT", name: set.name, content: txtValue(r), ttl: set.ttl });
+      }
+    } else if (type === "MX") {
+      for (const r of set.mxRecords ?? []) {
+        result.push({ type: "MX", name: set.name, content: r.exchange.replace(/\.$/, ""), priority: r.preference, ttl: set.ttl });
+      }
+    } else if (type === "CNAME" && set.cnameRecord) {
+      result.push({ type: "CNAME", name: set.name, content: cnameValue(set.cnameRecord).replace(/\.$/, ""), ttl: set.ttl });
+    }
+  }
+  return result;
+}
+async function listRecords10(domain, { subscription }) {
+  const azCmd = makeAzCmd(subscription);
+  const zone = await getZone(domain, azCmd);
+  return normalizeRecords4(await fetchRecords8(zone.resourceGroup, domain, azCmd));
 }
 function azRecordType(set) {
   return set.type.split("/").pop();
@@ -1486,13 +1664,11 @@ function buildAddArgs(rg, zone, record) {
 }
 async function setupRecords10({ domain, records, verificationPrefix, confirm: confirmFn, az: azFn }, { subscription }) {
   const confirmCmd = confirmFn ?? confirm;
-  const subscriptionArgs = subscription ? ["--subscription", subscription] : [];
-  const azBase = azFn ?? az;
-  const azCmd = (args) => azBase([...subscriptionArgs, ...args]);
+  const azCmd = makeAzCmd(subscription, azFn ?? az);
   const zone = await getZone(domain, azCmd);
   const { resourceGroup: rg } = zone;
   log.success(`DNS zone found: ${domain} (resource group: ${rg})`);
-  const existing = await listRecords8(rg, domain, azCmd);
+  const existing = await fetchRecords8(rg, domain, azCmd);
   const groups = /* @__PURE__ */ new Map();
   for (const record of records) {
     const key = `${record.name}|${record.type}`;
@@ -1569,7 +1745,7 @@ var execFileAsync4 = promisify4(execFile4);
 var inputs11 = [
   {
     flag: "awsProfile",
-    name: "AWS profile",
+    name: "AWS profile to use",
     env: "AWS_PROFILE",
     example: "my-profile",
     optional: true
@@ -1880,51 +2056,61 @@ var DNS_PROVIDERS = {
   cloudflare: {
     name: "Cloudflare",
     setupRecords,
+    listRecords,
     inputs
   },
   digitalocean: {
     name: "DigitalOcean",
     setupRecords: setupRecords3,
+    listRecords: listRecords3,
     inputs: inputs3
   },
   godaddy: {
     name: "GoDaddy",
     setupRecords: setupRecords2,
+    listRecords: listRecords2,
     inputs: inputs2
   },
   gcloud: {
     name: "Google Cloud",
     setupRecords: setupRecords4,
+    listRecords: listRecords4,
     inputs: inputs4
   },
   netlify: {
     name: "Netlify",
     setupRecords: setupRecords5,
+    listRecords: listRecords5,
     inputs: inputs5
   },
   route53: {
     name: "Amazon Route 53",
     setupRecords: setupRecords6,
+    listRecords: listRecords6,
     inputs: inputs6
   },
   vercel: {
     name: "Vercel",
     setupRecords: setupRecords7,
+    listRecords: listRecords7,
     inputs: inputs7
   },
   hetzner: {
     name: "Hetzner",
     setupRecords: setupRecords8,
+    listRecords: listRecords8,
     inputs: inputs8
   },
   spaceship: {
     name: "Spaceship",
     setupRecords: setupRecords9,
+    listRecords: listRecords9,
     inputs: inputs9
   },
   azure: {
     name: "Azure DNS",
     setupRecords: setupRecords10,
+    listRecords: listRecords10,
     inputs: inputs10
   }
 };
@@ -2001,6 +2187,31 @@ var EMAIL_PROVIDERS = {
   }
 };
 
+// src/validate.ts
+function validateDomain(domain) {
+  if (domain.length > 253)
+    throw new Error(`Invalid domain: ${domain}`);
+  const labels = domain.split(".");
+  if (labels.length < 2)
+    throw new Error(`Invalid domain: ${domain}`);
+  for (const label of labels) {
+    if (label.length === 0 || label.length > 63 || !/^[a-zA-Z0-9]([a-zA-Z0-9-]*[a-zA-Z0-9])?$/.test(label))
+      throw new Error(`Invalid domain: ${domain}`);
+  }
+  if (/^\d+$/.test(labels[labels.length - 1]))
+    throw new Error(`Invalid domain: ${domain}`);
+}
+function validateEmailProvider(emailProvider) {
+  if (!EMAIL_PROVIDERS[emailProvider])
+    throw new Error(`Unknown email provider: ${emailProvider}
+Supported: ${Object.keys(EMAIL_PROVIDERS).join(", ")}`);
+}
+function validateDnsProvider(dnsProvider) {
+  if (!DNS_PROVIDERS[dnsProvider])
+    throw new Error(`Unknown DNS provider: ${dnsProvider}
+Supported: ${Object.keys(DNS_PROVIDERS).join(", ")}`);
+}
+
 // src/core.ts
 function buildFromTemplate(template, domain, emailInputs) {
   const toScreamingSnake = (key) => key.replace(/([A-Z])/g, "_$1").toUpperCase();
@@ -2038,7 +2249,7 @@ async function buildRecords({ domain, emailProvider, emailInputs, noMx }) {
 }
 
 // src/buildInfo.ts
-var buildInfo_default = { version: "1.0.0", date: /* @__PURE__ */ new Date(1775602490698) };
+var buildInfo_default = { version: "1.0.0", date: /* @__PURE__ */ new Date(1775666909554) };
 
 // src/cli.ts
 var program = new Command();
@@ -2103,7 +2314,9 @@ for (const o of COMMANDS.setup.options) {
   setupCmd.option(flags, o.description);
 }
 setupCmd.addHelpText("after", buildEmailHelpText() + "\n" + buildDnsHelpText()).action(async (domain, emailProvider, dnsProvider, opts) => {
-  validateProviders(emailProvider, dnsProvider);
+  validateDomain(domain);
+  validateEmailProvider(emailProvider);
+  validateDnsProvider(dnsProvider);
   const yes = !!opts.yes;
   const emailInputDefs = getEmailInputDefs(emailProvider);
   const emailInputs = await resolveInputs(emailInputDefs, opts, yes);
@@ -2116,8 +2329,22 @@ setupCmd.addHelpText("after", buildEmailHelpText() + "\n" + buildDnsHelpText()).
 program.command("preview").description(COMMANDS.preview.description).argument("<domain>").argument("<email-provider>", `(${Object.keys(EMAIL_PROVIDERS).join(", ")})`).action(async (_domain, _emailProvider) => {
   log.warn("preview not yet implemented");
 });
-program.command("list").description(COMMANDS.list.description).argument("<domain>").argument("<dns-provider>", `(${Object.keys(DNS_PROVIDERS).join(", ")})`).action(async (_domain, _dnsProvider) => {
-  log.warn("list not yet implemented");
+var listCmd = program.command("list").description(COMMANDS.list.description).argument("<domain>").argument("<dns-provider>", `(${Object.keys(DNS_PROVIDERS).join(", ")})`);
+registerProviderOptions(listCmd);
+listCmd.addHelpText("after", buildDnsHelpText()).action(async (domain, dnsProvider, opts) => {
+  validateDomain(domain);
+  validateDnsProvider(dnsProvider);
+  const dnsDef = DNS_PROVIDERS[dnsProvider];
+  const dnsInputs = await resolveInputs(dnsDef.inputs, opts, false);
+  const records = await dnsDef.listRecords(domain, dnsInputs);
+  if (records.length === 0) {
+    log.warn("No DNS records found.");
+    return;
+  }
+  log.info(`
+DNS records for ${domain} (${dnsDef.name}):
+`);
+  for (const r of records) log.dim(formatDnsRecord(r));
 });
 program.command("verify").description(COMMANDS.verify.description).argument("<domain>").argument("<email-provider>", `(${Object.keys(EMAIL_PROVIDERS).join(", ")})`).argument("<dns-provider>", `(${Object.keys(DNS_PROVIDERS).join(", ")})`).action(async (_domain, _emailProvider, _dnsProvider) => {
   log.warn("verify not yet implemented");
