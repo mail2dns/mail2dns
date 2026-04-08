@@ -9,7 +9,7 @@ const execFileAsync = promisify(execFile) as (file: string, args: string[]) => P
 export const inputs: InputDef[] = [
   {
     flag: 'awsProfile',
-    name: 'AWS profile',
+    name: 'AWS profile to use',
     env: 'AWS_PROFILE',
     example: 'my-profile',
     optional: true

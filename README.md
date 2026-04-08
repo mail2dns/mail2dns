@@ -60,8 +60,10 @@ Provider-specific options are prompted interactively if not provided via flag or
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| <nobr>`--no-mx`</nobr> | skip MX records (for outbound-only use) | `false` |
-| <nobr>`-y`, `--yes`</nobr> | skip confirmation prompt (error if any required inputs are missing) | `false` |
+| <nobr>`-o`, `--no-mx`</nobr> | Skip MX records (set up DNS for outbound email only) | `false` |
+| <nobr>`-y`, `--yes`</nobr> | Skip confirmation prompts (the command will error if any required inputs are missing) | `false` |
+| <nobr>`--allow-insecure-flags`</nobr> | Allow secrets to be passed via command-line flags (not recommended) | `false` |
+| <nobr>`-d`, `--dry-run`</nobr> | show records that would be created without applying them | `false` |
 
 ### Verify
 
@@ -235,7 +237,7 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| <nobr>`--aws-profile`</nobr> | `AWS_PROFILE` | AWS profile | `my-profile` |
+| <nobr>`--aws-profile`</nobr> | `AWS_PROFILE` | AWS profile to use | `my-profile` |
 
 ## ⬛ DNS providers
 
@@ -270,7 +272,7 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| <nobr>`--project`</nobr> | `CLOUDSDK_CORE_PROJECT` | Google Cloud project ID | `my-project-123` |
+| <nobr>`--project`</nobr> | `CLOUDSDK_CORE_PROJECT` | Google Cloud project ID to use | `my-project-123` |
 
 ### Netlify
 
@@ -286,7 +288,7 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| <nobr>`--aws-profile`</nobr> | `AWS_PROFILE` | AWS profile | `my-profile` |
+| <nobr>`--aws-profile`</nobr> | `AWS_PROFILE` | AWS profile to use | `my-profile` |
 
 ### Vercel
 
@@ -320,6 +322,6 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| <nobr>`--subscription`</nobr> | `AZURE_SUBSCRIPTION_ID` | Azure subscription ID | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
+| <nobr>`--subscription`</nobr> | `AZURE_SUBSCRIPTION_ID` | Azure subscription ID to use | `xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx` |
 
 <!-- /generated-providers-reference -->

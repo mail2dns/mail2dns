@@ -8,7 +8,7 @@ const execFileAsync = promisify(execFile) as (file: string, args: string[]) => P
 export const inputs: InputDef[] = [
   {
     flag: 'subscription',
-    name: 'Azure subscription ID',
+    name: 'Azure subscription ID to use',
     env: 'AZURE_SUBSCRIPTION_ID',
     example: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
     optional: true,

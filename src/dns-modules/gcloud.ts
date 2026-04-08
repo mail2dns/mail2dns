@@ -9,7 +9,7 @@ const execFileAsync = promisify(execFile) as (file: string, args: string[]) => P
 export const inputs: InputDef[] = [
   {
     flag: 'project',
-    name: 'Google Cloud project ID',
+    name: 'Google Cloud project ID to use',
     env: 'CLOUDSDK_CORE_PROJECT',
     example: 'my-project-123',
     optional: true,
