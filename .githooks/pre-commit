@@ -1,6 +1,6 @@
 #!/bin/sh
 npm run typecheck
-npm run docs
+npm run generate:docs
 git add README.md
 npm run generate:buildinfo
 git add src/buildInfo.ts
