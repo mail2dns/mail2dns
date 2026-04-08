@@ -69,3 +69,7 @@ export interface EmailTemplate {
   inputs?: InputDef[]
   records: EmailTemplateRecord[]
 }
+
+export type VerifyRecord =
+  | { type: DnsRecord['type']; name: string; match: 'exact';   content: string }
+  | { type: DnsRecord['type']; name: string; match: 'pattern'; pattern: RegExp; display: string }
