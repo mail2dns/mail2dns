@@ -34,7 +34,7 @@ async function cfFetch<T>(path: string, options: RequestInit, token: string): Pr
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
-      ...options?.headers
+      ...(options?.headers as Record<string, string> | undefined)
     }
   })
   const data: CfResponse<T> = await res.json()
@@ -127,7 +127,7 @@ export async function listRecords(domain: string, { token }: Record<string, stri
   return records
     .filter(r => isMailDnsType(r.type))
     .map(r => ({
-      type: r.type,
+      type: r.type as DnsRecord['type'],
       name: normalizeName(r.name, domain),
       content: r.content,
       ...(r.priority !== undefined && { priority: r.priority })
@@ -136,7 +136,7 @@ export async function listRecords(domain: string, { token }: Record<string, stri
 
 type Opts = SetupRecordsOptions & { confirm?: (q: string) => Promise<boolean> }
 
-export async function setupRecords({ domain, records, verificationPrefix, confirm: confirmFn }: Opts, { token }: Record<string, string>): Promise<void> {
+export async function setupRecords({ domain, records, verificationPrefix, confirm: confirmFn, dryRun }: Opts, { token }: Record<string, string>): Promise<void> {
   const confirmCmd = confirmFn ?? confirm
   const zoneId = await getZoneId(domain, token)
   log.success(`Zone found: ${domain}`)
@@ -157,6 +157,8 @@ export async function setupRecords({ domain, records, verificationPrefix, confir
   for (const r of records) {
     log.dim(formatRecord(r, domain))
   }
+
+  if (dryRun) return
 
   console.log()
   const ok = await confirmCmd('Proceed? (y/N) ')

@@ -31,6 +31,7 @@ export interface SetupRecordsOptions {
   records: DnsRecord[]
   verificationPrefix?: string
   confirm?: (q: string) => Promise<boolean>
+  dryRun?: boolean
 }
 
 export interface DnsProviderDef {

@@ -13,7 +13,6 @@ export const COMMANDS: Record<string, { description: string; options: OptionDef[
   },
   verify:  { description: 'Check that expected DNS records are in place', options: [] },
   list:    { description: 'Show existing DNS records for a domain', options: [] },
-  preview: { description: 'Show DNS records that would be created without applying them', options: [] },
 }
 
 const c = {

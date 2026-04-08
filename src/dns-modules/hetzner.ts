@@ -26,7 +26,7 @@ async function hzFetch<T>(path: string, options: RequestInit, token: string): Pr
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
-      ...options?.headers
+      ...(options?.headers as Record<string, string> | undefined)
     }
   })
   if (!res.ok) {
@@ -142,7 +142,7 @@ function formatRecord(r: DnsRecord): string {
 type Opts = SetupRecordsOptions & { confirm?: (q: string) => Promise<boolean> }
 
 export async function setupRecords(
-  { domain, records, verificationPrefix, confirm: confirmFn }: Opts,
+  { domain, records, verificationPrefix, confirm: confirmFn, dryRun }: Opts,
   { token }: Record<string, string>
 ): Promise<void> {
   const confirm = confirmFn ?? utilsConfirm
@@ -165,6 +165,8 @@ export async function setupRecords(
   for (const r of records) {
     log.dim(formatRecord(r))
   }
+
+  if (dryRun) return
 
   console.log()
   const ok = await confirm('Proceed? (y/N) ')

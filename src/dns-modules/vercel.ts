@@ -37,7 +37,7 @@ async function vrFetch<T>(path: string, options: RequestInit, token: string, tea
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
-      ...options?.headers
+      ...(options?.headers as Record<string, string> | undefined)
     }
   })
   if (!res.ok) {
@@ -58,7 +58,7 @@ export async function listRecords(domain: string, { token, 'team-id': teamId }: 
   return records
     .filter(r => isMailDnsType(r.type))
     .map(r => ({
-      type: r.type,
+      type: r.type as DnsRecord['type'],
       name: normalizeName(r.name),
       content: r.value,
       ...(r.mxPriority !== undefined && { priority: r.mxPriority }),
@@ -131,7 +131,7 @@ function formatRecord(r: { type: string; name: string; value: string; mxPriority
 type Opts = SetupRecordsOptions & { confirm?: (q: string) => Promise<boolean> }
 
 export async function setupRecords(
-  { domain, records, verificationPrefix, confirm: confirmFn }: Opts,
+  { domain, records, verificationPrefix, confirm: confirmFn, dryRun }: Opts,
   { token, 'team-id': teamId }: Record<string, string>
 ): Promise<void> {
   const confirm = confirmFn ?? utilsConfirm
@@ -154,6 +154,8 @@ export async function setupRecords(
   for (const r of records) {
     log.dim(formatRecord({ type: r.type, name: r.name, value: r.content, mxPriority: r.priority }))
   }
+
+  if (dryRun) return
 
   console.log()
   const ok = await confirm('Proceed? (y/N) ')

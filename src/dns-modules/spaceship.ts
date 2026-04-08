@@ -34,7 +34,7 @@ async function spFetch<T>(path: string, options: RequestInit, apiKey: string, ap
       'X-API-Key': apiKey,
       'X-API-Secret': apiSecret,
       'Content-Type': 'application/json',
-      ...options?.headers
+      ...(options?.headers as Record<string, string> | undefined)
     }
   })
   if (!res.ok) {
@@ -60,7 +60,7 @@ export async function listRecords(domain: string, { 'api-key': apiKey, 'api-secr
   return records
     .filter(r => isMailDnsType(r.type))
     .map(r => ({
-      type: r.type,
+      type: r.type as DnsRecord['type'],
       name: r.name,
       content: r.value,
       ...(r.priority !== undefined && { priority: r.priority }),
@@ -135,7 +135,7 @@ function formatRecord(r: DnsRecord): string {
 type Opts = SetupRecordsOptions & { confirm?: (q: string) => Promise<boolean> }
 
 export async function setupRecords(
-  { domain, records, verificationPrefix, confirm: confirmFn }: Opts,
+  { domain, records, verificationPrefix, confirm: confirmFn, dryRun }: Opts,
   { 'api-key': apiKey, 'api-secret': apiSecret }: Record<string, string>
 ): Promise<void> {
   const confirm = confirmFn ?? utilsConfirm
@@ -158,6 +158,8 @@ export async function setupRecords(
   for (const r of records) {
     log.dim(formatRecord(r))
   }
+
+  if (dryRun) return
 
   console.log()
   const ok = await confirm('Proceed? (y/N) ')

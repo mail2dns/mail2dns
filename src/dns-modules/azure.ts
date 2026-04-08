@@ -131,7 +131,7 @@ function buildRemoveArgs(
     return [...base, '--value', value]
   }
   if (type === 'MX') {
-    const mx = existing.mxRecords?.find(r => mxValue(r) === value)
+    const mx = (existing.mxRecords ?? []).find(r => mxValue(r) === value)
     if (!mx) return base
     return [...base, '--preference', String(mx.preference), '--exchange', mx.exchange]
   }
@@ -167,7 +167,7 @@ type Opts = SetupRecordsOptions & {
 }
 
 export async function setupRecords(
-  { domain, records, verificationPrefix, confirm: confirmFn, az: azFn }: Opts,
+  { domain, records, verificationPrefix, confirm: confirmFn, dryRun, az: azFn }: Opts,
   { subscription }: Record<string, string>
 ): Promise<void> {
   const confirmCmd = confirmFn ?? utilsConfirm
@@ -231,6 +231,8 @@ export async function setupRecords(
 
   log.info('\nThe following records will be created:')
   for (const r of toAdd) log.dim(r)
+
+  if (dryRun) return
 
   console.log()
   const ok = await confirmCmd('Proceed? (y/N) ')

@@ -93,6 +93,7 @@ setupCmd
     validateDnsProvider(dnsProvider)
 
     const yes = !!opts.yes
+    const dryRun = !!opts.dryRun
     const emailInputDefs = getEmailInputDefs(emailProvider)
     const emailInputs = await resolveInputs(emailInputDefs, opts, yes)
     const { records, verificationPrefix } = await buildRecords({ domain, emailProvider, emailInputs, noMx: !!opts.noMx })
@@ -101,16 +102,7 @@ setupCmd
     const dnsInputs = await resolveInputs(dnsDef.inputs, opts, yes)
 
     const confirm = yes ? async () => true : undefined
-    await dnsDef.setupRecords({ domain, records, verificationPrefix, confirm }, dnsInputs)
-  })
-
-program
-  .command('preview')
-  .description(COMMANDS.preview.description)
-  .argument('<domain>')
-  .argument('<email-provider>', `(${Object.keys(EMAIL_PROVIDERS).join(', ')})`)
-  .action(async (_domain: string, _emailProvider: string) => {
-    log.warn('preview not yet implemented')
+    await dnsDef.setupRecords({ domain, records, verificationPrefix, confirm, dryRun }, dnsInputs)
   })
 
 const listCmd = program

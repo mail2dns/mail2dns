@@ -144,7 +144,7 @@ type Opts = SetupRecordsOptions & {
 }
 
 export async function setupRecords(
-  { domain, records, verificationPrefix, confirm: confirmFn, gcloud: gcloudFn }: Opts,
+  { domain, records, verificationPrefix, confirm: confirmFn, dryRun, gcloud: gcloudFn }: Opts,
   { project }: Record<string, string>
 ): Promise<void> {
   const confirmCmd = confirmFn ?? utilsConfirm
@@ -199,6 +199,8 @@ export async function setupRecords(
 
   log.info('\nThe following records will be created:')
   for (const r of toAdd) log.dim(r)
+
+  if (dryRun) return
 
   console.log()
   const ok = await confirmCmd('Proceed? (y/N) ')

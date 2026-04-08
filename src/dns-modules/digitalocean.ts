@@ -28,7 +28,7 @@ async function doFetch<T>(path: string, options: RequestInit, token: string): Pr
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
-      ...options?.headers
+      ...(options?.headers as Record<string, string> | undefined)
     }
   })
   if (!res.ok) {
@@ -53,7 +53,7 @@ export async function listRecords(domain: string, { token }: Record<string, stri
   return records
     .filter(r => isMailDnsType(r.type))
     .map(r => ({
-      type: r.type,
+      type: r.type as DnsRecord['type'],
       name: r.name,
       content: r.data,
       ...(r.priority !== undefined && { priority: r.priority }),
@@ -116,7 +116,7 @@ function formatRecord(r: { type: string; name: string; data: string; priority?: 
 type Opts = SetupRecordsOptions & { confirm?: (q: string) => Promise<boolean> }
 
 export async function setupRecords(
-  { domain, records, verificationPrefix, confirm: confirmFn }: Opts,
+  { domain, records, verificationPrefix, confirm: confirmFn, dryRun }: Opts,
   { token }: Record<string, string>
 ): Promise<void> {
   const confirm = confirmFn ?? utilsConfirm
@@ -138,6 +138,8 @@ export async function setupRecords(
   for (const r of records) {
     log.dim(formatRecord({ type: r.type, name: r.name, data: r.content, priority: r.priority }))
   }
+
+  if (dryRun) return
 
   console.log()
   const ok = await confirm('Proceed? (y/N) ')

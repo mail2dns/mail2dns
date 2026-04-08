@@ -140,7 +140,7 @@ type Opts = SetupRecordsOptions & {
 }
 
 export async function setupRecords(
-  { domain, records, verificationPrefix, confirm: confirmFn, aws: awsFn }: Opts,
+  { domain, records, verificationPrefix, confirm: confirmFn, dryRun, aws: awsFn }: Opts,
   { awsProfile }: Record<string, string>
 ): Promise<void> {
   const awsCmd = makeAwsCmd(awsProfile, awsFn ?? aws)
@@ -202,6 +202,8 @@ export async function setupRecords(
 
   log.info('\nThe following records will be created:')
   for (const r of toAdd) log.dim(r)
+
+  if (dryRun) return
 
   console.log()
   const ok = await confirmCmd('Proceed? (y/N) ')
