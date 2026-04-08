@@ -137,25 +137,13 @@ refLines.push('')
 for (const [key, def] of Object.entries(EMAIL_PROVIDERS)) {
   refLines.push(`### ${def.name}`)
   refLines.push('')
-  if (def.type === 'template' && def.auto) {
-    refLines.push(def.auto.explanation)
-    refLines.push('')
+
+  const inputs = getEmailInputDefs(key)
+
+  if (inputs.length > 0) {
     refLines.push('#### Inputs')
     refLines.push('')
-    refLines.push('##### Auto Mode')
-    refLines.push('')
-    refLines.push(inputTable(getEmailInputDefs(key, 'auto')))
-    refLines.push('')
-    refLines.push('##### Manual Mode (default)')
-    refLines.push('')
-    refLines.push(inputTable(getEmailInputDefs(key, 'manual')))
-  } else {
-    const inputs = getEmailInputDefs(key)
-    if (inputs.length > 0) {
-      refLines.push('#### Inputs')
-      refLines.push('')
-      refLines.push(inputTable(inputs))
-    }
+    refLines.push(inputTable(inputs))
   }
   refLines.push('')
 }
