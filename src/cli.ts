@@ -1,6 +1,7 @@
 import { Command, Option } from 'commander'
 import { EMAIL_PROVIDERS, DNS_PROVIDERS } from './providers.js'
-import { resolveInputs, camelToKebab, validateProviders, COMMANDS, log } from './utils.js'
+import { resolveInputs, camelToKebab, COMMANDS, log } from './utils.js'
+import { validateDomain, validateEmailProvider, validateDnsProvider } from './validate.js'
 import { buildRecords, getEmailInputDefs } from './core.js'
 import buildInfo from './buildInfo.js'
 import type { InputDef } from './types.js'
@@ -87,7 +88,9 @@ for (const o of COMMANDS.setup.options) {
 setupCmd
   .addHelpText('after', buildEmailHelpText() + '\n' + buildDnsHelpText())
   .action(async (domain: string, emailProvider: string, dnsProvider: string, opts: Record<string, string | undefined>) => {
-    validateProviders(emailProvider, dnsProvider)
+    validateDomain(domain)
+    validateEmailProvider(emailProvider)
+    validateDnsProvider(dnsProvider)
 
     const yes = !!opts.yes
     const emailInputDefs = getEmailInputDefs(emailProvider)

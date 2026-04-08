@@ -1,5 +1,4 @@
 import readline from 'readline'
-import { EMAIL_PROVIDERS, DNS_PROVIDERS } from './providers.js'
 import type { InputDef, OptionDef } from './types.js'
 
 export const COMMANDS: Record<string, { description: string; options: OptionDef[] }> = {
@@ -70,9 +69,3 @@ export async function resolveInputs(inputs: InputDef[], argv: Record<string, str
   return result
 }
 
-export function validateProviders(emailProvider: string, dnsProvider: string): void {
-  if (!EMAIL_PROVIDERS[emailProvider])
-    throw new Error(`Unknown email provider: ${emailProvider}\nSupported: ${Object.keys(EMAIL_PROVIDERS).join(', ')}`)
-  if (!DNS_PROVIDERS[dnsProvider])
-    throw new Error(`Unknown DNS provider: ${dnsProvider}\nSupported: ${Object.keys(DNS_PROVIDERS).join(', ')}`)
-}

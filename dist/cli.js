@@ -2037,9 +2037,12 @@ async function buildRecords({ domain, emailProvider, emailInputs, noMx }) {
   return result;
 }
 
+// src/buildInfo.ts
+var buildInfo_default = { version: "1.0.0", date: /* @__PURE__ */ new Date(1775602490698) };
+
 // src/cli.ts
 var program = new Command();
-program.name("mail2dns").description("Configure DNS records for email providers");
+program.name("mail2dns").description("Configure DNS records for email providers").version(buildInfo_default.version, "-v, --version", "output the version number");
 function registerProviderOptions(cmd) {
   const seen = /* @__PURE__ */ new Set();
   const allInputs = [
