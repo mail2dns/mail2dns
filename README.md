@@ -63,20 +63,15 @@ Provider-specific options are prompted interactively if not provided via flag or
 | <nobr>`-o`, `--no-mx`</nobr> | Skip MX records (set up DNS for outbound email only) | `false` |
 | <nobr>`-y`, `--yes`</nobr> | Skip confirmation prompts (the command will error if any required inputs are missing) | `false` |
 | <nobr>`--allow-insecure-flags`</nobr> | Allow secrets to be passed via command-line flags (not recommended) | `false` |
-| <nobr>`-d`, `--dry-run`</nobr> | show records that would be created without applying them | `false` |
+| <nobr>`-d`, `--dry-run`</nobr> | Show records that would be created without applying them | `false` |
 
 ### Verify
 
-Check whether expected DNS records for an email provider are present at the indicated domain. This is useful for confirming whether DNS changes have propagated.
+Check that expected DNS records are in place
 
 ```bash
-mail2dns verify [options] <domain> <email-provider>
+mail2dns verify [options] <domain> <email-provider> <dns-provider>
 ```
-
-#### Options
-| Flag | Description                                          | Default |
-|------|------------------------------------------------------|---------|
-| <nobr>`-o`, `--no-mx`</nobr> | Skip MX records (verify DNS for outbound email only) | `false` |
 
 ### List
 

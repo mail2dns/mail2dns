@@ -3,7 +3,8 @@ import { fileURLToPath } from 'url'
 import { join, dirname } from 'path'
 import { DNS_PROVIDERS, EMAIL_PROVIDERS } from '../src/providers.js'
 import { getEmailInputDefs } from '../src/core.js'
-import { COMMANDS, ucfirst } from '../src/utils.js'
+import { ucfirst } from '../src/utils.js'
+import { COMMANDS } from '../src/commands.js'
 import type { InputDef } from '../src/types.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))

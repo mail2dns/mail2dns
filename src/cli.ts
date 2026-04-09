@@ -126,7 +126,7 @@ verifyCmd
 
 try {
   await program.parseAsync()
-} catch (err) {
+} catch (err: any) {
   log.error(err instanceof Error ? err.message : String(err))
   process.exit(1)
 }
