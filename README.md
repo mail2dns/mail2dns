@@ -9,6 +9,7 @@ for email providers. Supports multiple DNS providers.**
 
 🔗 [See website for setup guides for every provider combination](https://mail2dns.com)  
 
+<p>&nbsp;</p>
 
 ## Example
 
@@ -23,6 +24,8 @@ Creates:
 - DMARC record
 - Domain verification records
 
+<p>&nbsp;</p>
+
 ## 📦 Installation
 
 Requires Node.js 18+.
@@ -30,6 +33,8 @@ Requires Node.js 18+.
 ```bash
 npm install -g mail2dns
 ```
+
+<p>&nbsp;</p>
 
 <!-- generated-usage -->
 
@@ -62,6 +67,9 @@ Provider-specific options are prompted interactively if not provided via flag or
 | <nobr>`--allow-insecure-flags`</nobr> | Allow secrets to be passed via command-line flags (not recommended) | `false` |
 | <nobr>`-d`, `--dry-run`</nobr> | Show records that would be created without applying them | `false` |
 
+
+<p>&nbsp;</p>
+
 ### Verify
 
 Check that expected DNS records for an email provider are present via public DNS lookup
@@ -82,6 +90,9 @@ Provider-specific options are prompted interactively if not provided via flag or
 | Flag | Description | Default |
 |------|-------------|---------|
 | <nobr>`-o`, `--no-mx`</nobr> | Skip MX records (verify DNS for outbound email only) | `false` |
+
+
+<p>&nbsp;</p>
 
 ### List
 
@@ -106,8 +117,9 @@ Provider-specific options are prompted interactively if not provided via flag or
 
 <!-- /generated-usage -->
 
-## 💻 Examples
+<p>&nbsp;</p>
 
+## 💻 Examples
 
 ### Interactive — prompts for any required inputs
 ```bash
@@ -125,6 +137,9 @@ MIGADU_VERIFY_TXT="hosted-email-verify=YOUR_KEY" \
 CLOUDFLARE_API_TOKEN=YOUR_CF_TOKEN \
 mail2dns setup example.com migadu cloudflare
 ```
+
+<p>&nbsp;</p>
+
 <!-- generated-providers-reference -->
 
 ## ✅ Supported Email providers
@@ -144,6 +159,8 @@ mail2dns setup example.com migadu cloudflare
 | [Postmark](#postmark) | `postmark` |
 | [Amazon SES](#amazon-ses) | `ses` |
 
+<p>&nbsp;</p>
+
 ## ✅ Supported DNS providers
 
 | Provider | Key |
@@ -159,6 +176,8 @@ mail2dns setup example.com migadu cloudflare
 | [Spaceship](#spaceship) | `spaceship` |
 | [Azure DNS](#azure-dns) | `azure` |
 
+<p>&nbsp;</p>
+
 ## 📧 Email providers
 
 ### Migadu
@@ -168,7 +187,6 @@ mail2dns setup example.com migadu cloudflare
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
 | <nobr>`--verify-txt`</nobr> | `MIGADU_VERIFY_TXT` | Migadu verification TXT value | `hosted-email-verify=abc123` |
-
 ### Google Workspace
 
 #### Inputs
@@ -177,7 +195,6 @@ mail2dns setup example.com migadu cloudflare
 |------|---------|-------------|---------|
 | <nobr>`--verify-txt`</nobr> | `GOOGLE_VERIFY_TXT` | Google Workspace verification TXT value | `google-site-verification=abc123` |
 | <nobr>`--dkim-key`</nobr> | `GOOGLE_DKIM_KEY` | Google Workspace DKIM key | `v=DKIM1; k=rsa; p=...` |
-
 ### Microsoft 365
 
 #### Inputs
@@ -187,7 +204,6 @@ mail2dns setup example.com migadu cloudflare
 | <nobr>`--verify-txt`</nobr> | `MS365_VERIFY_TXT` | Microsoft 365 domain verification TXT value | `MS=ms12345678` |
 | <nobr>`--dkim-selector1-target`</nobr> | `MS365_DKIM_SELECTOR1` | DKIM selector1 CNAME target | `selector1-example-com._domainkey.example.onmicrosoft.com` |
 | <nobr>`--dkim-selector2-target`</nobr> | `MS365_DKIM_SELECTOR2` | DKIM selector2 CNAME target | `selector2-example-com._domainkey.example.onmicrosoft.com` |
-
 ### Microsoft Outlook
 
 #### Inputs
@@ -197,9 +213,7 @@ mail2dns setup example.com migadu cloudflare
 | <nobr>`--verify-txt`</nobr> | `MS365_VERIFY_TXT` | Microsoft 365 domain verification TXT value | `MS=ms12345678` |
 | <nobr>`--dkim-selector1-target`</nobr> | `MS365_DKIM_SELECTOR1` | DKIM selector1 CNAME target | `selector1-example-com._domainkey.example.onmicrosoft.com` |
 | <nobr>`--dkim-selector2-target`</nobr> | `MS365_DKIM_SELECTOR2` | DKIM selector2 CNAME target | `selector2-example-com._domainkey.example.onmicrosoft.com` |
-
 ### Fastmail
-
 
 ### Mailgun
 
@@ -208,7 +222,6 @@ mail2dns setup example.com migadu cloudflare
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
 | <nobr>`--dkim-txt`</nobr> | `MAILGUN_DKIM_TXT` | DKIM TXT value | `k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4...` |
-
 ### Proton Mail
 
 #### Inputs
@@ -219,7 +232,6 @@ mail2dns setup example.com migadu cloudflare
 | <nobr>`--dkim-cname1`</nobr> | `PROTON_DKIM_CNAME1` | DKIM CNAME 1 target | `protonmail.domainkey.abc123.domains.proton.ch` |
 | <nobr>`--dkim-cname2`</nobr> | `PROTON_DKIM_CNAME2` | DKIM CNAME 2 target | `protonmail2.domainkey.abc123.domains.proton.ch` |
 | <nobr>`--dkim-cname3`</nobr> | `PROTON_DKIM_CNAME3` | DKIM CNAME 3 target | `protonmail3.domainkey.abc123.domains.proton.ch` |
-
 ### Zoho Mail
 
 #### Inputs
@@ -228,7 +240,6 @@ mail2dns setup example.com migadu cloudflare
 |------|---------|-------------|---------|
 | <nobr>`--verify-txt`</nobr> | `ZOHO_VERIFY_TXT` | Zoho Mail domain verification TXT value | `zoho-verification=zb12345678.zmverify.zoho.com` |
 | <nobr>`--dkim-key`</nobr> | `ZOHO_DKIM_KEY` | Zoho Mail DKIM TXT value | `v=DKIM1; k=rsa; p=...` |
-
 ### Twilio SendGrid
 
 #### Inputs
@@ -237,7 +248,6 @@ mail2dns setup example.com migadu cloudflare
 |------|---------|-------------|---------|
 | <nobr>`--dkim1`</nobr> | `SENDGRID_DKIM1` | DKIM CNAME 1 value | `s1.domainkey.u12345.wl.sendgrid.net` |
 | <nobr>`--dkim2`</nobr> | `SENDGRID_DKIM2` | DKIM CNAME 2 value | `s2.domainkey.u12345.wl.sendgrid.net` |
-
 ### Resend
 
 #### Inputs
@@ -245,7 +255,6 @@ mail2dns setup example.com migadu cloudflare
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
 | <nobr>`--dkim`</nobr> | `RESEND_DKIM` | DKIM CNAME value | `p.resend.com` |
-
 ### Postmark
 
 #### Inputs
@@ -253,7 +262,6 @@ mail2dns setup example.com migadu cloudflare
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
 | <nobr>`--dkim`</nobr> | `POSTMARK_DKIM` | DKIM CNAME value | `cm.mtasv.net` |
-
 ### Amazon SES
 
 #### Inputs
@@ -261,6 +269,8 @@ mail2dns setup example.com migadu cloudflare
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
 | <nobr>`--aws-profile`</nobr> | `AWS_PROFILE` | AWS profile to use | `my-profile` |
+
+<p>&nbsp;</p>
 
 ## ⬛ DNS providers
 

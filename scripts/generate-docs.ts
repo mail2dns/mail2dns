@@ -14,6 +14,10 @@ function toFlag(camelCase: string): string {
   return '--' + camelCase.replace(/([A-Z])/g, c => '-' + c.toLowerCase())
 }
 
+function spacer(){
+  return ['', '<p>&nbsp;</p>', ''];
+}
+
 function toAnchor(name: string): string {
   return name.toLowerCase().replace(/\s+/g, '-')
 }
@@ -96,7 +100,9 @@ usageLines.push('')
 usageLines.push('## ⚙️ Usage')
 usageLines.push('')
 usageLines.push(...commandUsageSection('setup', providersExtra))
+usageLines.push(...spacer())
 usageLines.push(...commandUsageSection('verify', providersExtra))
+usageLines.push(...spacer())
 usageLines.push(...commandUsageSection('list', providersExtra))
 
 usageLines.push('<!-- /generated-usage -->')
@@ -114,7 +120,8 @@ refLines.push('|----------|-----|')
 for (const [key, def] of Object.entries(EMAIL_PROVIDERS)) {
   refLines.push(`| [${def.name}](#${toAnchor(def.name)}) | \`${key}\` |`)
 }
-refLines.push('')
+
+refLines.push(...spacer());
 
 refLines.push('## ✅ Supported DNS providers')
 refLines.push('')
@@ -123,7 +130,7 @@ refLines.push('|----------|-----|')
 for (const [key, def] of Object.entries(DNS_PROVIDERS)) {
   refLines.push(`| [${def.name}](#${toAnchor(def.name)}) | \`${key}\` |`)
 }
-refLines.push('')
+refLines.push(...spacer());
 
 refLines.push('## 📧 Email providers')
 refLines.push('')
@@ -138,8 +145,9 @@ for (const [key, def] of Object.entries(EMAIL_PROVIDERS)) {
     refLines.push('')
     refLines.push(inputTable(inputs))
   }
-  refLines.push('')
 }
+
+refLines.push(...spacer())
 
 refLines.push('## ⬛ DNS providers')
 refLines.push('')
