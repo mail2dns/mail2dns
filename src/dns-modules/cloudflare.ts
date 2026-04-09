@@ -28,6 +28,10 @@ interface CfResponse<T> {
   errors?: Array<{ message: string }>
 }
 
+interface CfPagedResponse<T> extends CfResponse<T> {
+  result_info?: { page: number; per_page: number; count: number; total_count: number }
+}
+
 async function cfFetch<T>(path: string, options: RequestInit, token: string): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
@@ -54,7 +58,22 @@ async function getZoneId(domain: string, token: string): Promise<string> {
 }
 
 async function listDnsRecords(zoneId: string, token: string): Promise<CfRecord[]> {
-  return cfFetch<CfRecord[]>(`/zones/${zoneId}/dns_records?per_page=100`, {}, token)
+  const all: CfRecord[] = []
+  let page = 1
+  while (true) {
+    const res = await fetch(`${BASE_URL}/zones/${zoneId}/dns_records?per_page=100&page=${page}`, {
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
+    })
+    const data: CfPagedResponse<CfRecord[]> = await res.json()
+    if (!data.success) {
+      const msg = data.errors?.[0]?.message ?? 'Unknown Cloudflare API error'
+      throw new Error(`Cloudflare API error: ${msg}`)
+    }
+    all.push(...data.result)
+    if (!data.result_info || all.length >= data.result_info.total_count) break
+    page++
+  }
+  return all
 }
 
 async function deleteRecord(zoneId: string, recordId: string, token: string): Promise<void> {

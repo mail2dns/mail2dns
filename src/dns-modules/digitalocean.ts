@@ -44,8 +44,17 @@ async function checkDomainExists(domain: string, token: string): Promise<void> {
 }
 
 async function fetchRecords(domain: string, token: string): Promise<DoRecord[]> {
-  const data = await doFetch<{ domain_records: DoRecord[] }>(`/domains/${domain}/records?per_page=200`, {}, token)
-  return data.domain_records
+  const all: DoRecord[] = []
+  let page = 1
+  while (true) {
+    const data = await doFetch<{ domain_records: DoRecord[]; meta: { total: number } }>(
+      `/domains/${domain}/records?per_page=200&page=${page}`, {}, token
+    )
+    all.push(...data.domain_records)
+    if (all.length >= data.meta.total) break
+    page++
+  }
+  return all
 }
 
 export async function listRecords(domain: string, { token }: Record<string, string>): Promise<DnsRecord[]> {

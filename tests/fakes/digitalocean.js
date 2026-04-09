@@ -42,8 +42,12 @@ export function makeServer() {
     const recordsPath = path.match(/^\/domains\/([^/]+)\/records$/)
     if (method === 'GET' && recordsPath) {
       const domain = recordsPath[1]
-      const domainRecords = records.get(domain) ?? new Map()
-      return json(res, 200, { domain_records: [...domainRecords.values()] })
+      const allRecords = [...(records.get(domain) ?? new Map()).values()]
+      const perPage = parseInt(url.searchParams.get('per_page') ?? '200', 10)
+      const page = parseInt(url.searchParams.get('page') ?? '1', 10)
+      const start = (page - 1) * perPage
+      const pageRecords = allRecords.slice(start, start + perPage)
+      return json(res, 200, { domain_records: pageRecords, meta: { total: allRecords.length } })
     }
 
     // POST /domains/:domain/records

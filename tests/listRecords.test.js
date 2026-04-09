@@ -25,8 +25,16 @@ const providers = [
       seedMxRecord:     () => fake.seedRecord(ZONE_ID, { id: '1', type: 'MX',  name: DOMAIN,              content: 'mail.example.com', priority: 10 }),
       seedSubdomainTxt: () => fake.seedRecord(ZONE_ID, { id: '2', type: 'TXT', name: `_dmarc.${DOMAIN}`,  content: 'v=DMARC1; p=none;' }),
       seedARecord:      () => fake.seedRecord(ZONE_ID, { id: '3', type: 'A',   name: DOMAIN,              content: '1.2.3.4' }),
+      // seed 110 A records (fills page 1 of 100) + 1 MX on page 2
+      seedManyRecords:  () => {
+        for (let i = 0; i < 110; i++) {
+          fake.seedRecord(ZONE_ID, { id: `bulk-${i}`, type: 'A', name: `sub${i}.${DOMAIN}`, content: `1.2.3.${i % 256}` })
+        }
+        fake.seedRecord(ZONE_ID, { id: 'mx-last', type: 'MX', name: DOMAIN, content: 'mail.example.com', priority: 10 })
+      },
       throwsOnMissingDomain: true,
-      expectedError: /Zone not found for domain/
+      expectedError: /Zone not found for domain/,
+      supportsPagination: true
     }
   })(),
 
@@ -43,7 +51,15 @@ const providers = [
       seedMxRecord:     () => fake.seedRecord(DOMAIN, { id: 1, type: 'MX',  name: '@',      data: 'mail.example.com', priority: 10 }),
       seedSubdomainTxt: () => fake.seedRecord(DOMAIN, { id: 2, type: 'TXT', name: '_dmarc', data: 'v=DMARC1; p=none;' }),
       seedARecord:      () => fake.seedRecord(DOMAIN, { id: 3, type: 'A',   name: '@',      data: '1.2.3.4' }),
-      throwsOnMissingDomain: false
+      // seed 210 A records (fills page 1 of 200) + 1 MX on page 2
+      seedManyRecords:  () => {
+        for (let i = 0; i < 210; i++) {
+          fake.seedRecord(DOMAIN, { id: 100 + i, type: 'A', name: `sub${i}`, data: `1.2.3.${i % 256}` })
+        }
+        fake.seedRecord(DOMAIN, { id: 9999, type: 'MX', name: '@', data: 'mail.example.com', priority: 10 })
+      },
+      throwsOnMissingDomain: false,
+      supportsPagination: true
     }
   })(),
 
@@ -195,5 +211,16 @@ for (const p of providers) {
       assert.equal(records.length, 1)
       assert.equal(records[0].type, 'MX')
     })
+
+    if (p.supportsPagination) {
+      it('fetches all records across multiple pages', async () => {
+        p.seedDomain()
+        p.seedManyRecords()
+
+        const records = await listRecords(DOMAIN, p.inputs)
+        const mxRecords = records.filter(r => r.type === 'MX')
+        assert.equal(mxRecords.length, 1, 'MX record from second page should be returned')
+      })
+    }
   })
 }

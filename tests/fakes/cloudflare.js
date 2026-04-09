@@ -44,8 +44,16 @@ export function makeServer() {
 
     // GET /zones/:zoneId/dns_records
     if (method === 'GET' && recordsPath) {
-      const zoneRecords = records.get(recordsPath[1]) ?? new Map()
-      return ok(res, [...zoneRecords.values()])
+      const allRecords = [...(records.get(recordsPath[1]) ?? new Map()).values()]
+      const perPage = parseInt(url.searchParams.get('per_page') ?? '100', 10)
+      const page = parseInt(url.searchParams.get('page') ?? '1', 10)
+      const start = (page - 1) * perPage
+      const pageRecords = allRecords.slice(start, start + perPage)
+      return json(res, {
+        success: true,
+        result: pageRecords,
+        result_info: { page, per_page: perPage, count: pageRecords.length, total_count: allRecords.length }
+      })
     }
 
     // POST /zones/:zoneId/dns_records
