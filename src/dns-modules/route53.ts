@@ -47,6 +47,19 @@ async function getHostedZoneId(domain: string, awsFn: AwsFn): Promise<string> {
   return zone.Id.split('/').pop()!
 }
 
+export async function resolveZone(domain: string, { awsProfile }: Record<string, string>): Promise<string> {
+  const awsFn = makeAwsCmd(awsProfile)
+  const parts = domain.split('.')
+  for (let i = 0; i < parts.length - 1; i++) {
+    const candidate = parts.slice(i).join('.')
+    const result = await awsFn<{ HostedZones: Array<{ Name: string }> }>([
+      'route53', 'list-hosted-zones-by-name', '--dns-name', `${candidate}.`, '--max-items', '1'
+    ])
+    if (result.HostedZones.find(z => z.Name === `${candidate}.`)) return candidate
+  }
+  throw new Error(`No zone found for domain: ${domain}`)
+}
+
 async function fetchRecords(zoneId: string, awsFn: AwsFn): Promise<R53RecordSet[]> {
   const result = await awsFn<{ ResourceRecordSets: R53RecordSet[] }>([
     'route53', 'list-resource-record-sets', '--hosted-zone-id', zoneId

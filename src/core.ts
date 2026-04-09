@@ -73,6 +73,23 @@ export function toFullName(name: string, domain: string): string {
   return name === '@' ? domain : `${name}.${domain}`
 }
 
+export function zonePrefix(domain: string, zone: string): string {
+  if (domain === zone) return ''
+  return domain.slice(0, domain.length - zone.length - 1)
+}
+
+export function applyPrefix(name: string, prefix: string): string {
+  if (!prefix) return name
+  return name === '@' ? prefix : `${name}.${prefix}`
+}
+
+export function removePrefix(name: string, prefix: string): string {
+  if (!prefix) return name
+  if (name === prefix) return '@'
+  if (name.endsWith(`.${prefix}`)) return name.slice(0, -(prefix.length + 1))
+  return name
+}
+
 type DnsResolver = Pick<typeof dnsPromises, 'resolveMx' | 'resolveTxt' | 'resolveCname' | 'resolveSrv'>
 
 export async function checkDnsRecord(vr: VerifyRecord, fullName: string, resolver: DnsResolver = dnsPromises): Promise<boolean> {

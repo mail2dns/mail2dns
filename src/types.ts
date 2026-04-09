@@ -19,7 +19,8 @@ export interface OptionDef {
   flag: string
   short?: string
   description: string
-  default: boolean
+  default: boolean | string
+  value?: string
 }
 
 export interface InputDef {
@@ -44,6 +45,7 @@ export interface DnsProviderDef {
   name: string
   setupRecords: (opts: SetupRecordsOptions, inputs: Record<string, string>) => Promise<void>
   listRecords: (domain: string, inputs: Record<string, string>) => Promise<DnsRecord[]>
+  resolveZone?: (domain: string, inputs: Record<string, string>) => Promise<string>
   inputs: InputDef[]
 }
 

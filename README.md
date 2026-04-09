@@ -66,6 +66,7 @@ Provider-specific options are prompted interactively if not provided via flag or
 | <nobr>`-y`, `--yes`</nobr> | Skip confirmation prompts (the command will error if any required inputs are missing) | `false` |
 | <nobr>`--allow-insecure-flags`</nobr> | Allow secrets to be passed via command-line flags (not recommended) | `false` |
 | <nobr>`-d`, `--dry-run`</nobr> | Show records that would be created without applying them | `false` |
+| <nobr>`--zone`</nobr> | DNS zone that contains the domain (overrides auto-detection) | `` |
 
 
 <p>&nbsp;</p>
@@ -114,6 +115,7 @@ Provider-specific options are prompted interactively if not provided via flag or
 | Flag | Description | Default |
 |------|-------------|---------|
 | <nobr>`--allow-insecure-flags`</nobr> | Allow secrets to be passed via command-line flags (not recommended) | `false` |
+| <nobr>`--zone`</nobr> | DNS zone that contains the domain (overrides auto-detection) | `` |
 
 <!-- /generated-usage -->
 

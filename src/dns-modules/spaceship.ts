@@ -1,6 +1,7 @@
 import { confirm as utilsConfirm, log } from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
+import { findContainingZone } from '../utils.js'
 
 export const inputs: InputDef[] = [
   {
@@ -55,6 +56,13 @@ async function fetchRecords(domain: string, apiKey: string, apiSecret: string): 
     apiSecret
   )
   return data.records ?? []
+}
+
+export async function resolveZone(domain: string, { 'api-key': apiKey, 'api-secret': apiSecret }: Record<string, string>): Promise<string> {
+  const data = await spFetch<{ items: Array<{ domain: string }> }>('/domains?take=200', {}, apiKey, apiSecret)
+  const containingZone = findContainingZone(domain, (data.items ?? []).map(d => d.domain))
+  if (!containingZone) throw new Error(`No zone found for domain: ${domain}`)
+  return containingZone
 }
 
 export async function listRecords(domain: string, { 'api-key': apiKey, 'api-secret': apiSecret }: Record<string, string>): Promise<DnsRecord[]> {

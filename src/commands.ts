@@ -13,6 +13,7 @@ export const COMMANDS: Record<string, { description: string; args: ArgumentDef[]
       { flag: 'yes', short: 'y', description: 'Skip confirmation prompts (the command will error if any required inputs are missing)', default: false },
       { flag: 'allowInsecureFlags', description: 'Allow secrets to be passed via command-line flags (not recommended)', default: false },
       { flag: 'dryRun', short: 'd', description: 'Show records that would be created without applying them', default: false },
+      { flag: 'zone', description: 'DNS zone that contains the domain (overrides auto-detection)', default: '', value: 'domain' },
     ],
   },
   verify: {
@@ -33,6 +34,7 @@ export const COMMANDS: Record<string, { description: string; args: ArgumentDef[]
     ],
     options: [
       { flag: 'allowInsecureFlags', description: 'Allow secrets to be passed via command-line flags (not recommended)', default: false },
+      { flag: 'zone', description: 'DNS zone that contains the domain (overrides auto-detection)', default: '', value: 'domain' },
     ],
   },
 }

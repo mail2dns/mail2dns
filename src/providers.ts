@@ -1,13 +1,13 @@
-import { setupRecords as cloudflareSetupRecords, listRecords as cloudflareListRecords, inputs as cloudflareInputs } from './dns-modules/cloudflare.js'
-import { setupRecords as godaddySetupRecords, listRecords as godaddyListRecords, inputs as godaddyInputs } from './dns-modules/godaddy.js'
-import { setupRecords as digitaloceanSetupRecords, listRecords as digitaloceanListRecords, inputs as digitaloceanInputs } from './dns-modules/digitalocean.js'
-import { setupRecords as gcloudSetupRecords, listRecords as gcloudListRecords, inputs as gcloudInputs } from './dns-modules/gcloud.js'
-import { setupRecords as netlifySetupRecords, listRecords as netlifyListRecords, inputs as netlifyInputs } from './dns-modules/netlify.js'
-import { setupRecords as route53SetupRecords, listRecords as route53ListRecords, inputs as route53Inputs } from './dns-modules/route53.js'
-import { setupRecords as vercelSetupRecords, listRecords as vercelListRecords, inputs as vercelInputs } from './dns-modules/vercel.js'
-import { setupRecords as hetznerSetupRecords, listRecords as hetznerListRecords, inputs as hetznerInputs } from './dns-modules/hetzner.js'
-import { setupRecords as spaceshipSetupRecords, listRecords as spaceshipListRecords, inputs as spaceshipInputs } from './dns-modules/spaceship.js'
-import { setupRecords as azureSetupRecords, listRecords as azureListRecords, inputs as azureInputs } from './dns-modules/azure.js'
+import { setupRecords as cloudflareSetupRecords, listRecords as cloudflareListRecords, resolveZone as cloudflareResolveZone, inputs as cloudflareInputs } from './dns-modules/cloudflare.js'
+import { setupRecords as godaddySetupRecords, listRecords as godaddyListRecords, resolveZone as godaddyResolveZone, inputs as godaddyInputs } from './dns-modules/godaddy.js'
+import { setupRecords as digitaloceanSetupRecords, listRecords as digitaloceanListRecords, resolveZone as digitaloceanResolveZone, inputs as digitaloceanInputs } from './dns-modules/digitalocean.js'
+import { setupRecords as gcloudSetupRecords, listRecords as gcloudListRecords, resolveZone as gcloudResolveZone, inputs as gcloudInputs } from './dns-modules/gcloud.js'
+import { setupRecords as netlifySetupRecords, listRecords as netlifyListRecords, resolveZone as netlifyResolveZone, inputs as netlifyInputs } from './dns-modules/netlify.js'
+import { setupRecords as route53SetupRecords, listRecords as route53ListRecords, resolveZone as route53ResolveZone, inputs as route53Inputs } from './dns-modules/route53.js'
+import { setupRecords as vercelSetupRecords, listRecords as vercelListRecords, resolveZone as vercelResolveZone, inputs as vercelInputs } from './dns-modules/vercel.js'
+import { setupRecords as hetznerSetupRecords, listRecords as hetznerListRecords, resolveZone as hetznerResolveZone, inputs as hetznerInputs } from './dns-modules/hetzner.js'
+import { setupRecords as spaceshipSetupRecords, listRecords as spaceshipListRecords, resolveZone as spaceshipResolveZone, inputs as spaceshipInputs } from './dns-modules/spaceship.js'
+import { setupRecords as azureSetupRecords, listRecords as azureListRecords, resolveZone as azureResolveZone, inputs as azureInputs } from './dns-modules/azure.js'
 import { inputs as sesInputs, getRecords as sesGetRecords } from './email-modules/ses.js'
 import migaduTemplate from './email-templates/migadu.json'
 import googleworkspaceTemplate from './email-templates/googleworkspace.json'
@@ -26,60 +26,70 @@ export const DNS_PROVIDERS: Record<string, DnsProviderDef> = {
     name: 'Cloudflare',
     setupRecords: cloudflareSetupRecords,
     listRecords: cloudflareListRecords,
+    resolveZone: cloudflareResolveZone,
     inputs: cloudflareInputs
   },
   digitalocean: {
     name: 'DigitalOcean',
     setupRecords: digitaloceanSetupRecords,
     listRecords: digitaloceanListRecords,
+    resolveZone: digitaloceanResolveZone,
     inputs: digitaloceanInputs
   },
   godaddy: {
     name: 'GoDaddy',
     setupRecords: godaddySetupRecords,
     listRecords: godaddyListRecords,
+    resolveZone: godaddyResolveZone,
     inputs: godaddyInputs
   },
   gcloud: {
     name: 'Google Cloud',
     setupRecords: gcloudSetupRecords,
     listRecords: gcloudListRecords,
+    resolveZone: gcloudResolveZone,
     inputs: gcloudInputs
   },
   netlify: {
     name: 'Netlify',
     setupRecords: netlifySetupRecords,
     listRecords: netlifyListRecords,
+    resolveZone: netlifyResolveZone,
     inputs: netlifyInputs
   },
   route53: {
     name: 'Amazon Route 53',
     setupRecords: route53SetupRecords,
     listRecords: route53ListRecords,
+    resolveZone: route53ResolveZone,
     inputs: route53Inputs
   },
   vercel: {
     name: 'Vercel',
     setupRecords: vercelSetupRecords,
     listRecords: vercelListRecords,
+    resolveZone: vercelResolveZone,
     inputs: vercelInputs
   },
   hetzner: {
     name: 'Hetzner',
     setupRecords: hetznerSetupRecords,
     listRecords: hetznerListRecords,
+    resolveZone: hetznerResolveZone,
     inputs: hetznerInputs
   },
   spaceship: {
     name: 'Spaceship',
     setupRecords: spaceshipSetupRecords,
     listRecords: spaceshipListRecords,
+    resolveZone: spaceshipResolveZone,
     inputs: spaceshipInputs
   },
   azure: {
     name: 'Azure DNS',
     setupRecords: azureSetupRecords,
     listRecords: azureListRecords,
+    resolveZone: azureResolveZone,
     inputs: azureInputs
   }
 }

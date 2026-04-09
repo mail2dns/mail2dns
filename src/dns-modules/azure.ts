@@ -2,6 +2,7 @@ import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { confirm as utilsConfirm, log } from '../utils.js'
 import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
+import { findContainingZone } from '../utils.js'
 
 const execFileAsync = promisify(execFile) as (file: string, args: string[]) => Promise<{ stdout: string; stderr: string }>
 
@@ -50,6 +51,14 @@ async function getZone(domain: string, azFn: AzFn): Promise<AzZone> {
   const zone = zones?.find(z => z.name === domain)
   if (!zone) throw new Error(`DNS zone not found for domain: ${domain}`)
   return zone
+}
+
+export async function resolveZone(domain: string, { subscription }: Record<string, string>): Promise<string> {
+  const azFn = makeAzCmd(subscription)
+  const zones = await azFn<AzZone[]>(['network', 'dns', 'zone', 'list'])
+  const containingZone = findContainingZone(domain, (zones ?? []).map(z => z.name))
+  if (!containingZone) throw new Error(`No zone found for domain: ${domain}`)
+  return containingZone
 }
 
 async function fetchRecords(rg: string, zone: string, azFn: AzFn): Promise<AzRecordSet[]> {

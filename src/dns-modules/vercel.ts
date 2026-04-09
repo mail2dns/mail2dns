@@ -1,6 +1,7 @@
 import { confirm as utilsConfirm, log } from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
+import { findContainingZone } from '../utils.js'
 
 export const inputs: InputDef[] = [
   {
@@ -52,6 +53,13 @@ async function vrFetch<T>(path: string, options: RequestInit, token: string, tea
 async function fetchRecords(domain: string, token: string, teamId?: string): Promise<VrRecord[]> {
   const data = await vrFetch<{ records: VrRecord[] }>(`/v4/domains/${domain}/records`, {}, token, teamId)
   return data.records
+}
+
+export async function resolveZone(domain: string, { token, 'team-id': teamId }: Record<string, string>): Promise<string> {
+  const data = await vrFetch<{ domains: Array<{ name: string }> }>('/v5/domains?limit=100', {}, token, teamId)
+  const containingZone = findContainingZone(domain, (data.domains ?? []).map(d => d.name))
+  if (!containingZone) throw new Error(`No zone found for domain: ${domain}`)
+  return containingZone
 }
 
 export async function listRecords(domain: string, { token, 'team-id': teamId }: Record<string, string>): Promise<DnsRecord[]> {

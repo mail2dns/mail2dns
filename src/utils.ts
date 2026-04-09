@@ -57,6 +57,12 @@ export function assertNoInsecureFlags(inputs: InputDef[], argv: Record<string, s
   }
 }
 
+export function findContainingZone(domain: string, zones: string[]): string | undefined {
+  return zones
+    .filter(z => domain === z || domain.endsWith(`.${z}`))
+    .sort((a, b) => b.length - a.length)[0]
+}
+
 export async function resolveInputs(inputs: InputDef[], argv: Record<string, string | undefined>, nonInteractive = false): Promise<Record<string, string>> {
   const result: Record<string, string> = {}
   for (const input of inputs) {

@@ -3,6 +3,7 @@ import { promisify } from 'util'
 import { confirm as utilsConfirm, log } from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
+import { findContainingZone } from '../utils.js'
 
 const execFileAsync = promisify(execFile) as (file: string, args: string[]) => Promise<{ stdout: string; stderr: string }>
 
@@ -45,6 +46,15 @@ async function getManagedZone(domain: string, gcloudFn: GcloudFn): Promise<strin
   const zone = zones?.find(z => z.dnsName === `${domain}.`)
   if (!zone) throw new Error(`Managed zone not found for domain: ${domain}`)
   return zone.name
+}
+
+export async function resolveZone(domain: string, { project }: Record<string, string>): Promise<string> {
+  const gcloudFn = makeGcloudCmd(project)
+  const zones = await gcloudFn<GcpZone[]>(['dns', 'managed-zones', 'list'])
+  const names = (zones ?? []).map(z => z.dnsName.replace(/\.$/, ''))
+  const containingZone = findContainingZone(domain, names)
+  if (!containingZone) throw new Error(`No zone found for domain: ${domain}`)
+  return containingZone
 }
 
 async function fetchRecords(zone: string, gcloudFn: GcloudFn): Promise<GcpRecord[]> {

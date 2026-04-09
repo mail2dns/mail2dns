@@ -1,6 +1,7 @@
 import { confirm as utilsConfirm, log } from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
+import { findContainingZone } from '../utils.js'
 
 export const inputs: InputDef[] = [
   {
@@ -47,6 +48,13 @@ async function getZoneId(domain: string, token: string): Promise<string> {
     throw new Error(`DNS zone not found for domain: ${domain}`)
   }
   return zone.id
+}
+
+export async function resolveZone(domain: string, { token }: Record<string, string>): Promise<string> {
+  const zones = await nlFetch<Array<{ name: string }>>('/dns_zones', {}, token)
+  const containingZone = findContainingZone(domain, zones.map(z => z.name))
+  if (!containingZone) throw new Error(`No zone found for domain: ${domain}`)
+  return containingZone
 }
 
 async function fetchRecords(zoneId: string, token: string): Promise<NlRecord[]> {

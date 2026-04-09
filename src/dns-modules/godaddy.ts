@@ -1,6 +1,7 @@
 import { confirm as utilsConfirm, log } from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
+import { findContainingZone } from '../utils.js'
 
 export const inputs: InputDef[] = [
   {
@@ -47,6 +48,13 @@ async function gdFetch<T>(path: string, options: RequestInit, key: string, secre
 
 async function fetchRecords(domain: string, key: string, secret: string): Promise<GdRecord[]> {
   return gdFetch<GdRecord[]>(`/v1/domains/${encodeURIComponent(domain)}/records`, {}, key, secret)
+}
+
+export async function resolveZone(domain: string, { key, secret }: Record<string, string>): Promise<string> {
+  const domains = await gdFetch<Array<{ domain: string }>>('/v1/domains?statuses=ACTIVE&limit=500', {}, key, secret)
+  const containingZone = findContainingZone(domain, (domains ?? []).map(d => d.domain))
+  if (!containingZone) throw new Error(`No zone found for domain: ${domain}`)
+  return containingZone
 }
 
 export async function listRecords(domain: string, { key, secret }: Record<string, string>): Promise<DnsRecord[]> {

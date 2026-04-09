@@ -1,6 +1,7 @@
 import { confirm as utilsConfirm, log } from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
+import { findContainingZone } from '../utils.js'
 
 export const inputs: InputDef[] = [
   {
@@ -78,6 +79,13 @@ export function normalizeRecords(rrsets: HzRRSet[]): DnsRecord[] {
     }
   }
   return result
+}
+
+export async function resolveZone(domain: string, { token }: Record<string, string>): Promise<string> {
+  const data = await hzFetch<{ zones: Array<{ name: string }> }>('/zones', {}, token)
+  const containingZone = findContainingZone(domain, (data.zones ?? []).map(z => z.name))
+  if (!containingZone) throw new Error(`No zone found for domain: ${domain}`)
+  return containingZone
 }
 
 export async function listRecords(domain: string, { token }: Record<string, string>): Promise<DnsRecord[]> {

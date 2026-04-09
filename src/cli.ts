@@ -93,7 +93,8 @@ registerArguments(setupCmd, COMMANDS.setup.args)
 registerProviderOptions(setupCmd)
 for (const o of COMMANDS.setup.options) {
   const kebab = camelToKebab(o.flag)
-  const flags = o.short ? `-${o.short}, --${kebab}` : `--${kebab}`
+  const flagStr = o.value ? `--${kebab} <${o.value}>` : `--${kebab}`
+  const flags = o.short ? `-${o.short}, ${flagStr}` : flagStr
   setupCmd.option(flags, o.description)
 }
 setupCmd
@@ -111,7 +112,8 @@ registerArguments(listCmd, COMMANDS.list.args)
 registerProviderOptions(listCmd)
 for (const o of COMMANDS.list.options) {
   const kebab = camelToKebab(o.flag)
-  const flags = o.short ? `-${o.short}, --${kebab}` : `--${kebab}`
+  const flagStr = o.value ? `--${kebab} <${o.value}>` : `--${kebab}`
+  const flags = o.short ? `-${o.short}, ${flagStr}` : flagStr
   listCmd.option(flags, o.description)
 }
 listCmd
@@ -129,7 +131,8 @@ registerArguments(verifyCmd, COMMANDS.verify.args)
 registerProviderOptions(verifyCmd)
 for (const o of COMMANDS.verify.options) {
   const kebab = camelToKebab(o.flag)
-  const flags = o.short ? `-${o.short}, --${kebab}` : `--${kebab}`
+  const flagStr = o.value ? `--${kebab} <${o.value}>` : `--${kebab}`
+  const flags = o.short ? `-${o.short}, ${flagStr}` : flagStr
   verifyCmd.option(flags, o.description)
 }
 verifyCmd

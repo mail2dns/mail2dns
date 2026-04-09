@@ -58,6 +58,16 @@ async function getZoneId(domain: string, token: string): Promise<string> {
   return zones[0].id
 }
 
+export async function resolveZone(domain: string, { token }: Record<string, string>): Promise<string> {
+  const parts = domain.split('.')
+  for (let i = 0; i < parts.length - 1; i++) {
+    const candidate = parts.slice(i).join('.')
+    const zones = await cfFetch<Array<{ id: string }>>(`/zones?name=${encodeURIComponent(candidate)}&status=active`, {}, token)
+    if (zones?.length) return candidate
+  }
+  throw new Error(`No zone found for domain: ${domain}`)
+}
+
 async function listDnsRecords(zoneId: string, token: string): Promise<CfRecord[]> {
   const all: CfRecord[] = []
   let page = 1
