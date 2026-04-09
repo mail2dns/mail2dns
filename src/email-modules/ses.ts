@@ -14,9 +14,11 @@ export const inputs: InputDef[] = [
   }
 ]
 
-function makeAws(profileArgs: string[]) {
+type ExecFn = (file: string, args: string[]) => Promise<{ stdout: string; stderr: string }>
+
+function makeAws(profileArgs: string[], exec: ExecFn) {
   return async function aws<T>(args: string[]): Promise<T> {
-    const { stdout } = await execFileAsync('aws', [...profileArgs, ...args, '--output', 'json'])
+    const { stdout } = await exec('aws', [...profileArgs, ...args, '--output', 'json'])
       .catch((e: { stderr?: string; message: string }) => {
         throw new Error(`AWS CLI error: ${e.stderr?.trim() || e.message}\nIs the AWS CLI installed and configured?`)
       })
@@ -24,8 +26,8 @@ function makeAws(profileArgs: string[]) {
   }
 }
 
-async function getRegion(profileArgs: string[]): Promise<string> {
-  const { stdout } = await execFileAsync('aws', [...profileArgs, 'configure', 'get', 'region'])
+async function getRegion(profileArgs: string[], exec: ExecFn): Promise<string> {
+  const { stdout } = await exec('aws', [...profileArgs, 'configure', 'get', 'region'])
     .catch((e: { stderr?: string; message: string }) => {
       throw new Error(`AWS CLI error: ${e.stderr?.trim() || e.message}\nIs the AWS CLI installed and configured?`)
     })
@@ -34,10 +36,9 @@ async function getRegion(profileArgs: string[]): Promise<string> {
   return region
 }
 
-export async function getRecords({ domain, awsProfile }: { domain: string } & Record<string, string>): Promise<DnsRecord[]> {
-  const profileArgs = awsProfile ? ['--profile', awsProfile] : []
-  const aws = makeAws(profileArgs)
-  const region = await getRegion(profileArgs)
+export async function buildRecordsFromExec(domain: string, profileArgs: string[], exec: ExecFn): Promise<DnsRecord[]> {
+  const aws = makeAws(profileArgs, exec)
+  const region = await getRegion(profileArgs, exec)
 
   const [identity, dkim] = await Promise.all([
     aws<{ VerificationToken: string }>(['ses', 'verify-domain-identity', '--domain', domain]),
@@ -58,4 +59,9 @@ export async function getRecords({ domain, awsProfile }: { domain: string } & Re
     { type: 'CNAME', name: `${DkimTokens[1]}._domainkey`, content: `${DkimTokens[1]}.dkim.amazonses.com`,       ttl: 1            },
     { type: 'CNAME', name: `${DkimTokens[2]}._domainkey`, content: `${DkimTokens[2]}.dkim.amazonses.com`,       ttl: 1            },
   ]
+}
+
+export async function getRecords({ domain, awsProfile }: { domain: string } & Record<string, string>): Promise<DnsRecord[]> {
+  const profileArgs = awsProfile ? ['--profile', awsProfile] : []
+  return buildRecordsFromExec(domain, profileArgs, execFileAsync)
 }
