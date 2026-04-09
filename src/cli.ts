@@ -13,7 +13,18 @@ const program = new Command()
 program
   .name('mail2dns')
   .description('Configure DNS records for email providers')
-  .version(version, '-v, --version', 'output the version number')
+  .version(version, '-v, --version', 'Output the version number')
+  .helpOption('-h, --help', 'Display help for command')
+  .helpCommand('help [command]', 'Display help for command')
+
+function registerArguments(cmd: Command, args: { name: string; description?: string }[]): void {
+  for (const arg of args) {
+    const desc = arg.name === 'email-provider' ? `(${Object.keys(EMAIL_PROVIDERS).join(', ')})`
+               : arg.name === 'dns-provider'   ? `(${Object.keys(DNS_PROVIDERS).join(', ')})`
+               : arg.description
+    cmd.argument(`<${arg.name}>`, desc)
+  }
+}
 
 /** Register all provider input flags as hidden options so Commander parses them */
 function registerProviderOptions(cmd: Command): void {
@@ -77,9 +88,7 @@ function buildDnsHelpText(): string {
 const setupCmd = program
   .command('setup')
   .description(COMMANDS.setup.description)
-  .argument('<domain>')
-  .argument('<email-provider>', `(${Object.keys(EMAIL_PROVIDERS).join(', ')})`)
-  .argument('<dns-provider>',   `(${Object.keys(DNS_PROVIDERS).join(', ')})`)
+registerArguments(setupCmd, COMMANDS.setup.args)
 
 registerProviderOptions(setupCmd)
 for (const o of COMMANDS.setup.options) {
@@ -88,6 +97,7 @@ for (const o of COMMANDS.setup.options) {
   setupCmd.option(flags, o.description)
 }
 setupCmd
+  .helpOption('-h, --help', 'Display help for command')
   .addHelpText('after', buildEmailHelpText() + '\n' + buildDnsHelpText())
   .action((domain: string, emailProvider: string, dnsProvider: string, opts: Record<string, string | undefined>) =>
     setup(domain, emailProvider, dnsProvider, opts)
@@ -96,8 +106,7 @@ setupCmd
 const listCmd = program
   .command('list')
   .description(COMMANDS.list.description)
-  .argument('<domain>')
-  .argument('<dns-provider>', `(${Object.keys(DNS_PROVIDERS).join(', ')})`)
+registerArguments(listCmd, COMMANDS.list.args)
 
 registerProviderOptions(listCmd)
 for (const o of COMMANDS.list.options) {
@@ -106,6 +115,7 @@ for (const o of COMMANDS.list.options) {
   listCmd.option(flags, o.description)
 }
 listCmd
+  .helpOption('-h, --help', 'Display help for command')
   .addHelpText('after', buildDnsHelpText())
   .action((domain: string, dnsProvider: string, opts: Record<string, string | undefined>) =>
     list(domain, dnsProvider, opts)
@@ -114,8 +124,7 @@ listCmd
 const verifyCmd = program
   .command('verify')
   .description(COMMANDS.verify.description)
-  .argument('<domain>')
-  .argument('<email-provider>', `(${Object.keys(EMAIL_PROVIDERS).join(', ')})`)
+registerArguments(verifyCmd, COMMANDS.verify.args)
 
 registerProviderOptions(verifyCmd)
 for (const o of COMMANDS.verify.options) {
@@ -124,6 +133,7 @@ for (const o of COMMANDS.verify.options) {
   verifyCmd.option(flags, o.description)
 }
 verifyCmd
+  .helpOption('-h, --help', 'Display help for command')
   .addHelpText('after', buildEmailHelpText())
   .action((domain: string, emailProvider: string, opts: Record<string, string | undefined>) =>
     verify(domain, emailProvider, opts)

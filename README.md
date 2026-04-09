@@ -47,16 +47,14 @@ mail2dns setup [options] <domain> <email-provider> <dns-provider>
 #### [Email Providers](#supported-email-providers)
 
 migadu, googleworkspace, ms365, outlook, fastmail, mailgun, proton, zoho, sendgrid, resend, postmark, ses
-
 #### [DNS Providers](#supported-dns-providers)
 
 cloudflare, digitalocean, godaddy, gcloud, netlify, route53, vercel, hetzner, spaceship, azure
-
 #### Provider Options
 
 Provider-specific options are prompted interactively if not provided via flag or environment variable. See the providers reference below.
 
-#### General Options
+#### Options
 
 | Flag | Description | Default |
 |------|-------------|---------|
@@ -67,19 +65,45 @@ Provider-specific options are prompted interactively if not provided via flag or
 
 ### Verify
 
-Check that expected DNS records are in place
+Check that expected DNS records for an email provider are present via public DNS lookup
 
 ```bash
-mail2dns verify [options] <domain> <email-provider> <dns-provider>
+mail2dns verify [options] <domain> <email-provider>
 ```
+
+#### [Email Providers](#supported-email-providers)
+
+migadu, googleworkspace, ms365, outlook, fastmail, mailgun, proton, zoho, sendgrid, resend, postmark, ses
+#### Provider Options
+
+Provider-specific options are prompted interactively if not provided via flag or environment variable. See the providers reference below.
+
+#### Options
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| <nobr>`-o`, `--no-mx`</nobr> | Skip MX records (verify DNS for outbound email only) | `false` |
 
 ### List
 
-Show existing DNS records for a domain
+Show existing DNS records for a domain via the DNS provider API
 
 ```bash
 mail2dns list [options] <domain> <dns-provider>
 ```
+
+#### [DNS Providers](#supported-dns-providers)
+
+cloudflare, digitalocean, godaddy, gcloud, netlify, route53, vercel, hetzner, spaceship, azure
+#### Provider Options
+
+Provider-specific options are prompted interactively if not provided via flag or environment variable. See the providers reference below.
+
+#### Options
+
+| Flag | Description | Default |
+|------|-------------|---------|
+| <nobr>`--allow-insecure-flags`</nobr> | Allow secrets to be passed via command-line flags (not recommended) | `false` |
 
 <!-- /generated-usage -->
 

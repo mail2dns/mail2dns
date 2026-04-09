@@ -39,73 +39,65 @@ function replaceBlock(content: string, marker: string, generated: string): strin
   return content.slice(0, start) + generated + content.slice(end)
 }
 
+function optionsTable(opts, title) {
+  let lines = [];
+  lines.push('')
+  lines.push(`#### ${title}`)
+  lines.push('')
+  lines.push('| Flag | Description | Default |')
+  lines.push('|------|-------------|---------|')
+  for (const o of opts) {
+    const flag = o.short ? `<nobr>\`-${o.short}\`, \`${toFlag(o.flag)}\`</nobr>` : `<nobr>\`${toFlag(o.flag)}\`</nobr>`
+    lines.push(`| ${flag} | ${o.description} | \`${o.default}\` |`)
+  }
+  return lines;
+}
+
+function commandUsageSection(key: string, extra: string[] = []): string[] {
+  const cmd = COMMANDS[key]
+  const optsPart = cmd.options.length ? ' [options]' : ''
+  const argsPart = cmd.args.map(a => `<${a.name}>`).join(' ')
+  const lines: string[] = []
+  lines.push(`### ${ucfirst(key)}`)
+  lines.push('')
+  lines.push(cmd.description)
+  lines.push('')
+  lines.push('```bash')
+  lines.push(`mail2dns ${key}${optsPart} ${argsPart}`)
+  lines.push('```')
+
+  const providerLines: string[] = []
+  for (const arg of cmd.args) {
+    if (arg.name === 'email-provider') {
+      providerLines.push('#### [Email Providers](#supported-email-providers)', '', Object.keys(EMAIL_PROVIDERS).join(', '))
+    } else if (arg.name === 'dns-provider') {
+      providerLines.push('#### [DNS Providers](#supported-dns-providers)', '', Object.keys(DNS_PROVIDERS).join(', '))
+    }
+  }
+
+  const allExtra = [...providerLines, ...extra]
+  if (allExtra.length) lines.push('', ...allExtra)
+  if (cmd.options.length) lines.push(...optionsTable(cmd.options, 'Options'))
+  lines.push('')
+  return lines
+}
+
 // --- generated-usage ---
 
-const emailProviderKeys = Object.keys(EMAIL_PROVIDERS).join(', ')
-const dnsProviderKeys = Object.keys(DNS_PROVIDERS).join(', ')
+const providersExtra = [
+  '#### Provider Options',
+  '',
+  'Provider-specific options are prompted interactively if not provided via flag or environment variable. See the providers reference below.',
+]
 
 const usageLines: string[] = []
 usageLines.push('<!-- generated-usage -->')
 usageLines.push('')
 usageLines.push('## ⚙️ Usage')
 usageLines.push('')
-
-// Setup
-usageLines.push(`### ${ucfirst('setup')}`)
-usageLines.push('')
-usageLines.push(COMMANDS.setup.description)
-usageLines.push('')
-const setupOpts = COMMANDS.setup.options
-const setupOptsPart = setupOpts.length ? ' [options]' : ''
-usageLines.push('```bash')
-usageLines.push(`mail2dns setup${setupOptsPart} <domain> <email-provider> <dns-provider>`)
-usageLines.push('```')
-usageLines.push('')
-usageLines.push('#### [Email Providers](#supported-email-providers)')
-usageLines.push('')
-usageLines.push(emailProviderKeys)
-usageLines.push('')
-usageLines.push('#### [DNS Providers](#supported-dns-providers)')
-usageLines.push('')
-usageLines.push(dnsProviderKeys)
-usageLines.push('')
-usageLines.push('#### Provider Options')
-usageLines.push('')
-usageLines.push('Provider-specific options are prompted interactively if not provided via flag or environment variable. See the providers reference below.')
-if (setupOpts.length) {
-  usageLines.push('')
-  usageLines.push('#### General Options')
-  usageLines.push('')
-  usageLines.push('| Flag | Description | Default |')
-  usageLines.push('|------|-------------|---------|')
-  for (const o of setupOpts) {
-    const flag = o.short ? `<nobr>\`-${o.short}\`, \`${toFlag(o.flag)}\`</nobr>` : `<nobr>\`${toFlag(o.flag)}\`</nobr>`
-    usageLines.push(`| ${flag} | ${o.description} | \`${o.default}\` |`)
-  }
-}
-usageLines.push('')
-
-// Verify
-usageLines.push(`### ${ucfirst('verify')}`)
-usageLines.push('')
-usageLines.push(COMMANDS.verify.description)
-usageLines.push('')
-const verifyOptsPart = COMMANDS.verify.options.length ? ' [options]' : ''
-usageLines.push('```bash')
-usageLines.push(`mail2dns verify${verifyOptsPart} <domain> <email-provider> <dns-provider>`)
-usageLines.push('```')
-usageLines.push('')
-
-// List
-usageLines.push(`### ${ucfirst('list')}`)
-usageLines.push('')
-usageLines.push(COMMANDS.list.description)
-usageLines.push('')
-const listOptsPart = COMMANDS.list.options.length ? ' [options]' : ''
-usageLines.push('```bash')
-usageLines.push(`mail2dns list${listOptsPart} <domain> <dns-provider>`)
-usageLines.push('```')
-usageLines.push('')
+usageLines.push(...commandUsageSection('setup', providersExtra))
+usageLines.push(...commandUsageSection('verify', providersExtra))
+usageLines.push(...commandUsageSection('list', providersExtra))
 
 usageLines.push('<!-- /generated-usage -->')
 

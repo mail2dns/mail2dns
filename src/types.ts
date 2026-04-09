@@ -10,6 +10,11 @@ export interface DnsRecord {
   ttl?: number
 }
 
+export interface ArgumentDef {
+  name: string
+  description?: string
+}
+
 export interface OptionDef {
   flag: string
   short?: string
