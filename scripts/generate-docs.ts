@@ -69,9 +69,9 @@ function commandUsageSection(key: string, extra: string[] = []): string[] {
   const providerLines: string[] = []
   for (const arg of cmd.args) {
     if (arg.name === 'email-provider') {
-      providerLines.push('#### [Email Providers](#supported-email-providers)', '', Object.keys(EMAIL_PROVIDERS).join(', '))
+      providerLines.push('#### [Email Providers](#-supported-email-providers)', '', Object.keys(EMAIL_PROVIDERS).join(', '))
     } else if (arg.name === 'dns-provider') {
-      providerLines.push('#### [DNS Providers](#supported-dns-providers)', '', Object.keys(DNS_PROVIDERS).join(', '))
+      providerLines.push('#### [DNS Providers](#-supported-dns-providers)', '', Object.keys(DNS_PROVIDERS).join(', '))
     }
   }
 
@@ -107,7 +107,7 @@ const refLines: string[] = []
 refLines.push('<!-- generated-providers-reference -->')
 refLines.push('')
 
-refLines.push('## ✅  Supported Email providers')
+refLines.push('## ✅ Supported Email providers')
 refLines.push('')
 refLines.push('| Provider | Key |')
 refLines.push('|----------|-----|')

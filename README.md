@@ -7,7 +7,6 @@ for email providers across multiple DNS providers.**
 
 ⭐ Currently Supports 12 email providers and 10 DNS providers in any combination.
 
-
 🔗 [See website for setup guides for every provider combination](https://mail2dns.com)  
 
 
@@ -44,10 +43,10 @@ Create DNS records for an email provider
 mail2dns setup [options] <domain> <email-provider> <dns-provider>
 ```
 
-#### [Email Providers](#supported-email-providers)
+#### [Email Providers](#-supported-email-providers)
 
 migadu, googleworkspace, ms365, outlook, fastmail, mailgun, proton, zoho, sendgrid, resend, postmark, ses
-#### [DNS Providers](#supported-dns-providers)
+#### [DNS Providers](#-supported-dns-providers)
 
 cloudflare, digitalocean, godaddy, gcloud, netlify, route53, vercel, hetzner, spaceship, azure
 #### Provider Options
@@ -71,7 +70,7 @@ Check that expected DNS records for an email provider are present via public DNS
 mail2dns verify [options] <domain> <email-provider>
 ```
 
-#### [Email Providers](#supported-email-providers)
+#### [Email Providers](#-supported-email-providers)
 
 migadu, googleworkspace, ms365, outlook, fastmail, mailgun, proton, zoho, sendgrid, resend, postmark, ses
 #### Provider Options
@@ -92,7 +91,7 @@ Show existing DNS records for a domain via the DNS provider API
 mail2dns list [options] <domain> <dns-provider>
 ```
 
-#### [DNS Providers](#supported-dns-providers)
+#### [DNS Providers](#-supported-dns-providers)
 
 cloudflare, digitalocean, godaddy, gcloud, netlify, route53, vercel, hetzner, spaceship, azure
 #### Provider Options
@@ -128,7 +127,7 @@ mail2dns setup example.com migadu cloudflare
 ```
 <!-- generated-providers-reference -->
 
-## ✅  Supported Email providers
+## ✅ Supported Email providers
 
 | Provider | Key |
 |----------|-----|
