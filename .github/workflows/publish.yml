@@ -19,6 +19,8 @@ jobs:
 
       - run: npm ci
 
+      - run: npm test
+
       - run: node scripts/generate-buildinfo.mjs
 
       - run: npm run build
