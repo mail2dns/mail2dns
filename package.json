@@ -9,14 +9,12 @@
   "files": ["dist"],
   "type": "module",
   "scripts": {
-    "version": "npm run generate:buildinfo && git add src/buildInfo.ts",
     "prepare": "git config core.hooksPath .githooks",
     "build": "node node_modules/tsup/dist/cli-default.js",
     "dev": "node node_modules/tsx/dist/cli.mjs src/cli.ts",
     "typecheck": "node node_modules/typescript/lib/tsc.js",
     "test": "node --import tsx/esm --test tests/**/*.test.js",
     "export:schema": "node node_modules/tsx/dist/cli.mjs scripts/export-schema.ts",
-    "generate:buildinfo": "node scripts/generate-buildinfo.mjs",
     "generate:docs": "node node_modules/tsx/dist/cli.mjs scripts/generate-docs.ts"
   },
   "dependencies": {

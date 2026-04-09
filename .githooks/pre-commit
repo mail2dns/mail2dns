@@ -4,5 +4,3 @@ npm run typecheck
 node --import tsx/esm --test --test-reporter dot tests/**/*.test.js
 npm run generate:docs
 git add README.md
-npm run generate:buildinfo
-git add src/buildInfo.ts

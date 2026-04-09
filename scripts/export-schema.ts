@@ -1,10 +1,10 @@
 import {DNS_PROVIDERS, EMAIL_PROVIDERS} from '../src/providers.js'
 import {getEmailInputDefs} from '../src/core.js'
-import {COMMANDS} from '../src/utils.js'
-import buildInfo from "../src/buildInfo";
+import {COMMANDS} from '../src/commands.js'
+import { version } from '../package.json'
 
 const output = {
-    version: buildInfo.version,
+    version,
     setup: {
         options: COMMANDS.setup.options,
         dnsProviders: Object.fromEntries(
