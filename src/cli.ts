@@ -100,6 +100,11 @@ const listCmd = program
   .argument('<dns-provider>', `(${Object.keys(DNS_PROVIDERS).join(', ')})`)
 
 registerProviderOptions(listCmd)
+for (const o of COMMANDS.list.options) {
+  const kebab = camelToKebab(o.flag)
+  const flags = o.short ? `-${o.short}, --${kebab}` : `--${kebab}`
+  listCmd.option(flags, o.description)
+}
 listCmd
   .addHelpText('after', buildDnsHelpText())
   .action((domain: string, dnsProvider: string, opts: Record<string, string | undefined>) =>

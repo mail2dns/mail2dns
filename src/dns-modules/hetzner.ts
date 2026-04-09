@@ -7,6 +7,7 @@ export const inputs: InputDef[] = [
     flag: 'token',
     name: 'Hetzner Cloud API token',
     env: 'HCLOUD_TOKEN',
+    secret: true,
     instructions: 'Create a token at https://console.hetzner.cloud/projects → select project → Security → API Tokens'
   }
 ]

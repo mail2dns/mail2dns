@@ -7,12 +7,14 @@ export const inputs: InputDef[] = [
     flag: 'api-key',
     name: 'Spaceship API key',
     env: 'SPACESHIP_API_KEY',
+    secret: true,
     instructions: 'Create an API key at https://www.spaceship.com/account/api-management/'
   },
   {
     flag: 'api-secret',
     name: 'Spaceship API secret',
     env: 'SPACESHIP_API_SECRET',
+    secret: true,
     instructions: 'Shown when creating an API key at https://www.spaceship.com/account/api-management/'
   }
 ]

@@ -7,12 +7,14 @@ export const inputs: InputDef[] = [
     flag: 'key',
     name: 'GoDaddy API key',
     env: 'GODADDY_API_KEY',
+    secret: true,
     instructions: 'Create API credentials at https://developer.godaddy.com/keys'
   },
   {
     flag: 'secret',
     name: 'GoDaddy API secret',
-    env: 'GODADDY_API_SECRET'
+    env: 'GODADDY_API_SECRET',
+    secret: true
   }
 ]
 

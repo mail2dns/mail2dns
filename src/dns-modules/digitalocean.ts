@@ -7,6 +7,7 @@ export const inputs: InputDef[] = [
     flag: 'token',
     name: 'DigitalOcean API token',
     env: 'DIGITALOCEAN_TOKEN',
+    secret: true,
     instructions: 'Create a token at https://cloud.digitalocean.com/account/api/tokens with read and write scopes.'
   }
 ]

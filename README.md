@@ -78,7 +78,7 @@ mail2dns verify [options] <domain> <email-provider> <dns-provider>
 Show existing DNS records for a domain
 
 ```bash
-mail2dns list <domain> <dns-provider>
+mail2dns list [options] <domain> <dns-provider>
 ```
 
 <!-- /generated-usage -->

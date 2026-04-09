@@ -16,5 +16,10 @@ export const COMMANDS: Record<string, { description: string; options: OptionDef[
       { flag: 'noMx', short: 'o', description: 'Skip MX records (verify DNS for outbound email only)', default: false },
     ],
   },
-  list: { description: 'Show existing DNS records for a domain', options: [] },
+  list: {
+    description: 'Show existing DNS records for a domain',
+    options: [
+      { flag: 'allowInsecureFlags', description: 'Allow secrets to be passed via command-line flags (not recommended)', default: false },
+    ],
+  },
 }

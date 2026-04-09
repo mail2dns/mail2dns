@@ -7,6 +7,7 @@ export const inputs: InputDef[] = [
     flag: 'token',
     name: 'Netlify personal access token',
     env: 'NETLIFY_AUTH_TOKEN',
+    secret: true,
     instructions: 'Create a token at https://app.netlify.com/user/applications#personal-access-tokens'
   }
 ]

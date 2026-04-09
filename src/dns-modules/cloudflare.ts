@@ -8,6 +8,7 @@ export const inputs: InputDef[] = [
     flag: 'token',
     name: 'Cloudflare API token',
     env: 'CLOUDFLARE_API_TOKEN',
+    secret: true,
     instructions: 'Create a token at https://dash.cloudflare.com/profile/api-tokens with Zone:DNS:Edit permissions'
   }
 ]

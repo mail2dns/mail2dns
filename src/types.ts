@@ -24,6 +24,7 @@ export interface InputDef {
   example?: string
   instructions?: string
   optional?: boolean
+  secret?: boolean
 }
 
 export interface SetupRecordsOptions {

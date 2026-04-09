@@ -7,6 +7,7 @@ export const inputs: InputDef[] = [
     flag: 'token',
     name: 'Vercel API token',
     env: 'VERCEL_TOKEN',
+    secret: true,
     instructions: 'Create a token at https://vercel.com/account/tokens'
   },
   {
