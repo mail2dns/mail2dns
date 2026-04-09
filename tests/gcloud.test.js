@@ -91,6 +91,68 @@ describe('gcloud-specific', () => {
     assert.equal(mx.cmd, 'update')
   })
 
+  it('replaces conflicting DMARC record', async () => {
+    fake.seedZone(ZONE, DOMAIN)
+    fake.seedRecordSet(ZONE, {
+      name: `_dmarc.${DOMAIN}.`, type: 'TXT', ttl: 300,
+      rrdatas: ['"v=DMARC1; p=none"']
+    })
+
+    await setupRecords(
+      {
+        domain: DOMAIN,
+        records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=quarantine', ttl: 1 }],
+        gcloud: fake.gcloud,
+        confirm: async () => true
+      },
+      {}
+    )
+
+    const txt = fake.state.mutations.find(m => m.type === 'TXT' && m.fqdn === `_dmarc.${DOMAIN}.`)
+    assert.ok(txt?.rrdatas?.some(v => v.includes('p=quarantine')), 'new DMARC not set')
+  })
+
+  it('replaces conflicting CNAME record', async () => {
+    fake.seedZone(ZONE, DOMAIN)
+    fake.seedRecordSet(ZONE, {
+      name: `email.${DOMAIN}.`, type: 'CNAME', ttl: 300,
+      rrdatas: ['old.mailgun.org.']
+    })
+
+    await setupRecords(
+      {
+        domain: DOMAIN,
+        records: [{ type: 'CNAME', name: 'email', content: 'mailgun.org', ttl: 1 }],
+        gcloud: fake.gcloud,
+        confirm: async () => true
+      },
+      {}
+    )
+
+    const cname = fake.state.mutations.find(m => m.type === 'CNAME')
+    assert.ok(cname?.rrdatas?.some(v => v.includes('mailgun.org')), 'new CNAME not set')
+  })
+
+  it('does not remove DMARC-like TXT at a different name', async () => {
+    fake.seedZone(ZONE, DOMAIN)
+    fake.seedRecordSet(ZONE, {
+      name: `other.${DOMAIN}.`, type: 'TXT', ttl: 300,
+      rrdatas: ['"v=DMARC1; p=reject"']
+    })
+
+    await setupRecords(
+      {
+        domain: DOMAIN,
+        records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=quarantine', ttl: 1 }],
+        gcloud: fake.gcloud,
+        confirm: async () => true
+      },
+      {}
+    )
+
+    assert.ok(!fake.state.mutations.some(m => m.fqdn === `other.${DOMAIN}.`))
+  })
+
   it('replaces conflicting SPF while preserving other TXT values', async () => {
     fake.seedZone(ZONE, DOMAIN)
     fake.seedRecordSet(ZONE, {

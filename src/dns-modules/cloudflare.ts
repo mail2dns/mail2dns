@@ -98,9 +98,7 @@ function findConflicts(existing: CfRecord[], records: DnsRecord[], domain: strin
         if (record.content.includes('v=DMARC1') && eName === record.name) return true
       }
 
-      if (record.name.includes('_domainkey') && (record.type === 'CNAME' || record.type === 'TXT')) {
-        if ((e.type === 'CNAME' || e.type === 'TXT') && eName === record.name) return true
-      }
+      if (record.type === 'CNAME' && (e.type === 'CNAME' || e.type === 'TXT') && eName === record.name) return true
 
       return false
     })

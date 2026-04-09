@@ -40,6 +40,11 @@ const providers = [
         assert.ok(fake.state.deleted.includes('mx-old-2'))
       },
       verifySpfConflictDeleted: () => assert.ok(fake.state.deleted.includes('spf-old')),
+      seedDmarcConflict:  () => fake.seedRecord(ZONE_ID, { id: 'dmarc-old', type: 'TXT', name: '_dmarc.example.com', content: 'v=DMARC1; p=none' }),
+      seedCnameConflict:  () => fake.seedRecord(ZONE_ID, { id: 'email-old', type: 'CNAME', name: 'email.example.com', content: 'mailgun.org' }),
+      seedUnrelatedDmarc: () => fake.seedRecord(ZONE_ID, { id: 'dmarc-other', type: 'TXT', name: 'other.example.com', content: 'v=DMARC1; p=reject' }),
+      verifyDmarcConflictDeleted: () => assert.ok(fake.state.deleted.includes('dmarc-old')),
+      verifyCnameConflictDeleted: () => assert.ok(fake.state.deleted.includes('email-old')),
       getCreatedValue: r => r.content,
       expectedNewMxValue: 'new-mx.example.com',
       throwsOnMissingDomain: true,
@@ -71,6 +76,11 @@ const providers = [
         assert.ok(fake.state.deleted.includes(2))
       },
       verifySpfConflictDeleted: () => assert.ok(fake.state.deleted.includes(1)),
+      seedDmarcConflict:  () => fake.seedRecord(DOMAIN, { id: 10, type: 'TXT', name: '_dmarc', data: 'v=DMARC1; p=none' }),
+      seedCnameConflict:  () => fake.seedRecord(DOMAIN, { id: 11, type: 'CNAME', name: 'email', data: 'mailgun.org' }),
+      seedUnrelatedDmarc: () => fake.seedRecord(DOMAIN, { id: 12, type: 'TXT', name: 'other', data: 'v=DMARC1; p=reject' }),
+      verifyDmarcConflictDeleted: () => assert.ok(fake.state.deleted.includes(10)),
+      verifyCnameConflictDeleted: () => assert.ok(fake.state.deleted.includes(11)),
       getCreatedValue: r => r.data,
       expectedNewMxValue: 'new-mx.example.com',
       throwsOnMissingDomain: true,
@@ -102,6 +112,11 @@ const providers = [
         assert.ok(fake.state.deleted.some(r => r.data === 'old-mx2.example.com'))
       },
       verifySpfConflictDeleted: () => assert.ok(fake.state.deleted[0].data.includes('v=spf1')),
+      seedDmarcConflict:  () => fake.seedRecord(DOMAIN, { type: 'TXT', name: '_dmarc', data: 'v=DMARC1; p=none' }),
+      seedCnameConflict:  () => fake.seedRecord(DOMAIN, { type: 'CNAME', name: 'email', data: 'mailgun.org' }),
+      seedUnrelatedDmarc: () => fake.seedRecord(DOMAIN, { type: 'TXT', name: 'other', data: 'v=DMARC1; p=reject' }),
+      verifyDmarcConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.name === '_dmarc' && r.type === 'TXT')),
+      verifyCnameConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.name === 'email' && r.type === 'CNAME')),
       getCreatedValue: r => r.data,
       expectedNewMxValue: 'new-mx.example.com',
       throwsOnMissingDomain: false
@@ -133,6 +148,11 @@ const providers = [
         assert.ok(fake.state.deleted.some(r => r.id === 'mx-old-2'))
       },
       verifySpfConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.id === 'spf-old')),
+      seedDmarcConflict:  () => fake.seedRecord(ZONE_ID, { id: 'dmarc-old', type: 'TXT', hostname: '_dmarc.example.com', value: 'v=DMARC1; p=none' }),
+      seedCnameConflict:  () => fake.seedRecord(ZONE_ID, { id: 'email-old', type: 'CNAME', hostname: 'email.example.com', value: 'mailgun.org' }),
+      seedUnrelatedDmarc: () => fake.seedRecord(ZONE_ID, { id: 'dmarc-other', type: 'TXT', hostname: 'other.example.com', value: 'v=DMARC1; p=reject' }),
+      verifyDmarcConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.id === 'dmarc-old')),
+      verifyCnameConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.id === 'email-old')),
       getCreatedValue: r => r.value,
       expectedNewMxValue: 'new-mx.example.com',
       throwsOnMissingDomain: true,
@@ -164,6 +184,11 @@ const providers = [
         assert.ok(fake.state.deleted.some(r => r.id === 'mx-old-2'))
       },
       verifySpfConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.id === 'spf-old')),
+      seedDmarcConflict:  () => fake.seedRecord(DOMAIN, { id: 'dmarc-old', type: 'TXT', name: '_dmarc', value: 'v=DMARC1; p=none' }),
+      seedCnameConflict:  () => fake.seedRecord(DOMAIN, { id: 'email-old', type: 'CNAME', name: 'email', value: 'mailgun.org' }),
+      seedUnrelatedDmarc: () => fake.seedRecord(DOMAIN, { id: 'dmarc-other', type: 'TXT', name: 'other', value: 'v=DMARC1; p=reject' }),
+      verifyDmarcConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.id === 'dmarc-old')),
+      verifyCnameConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.id === 'email-old')),
       getCreatedValue: r => r.value,
       expectedNewMxValue: 'new-mx.example.com',
       throwsOnMissingDomain: true,
@@ -195,6 +220,11 @@ const providers = [
         assert.ok(fake.state.deleted.some(r => r.value === 'old-mx2.example.com'))
       },
       verifySpfConflictDeleted: () => assert.ok(fake.state.deleted[0].value.includes('v=spf1')),
+      seedDmarcConflict:  () => fake.seedRecord(DOMAIN, { name: '_dmarc', type: 'TXT', value: 'v=DMARC1; p=none', ttl: 300 }),
+      seedCnameConflict:  () => fake.seedRecord(DOMAIN, { name: 'email', type: 'CNAME', value: 'mailgun.org', ttl: 300 }),
+      seedUnrelatedDmarc: () => fake.seedRecord(DOMAIN, { name: 'other', type: 'TXT', value: 'v=DMARC1; p=reject', ttl: 300 }),
+      verifyDmarcConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.name === '_dmarc' && r.type === 'TXT')),
+      verifyCnameConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.name === 'email' && r.type === 'CNAME')),
       getCreatedValue: r => r.value,
       expectedNewMxValue: 'new-mx.example.com',
       throwsOnMissingDomain: true,
@@ -225,6 +255,11 @@ const providers = [
         assert.ok(fake.state.deleted.some(r => r.name === '@' && r.type === 'MX'))
       },
       verifySpfConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.name === '@' && r.type === 'TXT')),
+      seedDmarcConflict:  () => fake.seedRRSet(DOMAIN, { name: '_dmarc', type: 'TXT', ttl: 300, records: [{ value: 'v=DMARC1; p=none' }] }),
+      seedCnameConflict:  () => fake.seedRRSet(DOMAIN, { name: 'email', type: 'CNAME', ttl: 300, records: [{ value: 'mailgun.org' }] }),
+      seedUnrelatedDmarc: () => fake.seedRRSet(DOMAIN, { name: 'other', type: 'TXT', ttl: 300, records: [{ value: 'v=DMARC1; p=reject' }] }),
+      verifyDmarcConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.name === '_dmarc' && r.type === 'TXT')),
+      verifyCnameConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.name === 'email' && r.type === 'CNAME')),
       getCreatedValue: r => r.records[0].value,
       expectedNewMxValue: '10 new-mx.example.com',
       throwsOnMissingDomain: true,
@@ -362,6 +397,54 @@ for (const p of providers) {
 
       assert.equal(p.fake.state.deleted.length, 0)
       assert.equal(p.fake.state[p.createdKey].length, 1)
+    })
+
+    it('removes conflicting DMARC record before creating', async () => {
+      p.seedDomain()
+      p.seedDmarcConflict()
+
+      await setupRecords(
+        {
+          domain: DOMAIN,
+          records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=quarantine' }],
+          confirm: async () => true
+        },
+        p.inputs
+      )
+
+      p.verifyDmarcConflictDeleted()
+    })
+
+    it('removes conflicting CNAME record before creating', async () => {
+      p.seedDomain()
+      p.seedCnameConflict()
+
+      await setupRecords(
+        {
+          domain: DOMAIN,
+          records: [{ type: 'CNAME', name: 'email', content: 'mailgun.org' }],
+          confirm: async () => true
+        },
+        p.inputs
+      )
+
+      p.verifyCnameConflictDeleted()
+    })
+
+    it('does not remove DMARC-like TXT at a different name', async () => {
+      p.seedDomain()
+      p.seedUnrelatedDmarc()
+
+      await setupRecords(
+        {
+          domain: DOMAIN,
+          records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=quarantine' }],
+          confirm: async () => true
+        },
+        p.inputs
+      )
+
+      assert.equal(p.fake.state.deleted.length, 0)
     })
   })
 }

@@ -112,12 +112,10 @@ function findConflicts(existing: HzRRSet[], records: DnsRecord[], verificationPr
       if (record.type === 'TXT' && e.type === 'TXT' && e.name === record.name) {
         if (record.content.includes('v=spf1') && e.records.some(r => r.value.includes('v=spf1'))) return true
         if (verificationPrefix && record.content.includes(verificationPrefix) && e.records.some(r => r.value.includes(verificationPrefix))) return true
-        if (record.content.includes('v=DMARC1')) return true
+        if (record.content.includes('v=DMARC1') && e.name === record.name) return true
       }
 
-      if (record.name.includes('_domainkey') && (record.type === 'CNAME' || record.type === 'TXT')) {
-        if ((e.type === 'CNAME' || e.type === 'TXT') && e.name === record.name) return true
-      }
+      if (record.type === 'CNAME' && (e.type === 'CNAME' || e.type === 'TXT') && e.name === record.name) return true
 
       return false
     })

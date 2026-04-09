@@ -111,7 +111,7 @@ function isConflictingValue(existing: string, newRecord: DnsRecord, verification
     if (verificationPrefix && newRecord.content.includes(verificationPrefix) && raw.includes(verificationPrefix)) return true
     if (newRecord.content.includes('v=DMARC1') && raw.includes('v=DMARC1')) return true
   }
-  if (newRecord.name.includes('_domainkey') && (newRecord.type === 'CNAME' || newRecord.type === 'TXT')) return true
+  if (newRecord.type === 'CNAME') return true
   return false
 }
 

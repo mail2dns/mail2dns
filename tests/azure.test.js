@@ -90,6 +90,67 @@ describe('azure-specific', () => {
     assert.ok(fake.state.added[0].args.includes('new-mx.example.com.'), 'new MX value wrong')
   })
 
+  it('replaces conflicting DMARC record', async () => {
+    fake.seedZone(DOMAIN, RG)
+    fake.seedRecordSet(DOMAIN, {
+      name: '_dmarc', type: 'Microsoft.Network/dnszones/TXT', ttl: 300,
+      txtRecords: [{ value: ['v=DMARC1; p=none'] }]
+    })
+
+    await setupRecords(
+      {
+        domain: DOMAIN,
+        records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=quarantine', ttl: 1 }],
+        az: fake.az,
+        confirm: async () => true
+      },
+      {}
+    )
+
+    assert.ok(fake.state.removed.some(m => m.type === 'TXT' && m.name === '_dmarc'), 'old DMARC not removed')
+    assert.ok(fake.state.added.some(m => m.type === 'TXT' && m.name === '_dmarc'), 'new DMARC not added')
+  })
+
+  it('replaces conflicting CNAME record', async () => {
+    fake.seedZone(DOMAIN, RG)
+    fake.seedRecordSet(DOMAIN, {
+      name: 'email', type: 'Microsoft.Network/dnszones/CNAME', ttl: 300,
+      cnameRecord: { cname: 'old.mailgun.org.' }
+    })
+
+    await setupRecords(
+      {
+        domain: DOMAIN,
+        records: [{ type: 'CNAME', name: 'email', content: 'mailgun.org', ttl: 1 }],
+        az: fake.az,
+        confirm: async () => true
+      },
+      {}
+    )
+
+    assert.ok(fake.state.added.some(m => m.type === 'CNAME' && m.name === 'email'), 'new CNAME not added')
+  })
+
+  it('does not remove DMARC-like TXT at a different name', async () => {
+    fake.seedZone(DOMAIN, RG)
+    fake.seedRecordSet(DOMAIN, {
+      name: 'other', type: 'Microsoft.Network/dnszones/TXT', ttl: 300,
+      txtRecords: [{ value: ['v=DMARC1; p=reject'] }]
+    })
+
+    await setupRecords(
+      {
+        domain: DOMAIN,
+        records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=quarantine', ttl: 1 }],
+        az: fake.az,
+        confirm: async () => true
+      },
+      {}
+    )
+
+    assert.equal(fake.state.removed.length, 0)
+  })
+
   it('replaces conflicting SPF while preserving other TXT values', async () => {
     fake.seedZone(DOMAIN, RG)
     fake.seedRecordSet(DOMAIN, {

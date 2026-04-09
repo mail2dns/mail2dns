@@ -98,10 +98,8 @@ function findConflicts(existing: GdRecord[], records: DnsRecord[], verificationP
         } else if (record.content.includes('v=DMARC1') && e.name === record.name) {
           addConflict(e.type, e.name)
         }
-      } else if (record.name.includes('_domainkey') && (record.type === 'CNAME' || record.type === 'TXT')) {
-        if ((e.type === 'CNAME' || e.type === 'TXT') && e.name === record.name) {
-          addConflict(e.type, e.name)
-        }
+      } else if (record.type === 'CNAME' && (e.type === 'CNAME' || e.type === 'TXT') && e.name === record.name) {
+        addConflict(e.type, e.name)
       }
     }
   }

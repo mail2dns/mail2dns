@@ -93,6 +93,69 @@ describe('route53-specific', () => {
     assert.ok(mx.ResourceRecords[0].Value.includes('new-mx.example.com'))
   })
 
+  it('replaces conflicting DMARC record', async () => {
+    fake.seedZone(DOMAIN, ZONE_ID)
+    fake.seedRecordSet(ZONE_ID, {
+      Name: `_dmarc.${DOMAIN}.`, Type: 'TXT', TTL: 300,
+      ResourceRecords: [{ Value: '"v=DMARC1; p=none"' }]
+    })
+
+    await setupRecords(
+      {
+        domain: DOMAIN,
+        records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=quarantine', ttl: 1 }],
+        aws: fake.aws,
+        confirm: async () => true
+      },
+      {}
+    )
+
+    const txt = fake.state.upserted.find(s => s.Type === 'TXT')
+    assert.ok(txt?.ResourceRecords?.[0]?.Value?.includes('p=quarantine'), 'new DMARC not set')
+  })
+
+  it('replaces conflicting CNAME record', async () => {
+    fake.seedZone(DOMAIN, ZONE_ID)
+    fake.seedRecordSet(ZONE_ID, {
+      Name: `email.${DOMAIN}.`, Type: 'CNAME', TTL: 300,
+      ResourceRecords: [{ Value: 'old.mailgun.org.' }]
+    })
+
+    await setupRecords(
+      {
+        domain: DOMAIN,
+        records: [{ type: 'CNAME', name: 'email', content: 'mailgun.org', ttl: 1 }],
+        aws: fake.aws,
+        confirm: async () => true
+      },
+      {}
+    )
+
+    const cname = fake.state.upserted.find(s => s.Type === 'CNAME')
+    assert.ok(cname?.ResourceRecords?.[0]?.Value?.includes('mailgun.org'), 'new CNAME not set')
+  })
+
+  it('does not remove DMARC-like TXT at a different name', async () => {
+    fake.seedZone(DOMAIN, ZONE_ID)
+    fake.seedRecordSet(ZONE_ID, {
+      Name: `other.${DOMAIN}.`, Type: 'TXT', TTL: 300,
+      ResourceRecords: [{ Value: '"v=DMARC1; p=reject"' }]
+    })
+
+    await setupRecords(
+      {
+        domain: DOMAIN,
+        records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=quarantine', ttl: 1 }],
+        aws: fake.aws,
+        confirm: async () => true
+      },
+      {}
+    )
+
+    const deletions = fake.state.changes.filter(c => c.Action === 'DELETE')
+    assert.equal(deletions.length, 0)
+  })
+
   it('replaces conflicting SPF while preserving other TXT values', async () => {
     fake.seedZone(DOMAIN, ZONE_ID)
     fake.seedRecordSet(ZONE_ID, {
