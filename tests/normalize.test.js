@@ -189,10 +189,10 @@ describe('hetzner normalizeRecords', () => {
     assert.equal(records[1].priority, 20)
   })
 
-  it('unquotes TXT values', () => {
+  it('preserves TXT values as returned by the API', () => {
     const rrsets = [{ name: '@', type: 'TXT', ttl: 300, records: [{ value: '"v=spf1 include:spf.example.com ~all"' }] }]
     const [r] = normalizeHetzner(rrsets)
-    assert.equal(r.content, 'v=spf1 include:spf.example.com ~all')
+    assert.equal(r.content, '"v=spf1 include:spf.example.com ~all"')
   })
 
   it('leaves unquoted TXT values untouched', () => {

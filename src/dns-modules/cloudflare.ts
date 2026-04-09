@@ -85,7 +85,7 @@ async function createRecord(zoneId: string, record: DnsRecord, token: string): P
   const body: Record<string, unknown> = {
     type: record.type,
     name: record.name,
-    content: record.content,
+    content: record.type === 'TXT' ? `"${record.content}"` : record.content,
     ttl: record.ttl ?? 1
   }
   if (record.priority !== undefined) {
@@ -102,6 +102,7 @@ function normalizeName(name: string, domain: string): string {
   if (name.endsWith(`.${domain}`)) return name.slice(0, -(domain.length + 1))
   return name
 }
+
 
 function findConflicts(existing: CfRecord[], records: DnsRecord[], domain: string, verificationPrefix?: string): CfRecord[] {
   const conflicts: CfRecord[] = []

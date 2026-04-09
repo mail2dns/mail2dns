@@ -71,8 +71,7 @@ export function normalizeRecords(rrsets: HzRRSet[]): DnsRecord[] {
         const content = r.value.slice(spaceIdx + 1).replace(/\.$/, '')
         result.push({ type, name: rrset.name, content, priority, ...ttl })
       } else if (type === 'TXT') {
-        const content = r.value.startsWith('"') && r.value.endsWith('"') ? r.value.slice(1, -1) : r.value
-        result.push({ type, name: rrset.name, content, ...ttl })
+        result.push({ type, name: rrset.name, content: r.value, ...ttl })
       } else {
         result.push({ type, name: rrset.name, content: r.value.replace(/\.$/, ''), ...ttl })
       }
@@ -86,9 +85,9 @@ export async function listRecords(domain: string, { token }: Record<string, stri
 }
 
 function recordValue(record: DnsRecord): string {
-  return record.type === 'MX'
-    ? `${record.priority ?? 10} ${record.content}`
-    : record.content
+  if (record.type === 'MX') return `${record.priority ?? 10} ${record.content}`
+  if (record.type === 'TXT') return `"${record.content}"`
+  return record.content
 }
 
 // Group DnsRecords by (name, type) for RRSet-based creation

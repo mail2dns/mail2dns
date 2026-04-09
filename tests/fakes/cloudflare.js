@@ -61,6 +61,10 @@ export function makeServer() {
       const zoneId = recordsPath[1]
       const body = await readBody(req)
       const id = genId()
+      // Cloudflare normalizes TXT content by stripping surrounding quotes
+      if (body.type === 'TXT' && body.content?.startsWith('"') && body.content?.endsWith('"')) {
+        body.content = body.content.slice(1, -1)
+      }
       const record = { id, ...body }
       if (!records.has(zoneId)) records.set(zoneId, new Map())
       records.get(zoneId).set(id, record)
