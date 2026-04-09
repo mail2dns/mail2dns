@@ -1,9 +1,9 @@
 # 🚀 mail2dns
 
 **CLI that automatically creates MX, SPF, DKIM, DMARC and verification DNS records
-for email providers across multiple DNS providers.**
+for email providers. Supports multiple DNS providers.**
 
-🚀 Stop manually copy-pasting DNS records for email!
+👍 Stop manually copy-pasting DNS records for email!
 
 ⭐ Currently Supports 12 email providers and 10 DNS providers in any combination.
 
