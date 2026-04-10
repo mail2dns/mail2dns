@@ -16,7 +16,8 @@ export const inputs: InputDef[] = [
     name: 'Vercel team ID',
     env: 'VERCEL_TEAM_ID',
     instructions: 'Found in your team settings URL: vercel.com/teams/<team-slug>/settings',
-    optional: true
+    optional: true,
+    value: 'id'
   }
 ]
 
