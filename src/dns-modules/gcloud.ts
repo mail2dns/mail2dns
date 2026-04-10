@@ -2,12 +2,12 @@ import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { confirm as utilsConfirm, log } from '../utils.js'
 import { isMailDnsType } from '../types.js'
-import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
+import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
 import { findContainingZone } from '../utils.js'
 
 const execFileAsync = promisify(execFile) as (file: string, args: string[]) => Promise<{ stdout: string; stderr: string }>
 
-export const inputs: InputDef[] = [
+export const inputs: RawInputDef[] = [
   {
     flag: 'project',
     name: 'Google Cloud project ID to use',

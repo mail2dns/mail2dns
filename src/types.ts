@@ -17,13 +17,14 @@ export interface ArgumentDef {
 
 export interface OptionDef {
   flag: string
+  cliFlag: string
   short?: string
   description: string
   default: boolean | string
   value?: string
 }
 
-export interface InputDef {
+export interface RawInputDef {
   flag: string
   name: string
   env?: string
@@ -33,6 +34,10 @@ export interface InputDef {
   secret?: boolean
   default?: string
   value?: string
+}
+
+export interface InputDef extends RawInputDef {
+  cliFlag: string
 }
 
 export interface SetupRecordsOptions {
@@ -55,6 +60,7 @@ export interface TemplateEmailProviderDef {
   type: 'template'
   name: string
   template: EmailTemplate
+  inputs: InputDef[]
 }
 
 export interface ModuleEmailProviderDef {
@@ -77,7 +83,7 @@ export interface EmailTemplateRecord {
 
 export interface EmailTemplate {
   verificationPrefix?: string
-  inputs?: InputDef[]
+  inputs?: RawInputDef[]
   records: EmailTemplateRecord[]
 }
 

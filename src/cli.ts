@@ -1,6 +1,6 @@
 import { Command, Option } from 'commander'
 import { EMAIL_PROVIDERS, DNS_PROVIDERS } from './providers.js'
-import { camelToKebab, log } from './utils.js'
+import { log } from './utils.js'
 import { COMMANDS } from './commands.js'
 import { version } from '../package.json'
 import type { InputDef } from './types.js'
@@ -30,20 +30,18 @@ function registerArguments(cmd: Command, args: { name: string; description?: str
 function registerProviderOptions(cmd: Command): void {
   const seen = new Set<string>()
   const allInputs: InputDef[] = [
-    ...Object.values(EMAIL_PROVIDERS).flatMap(p =>
-      p.type === 'template' ? (p.template.inputs ?? []) : p.inputs
-    ),
+    ...Object.values(EMAIL_PROVIDERS).flatMap(p => p.inputs),
     ...Object.values(DNS_PROVIDERS).flatMap(p => p.inputs)
   ]
   for (const input of allInputs) {
     if (seen.has(input.flag)) continue
     seen.add(input.flag)
-    cmd.addOption(new Option(`--${camelToKebab(input.flag)} <value>`, input.name).hideHelp())
+    cmd.addOption(new Option(`${input.cliFlag} <value>`, input.name).hideHelp())
   }
 }
 
 function formatInputLine(input: InputDef): string {
-  const flag = `--${camelToKebab(input.flag)} <${input.value || 'value'}>`
+  const flag = `${input.cliFlag} <${input.value || 'value'}>`
   const env = input.env ? `  [env: ${input.env}]` : ''
   const optional = input.optional ? ' (optional)' : ''
   return `    ${flag.padEnd(38)} ${input.name}${optional}${env}`
@@ -56,7 +54,7 @@ function buildEmailHelpText(): string {
 
   for (const [key, def] of Object.entries(EMAIL_PROVIDERS)) {
     const identity: object = def.type === 'template' ? def.template : def.inputs
-    const inputs: InputDef[] = def.type === 'template' ? (def.template.inputs ?? []) : def.inputs
+    const inputs: InputDef[] = def.inputs
     if (!identityToNames.has(identity)) {
       identityToNames.set(identity, [])
       identityToInputs.set(identity, inputs)
@@ -92,8 +90,7 @@ registerArguments(setupCmd, COMMANDS.setup.args)
 
 registerProviderOptions(setupCmd)
 for (const o of COMMANDS.setup.options) {
-  const kebab = camelToKebab(o.flag)
-  const flagStr = o.value ? `--${kebab} <${o.value}>` : `--${kebab}`
+  const flagStr = o.value ? `${o.cliFlag} <${o.value}>` : o.cliFlag
   const flags = o.short ? `-${o.short}, ${flagStr}` : flagStr
   setupCmd.option(flags, o.description)
 }
@@ -111,8 +108,7 @@ registerArguments(listCmd, COMMANDS.list.args)
 
 registerProviderOptions(listCmd)
 for (const o of COMMANDS.list.options) {
-  const kebab = camelToKebab(o.flag)
-  const flagStr = o.value ? `--${kebab} <${o.value}>` : `--${kebab}`
+  const flagStr = o.value ? `${o.cliFlag} <${o.value}>` : o.cliFlag
   const flags = o.short ? `-${o.short}, ${flagStr}` : flagStr
   listCmd.option(flags, o.description)
 }
@@ -130,8 +126,7 @@ registerArguments(verifyCmd, COMMANDS.verify.args)
 
 registerProviderOptions(verifyCmd)
 for (const o of COMMANDS.verify.options) {
-  const kebab = camelToKebab(o.flag)
-  const flagStr = o.value ? `--${kebab} <${o.value}>` : `--${kebab}`
+  const flagStr = o.value ? `${o.cliFlag} <${o.value}>` : o.cliFlag
   const flags = o.short ? `-${o.short}, ${flagStr}` : flagStr
   verifyCmd.option(flags, o.description)
 }

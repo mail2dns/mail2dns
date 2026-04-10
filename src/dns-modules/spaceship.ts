@@ -1,9 +1,9 @@
 import { confirm as utilsConfirm, log } from '../utils.js'
 import { isMailDnsType } from '../types.js'
-import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
+import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
 import { findContainingZone } from '../utils.js'
 
-export const inputs: InputDef[] = [
+export const inputs: RawInputDef[] = [
   {
     flag: 'api-key',
     name: 'Spaceship API key',

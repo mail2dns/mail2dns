@@ -2,11 +2,11 @@ import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { confirm, log } from '../utils.js'
 import { isMailDnsType } from '../types.js'
-import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
+import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
 
 const execFileAsync = promisify(execFile) as (file: string, args: string[]) => Promise<{ stdout: string; stderr: string }>
 
-export const inputs: InputDef[] = [
+export const inputs: RawInputDef[] = [
   {
     flag: 'awsProfile',
     name: 'AWS profile to use',

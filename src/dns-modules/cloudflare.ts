@@ -1,9 +1,9 @@
 import { confirm, log } from '../utils.js'
 import { isMailDnsType } from '../types.js'
-import type { DnsRecord, InputDef, SetupRecordsOptions } from '../types.js'
+import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
 
 
-export const inputs: InputDef[] = [
+export const inputs: RawInputDef[] = [
   {
     flag: 'token',
     name: 'Cloudflare API token',

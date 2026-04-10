@@ -8,6 +8,7 @@ import { setupRecords as vercelSetupRecords, listRecords as vercelListRecords, r
 import { setupRecords as hetznerSetupRecords, listRecords as hetznerListRecords, resolveZone as hetznerResolveZone, inputs as hetznerInputs } from './dns-modules/hetzner.js'
 import { setupRecords as spaceshipSetupRecords, listRecords as spaceshipListRecords, resolveZone as spaceshipResolveZone, inputs as spaceshipInputs } from './dns-modules/spaceship.js'
 import { setupRecords as azureSetupRecords, listRecords as azureListRecords, resolveZone as azureResolveZone, inputs as azureInputs } from './dns-modules/azure.js'
+import { camelToKebab } from './utils.js'
 import { inputs as sesInputs, getRecords as sesGetRecords } from './email-modules/ses.js'
 import migaduTemplate from './email-templates/migadu.json'
 import googleworkspaceTemplate from './email-templates/googleworkspace.json'
@@ -19,7 +20,11 @@ import zohoTemplate from './email-templates/zoho.json'
 import sendgridTemplate from './email-templates/sendgrid.json'
 import resendTemplate from './email-templates/resend.json'
 import postmarkTemplate from './email-templates/postmark.json'
-import type { DnsProviderDef, EmailProviderDef } from './types.js'
+import type { DnsProviderDef, EmailProviderDef, InputDef, RawInputDef } from './types.js'
+
+function withCliFlags(inputs: RawInputDef[]): InputDef[] {
+  return inputs.map(i => ({ ...i, cliFlag: `--${camelToKebab(i.flag)}` }))
+}
 
 export const DNS_PROVIDERS: Record<string, DnsProviderDef> = {
   cloudflare: {
@@ -27,70 +32,70 @@ export const DNS_PROVIDERS: Record<string, DnsProviderDef> = {
     setupRecords: cloudflareSetupRecords,
     listRecords: cloudflareListRecords,
     resolveZone: cloudflareResolveZone,
-    inputs: cloudflareInputs
+    inputs: withCliFlags(cloudflareInputs)
   },
   digitalocean: {
     name: 'DigitalOcean',
     setupRecords: digitaloceanSetupRecords,
     listRecords: digitaloceanListRecords,
     resolveZone: digitaloceanResolveZone,
-    inputs: digitaloceanInputs
+    inputs: withCliFlags(digitaloceanInputs)
   },
   godaddy: {
     name: 'GoDaddy',
     setupRecords: godaddySetupRecords,
     listRecords: godaddyListRecords,
     resolveZone: godaddyResolveZone,
-    inputs: godaddyInputs
+    inputs: withCliFlags(godaddyInputs)
   },
   gcloud: {
     name: 'Google Cloud',
     setupRecords: gcloudSetupRecords,
     listRecords: gcloudListRecords,
     resolveZone: gcloudResolveZone,
-    inputs: gcloudInputs
+    inputs: withCliFlags(gcloudInputs)
   },
   netlify: {
     name: 'Netlify',
     setupRecords: netlifySetupRecords,
     listRecords: netlifyListRecords,
     resolveZone: netlifyResolveZone,
-    inputs: netlifyInputs
+    inputs: withCliFlags(netlifyInputs)
   },
   route53: {
     name: 'Amazon Route 53',
     setupRecords: route53SetupRecords,
     listRecords: route53ListRecords,
     resolveZone: route53ResolveZone,
-    inputs: route53Inputs
+    inputs: withCliFlags(route53Inputs)
   },
   vercel: {
     name: 'Vercel',
     setupRecords: vercelSetupRecords,
     listRecords: vercelListRecords,
     resolveZone: vercelResolveZone,
-    inputs: vercelInputs
+    inputs: withCliFlags(vercelInputs)
   },
   hetzner: {
     name: 'Hetzner',
     setupRecords: hetznerSetupRecords,
     listRecords: hetznerListRecords,
     resolveZone: hetznerResolveZone,
-    inputs: hetznerInputs
+    inputs: withCliFlags(hetznerInputs)
   },
   spaceship: {
     name: 'Spaceship',
     setupRecords: spaceshipSetupRecords,
     listRecords: spaceshipListRecords,
     resolveZone: spaceshipResolveZone,
-    inputs: spaceshipInputs
+    inputs: withCliFlags(spaceshipInputs)
   },
   azure: {
     name: 'Azure DNS',
     setupRecords: azureSetupRecords,
     listRecords: azureListRecords,
     resolveZone: azureResolveZone,
-    inputs: azureInputs
+    inputs: withCliFlags(azureInputs)
   }
 }
 
@@ -98,62 +103,73 @@ export const EMAIL_PROVIDERS: Record<string, EmailProviderDef> = {
   migadu: {
     name: 'Migadu',
     type: 'template',
-    template: migaduTemplate
+    template: migaduTemplate,
+    inputs: withCliFlags(migaduTemplate.inputs!)
   },
   googleworkspace: {
     name: 'Google Workspace',
     type: 'template',
-    template: googleworkspaceTemplate
+    template: googleworkspaceTemplate,
+    inputs: withCliFlags(googleworkspaceTemplate.inputs!)
   },
   ms365: {
     name: 'Microsoft 365',
     type: 'template',
-    template: ms365Template
+    template: ms365Template,
+    inputs: withCliFlags(ms365Template.inputs!)
   },
   outlook: {
     name: 'Microsoft Outlook',
     type: 'template',
-    template: ms365Template
+    template: ms365Template,
+    inputs: withCliFlags(ms365Template.inputs!)
   },
   fastmail: {
     name: 'Fastmail',
     type: 'template',
-    template: fastmailTemplate
+    template: fastmailTemplate,
+    inputs: []
   },
   mailgun: {
     name: 'Mailgun',
     type: 'template',
-    template: mailgunTemplate
+    template: mailgunTemplate,
+    inputs: withCliFlags(mailgunTemplate.inputs!)
   },
   proton: {
     name: 'Proton Mail',
     type: 'template',
-    template: protonTemplate
+    template: protonTemplate,
+    inputs: withCliFlags(protonTemplate.inputs!)
   },
   zoho: {
     name: 'Zoho Mail',
     type: 'template',
-    template: zohoTemplate
+    template: zohoTemplate,
+    inputs: withCliFlags(zohoTemplate.inputs!)
   },
   sendgrid: {
     name: 'Twilio SendGrid',
     type: 'template',
-    template: sendgridTemplate
+    template: sendgridTemplate,
+    inputs: withCliFlags(sendgridTemplate.inputs!)
   },
   resend: {
     name: 'Resend',
     type: 'template',
-    template: resendTemplate
+    template: resendTemplate,
+    inputs: withCliFlags(resendTemplate.inputs!)
   },
   postmark: {
     name: 'Postmark',
     type: 'template',
-    template: postmarkTemplate
+    template: postmarkTemplate,
+    inputs: withCliFlags(postmarkTemplate.inputs!)
   },
   ses: {
     name: 'Amazon SES',
     type: 'module',
-    inputs: sesInputs,
+    inputs: withCliFlags(sesInputs),
     getRecords: sesGetRecords,
     records: [
       { type: 'TXT',   name: '_amazonses',              value: '{VERIFY_TOKEN}' },

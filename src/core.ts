@@ -21,9 +21,7 @@ function buildFromTemplate(template: EmailTemplate, domain: string, emailInputs:
 }
 
 export function getEmailInputDefs(emailProvider: string): InputDef[] {
-  const emailDef = EMAIL_PROVIDERS[emailProvider]
-  if (emailDef.type === 'template') return emailDef.template.inputs ?? []
-  return emailDef.inputs
+  return EMAIL_PROVIDERS[emailProvider].inputs
 }
 
 export async function buildRecords({ domain, emailProvider, emailInputs, noMx }: {
