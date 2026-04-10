@@ -20,7 +20,7 @@ export interface OptionDef {
   cliFlag: string
   short?: string
   description: string
-  default: boolean | string
+  default?: boolean | string
   value?: string
 }
 

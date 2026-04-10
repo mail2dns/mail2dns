@@ -66,7 +66,7 @@ Provider-specific options are prompted interactively if not provided via flag or
 | <nobr>`-y`, `--yes`</nobr> | Skip confirmation prompts (the command will error if any required inputs are missing) | `false` |
 | <nobr>`--allow-insecure-flags`</nobr> | Allow secrets to be passed via command-line flags (not recommended) | `false` |
 | <nobr>`-d`, `--dry-run`</nobr> | Show records that would be created without applying them | `false` |
-| <nobr>`-z`, `--zone`</nobr> | DNS zone that contains the domain (overrides auto-detection) | `` |
+| <nobr>`-z`, `--zone`</nobr> | DNS zone that contains the domain (overrides auto-detection) | `undefined` |
 | <nobr>`-p`, `--dmarc-policy`</nobr> | DMARC policy to use in the _dmarc TXT record (none, quarantine, reject) | `none` |
 
 
@@ -117,7 +117,7 @@ Provider-specific options are prompted interactively if not provided via flag or
 | Flag | Description | Default |
 |------|-------------|---------|
 | <nobr>`--allow-insecure-flags`</nobr> | Allow secrets to be passed via command-line flags (not recommended) | `false` |
-| <nobr>`-z`, `--zone`</nobr> | DNS zone that contains the domain (overrides auto-detection) | `` |
+| <nobr>`-z`, `--zone`</nobr> | DNS zone that contains the domain (overrides auto-detection) | `undefined` |
 
 <!-- /generated-usage -->
 

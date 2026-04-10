@@ -25,7 +25,7 @@ export async function setup(
     )
   }
   const emailInputs = await resolveInputs(emailInputDefs, opts, yes)
-  emailInputs.dmarcPolicy = opts.dmarcPolicy ?? 'none'
+  emailInputs.dmarcPolicy = opts.dmarcPolicy as string
   const { records, verificationPrefix } = await buildRecords({ domain, emailProvider, emailInputs, noMx: !!opts.noMx })
 
   const dnsDef = DNS_PROVIDERS[dnsProvider]

@@ -18,7 +18,7 @@ export const COMMANDS: Record<string, { description: string; args: ArgumentDef[]
       opt({ flag: 'yes', short: 'y', description: 'Skip confirmation prompts (the command will error if any required inputs are missing)', default: false }),
       opt({ flag: 'allowInsecureFlags', description: 'Allow secrets to be passed via command-line flags (not recommended)', default: false }),
       opt({ flag: 'dryRun', short: 'd', description: 'Show records that would be created without applying them', default: false }),
-      opt({ flag: 'zone', short: 'z', description: 'DNS zone that contains the domain (overrides auto-detection)', default: '', value: 'domain' }),
+      opt({ flag: 'zone', short: 'z', description: 'DNS zone that contains the domain (overrides auto-detection)', value: 'domain' }),
       opt({ flag: 'dmarcPolicy', short: 'p', description: 'DMARC policy to use in the _dmarc TXT record (none, quarantine, reject)', default: 'none', value: 'policy' }),
     ],
   },
@@ -41,7 +41,7 @@ export const COMMANDS: Record<string, { description: string; args: ArgumentDef[]
     ],
     options: [
       opt({ flag: 'allowInsecureFlags', description: 'Allow secrets to be passed via command-line flags (not recommended)', default: false }),
-      opt({ flag: 'zone', short: 'z', description: 'DNS zone that contains the domain (overrides auto-detection)', default: '', value: 'domain' }),
+      opt({ flag: 'zone', short: 'z', description: 'DNS zone that contains the domain (overrides auto-detection)', value: 'domain' }),
     ],
   },
 }

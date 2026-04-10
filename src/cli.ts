@@ -1,7 +1,7 @@
 import { Command, Option } from 'commander'
 import { EMAIL_PROVIDERS, DNS_PROVIDERS } from './providers.js'
-import { log } from './utils.js'
 import { COMMANDS } from './commands.js'
+import { log } from './utils.js'
 import { version } from '../package.json'
 import type { InputDef } from './types.js'
 import { setup } from './actions/setup.js'
@@ -92,7 +92,7 @@ registerProviderOptions(setupCmd)
 for (const o of COMMANDS.setup.options) {
   const flagStr = o.value ? `${o.cliFlag} <${o.value}>` : o.cliFlag
   const flags = o.short ? `-${o.short}, ${flagStr}` : flagStr
-  setupCmd.option(flags, o.description)
+  setupCmd.option(flags, o.description, o.default || undefined)
 }
 setupCmd
   .helpOption('-h, --help', 'Display help for command')
@@ -110,7 +110,7 @@ registerProviderOptions(listCmd)
 for (const o of COMMANDS.list.options) {
   const flagStr = o.value ? `${o.cliFlag} <${o.value}>` : o.cliFlag
   const flags = o.short ? `-${o.short}, ${flagStr}` : flagStr
-  listCmd.option(flags, o.description)
+  listCmd.option(flags, o.description, o.default || undefined)
 }
 listCmd
   .helpOption('-h, --help', 'Display help for command')
@@ -128,7 +128,7 @@ registerProviderOptions(verifyCmd)
 for (const o of COMMANDS.verify.options) {
   const flagStr = o.value ? `${o.cliFlag} <${o.value}>` : o.cliFlag
   const flags = o.short ? `-${o.short}, ${flagStr}` : flagStr
-  verifyCmd.option(flags, o.description)
+  verifyCmd.option(flags, o.description, o.default || undefined)
 }
 verifyCmd
   .helpOption('-h, --help', 'Display help for command')
