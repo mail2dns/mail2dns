@@ -142,6 +142,11 @@ verifyCmd
     verify(domain, emailProvider, opts)
   )
 
+process.on('unhandledRejection', (reason) => {
+  log.error(reason instanceof Error ? reason.message : String(reason))
+  process.exit(1)
+})
+
 try {
   await program.parseAsync()
 } catch (err: any) {
