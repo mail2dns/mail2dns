@@ -144,6 +144,7 @@ process.on('unhandledRejection', (reason) => {
 
 try {
   await program.parseAsync()
+  process.exit(0)
 } catch (err: any) {
   log.error(err instanceof Error ? err.message : String(err))
   process.exit(1)

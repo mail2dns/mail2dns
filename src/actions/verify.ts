@@ -17,12 +17,12 @@ export async function verify(
 
   if (emailDef.type === 'template') {
     verifyRecords = buildVerifyRecords(emailDef.template, domain, { dmarcPolicy: opts.dmarcPolicy as string })
-    if (opts.noMx) verifyRecords = verifyRecords.filter(r => r.type !== 'MX')
+    if (!opts.mx) verifyRecords = verifyRecords.filter(r => r.type !== 'MX')
   } else {
     const emailInputs = await resolveInputs(emailDef.inputs, opts, false)
     const records = await emailDef.getRecords({ domain, ...emailInputs })
     verifyRecords = records
-      .filter(r => !opts.noMx || r.type !== 'MX')
+      .filter(r => opts.mx || r.type !== 'MX')
       .map(r => ({ ...r, match: 'exact' as const }))
   }
 
