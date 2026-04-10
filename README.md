@@ -67,6 +67,7 @@ Provider-specific options are prompted interactively if not provided via flag or
 | <nobr>`--allow-insecure-flags`</nobr> | Allow secrets to be passed via command-line flags (not recommended) | `false` |
 | <nobr>`-d`, `--dry-run`</nobr> | Show records that would be created without applying them | `false` |
 | <nobr>`--zone`</nobr> | DNS zone that contains the domain (overrides auto-detection) | `` |
+| <nobr>`--dmarc-policy`</nobr> | DMARC policy to use in the _dmarc TXT record (none, quarantine, reject) | `none` |
 
 
 <p>&nbsp;</p>
@@ -91,6 +92,7 @@ Provider-specific options are prompted interactively if not provided via flag or
 | Flag | Description | Default |
 |------|-------------|---------|
 | <nobr>`-o`, `--no-mx`</nobr> | Skip MX records (verify DNS for outbound email only) | `false` |
+| <nobr>`--dmarc-policy`</nobr> | Expected DMARC policy in the _dmarc TXT record (none, quarantine, reject) | `none` |
 
 
 <p>&nbsp;</p>

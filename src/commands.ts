@@ -14,6 +14,7 @@ export const COMMANDS: Record<string, { description: string; args: ArgumentDef[]
       { flag: 'allowInsecureFlags', description: 'Allow secrets to be passed via command-line flags (not recommended)', default: false },
       { flag: 'dryRun', short: 'd', description: 'Show records that would be created without applying them', default: false },
       { flag: 'zone', description: 'DNS zone that contains the domain (overrides auto-detection)', default: '', value: 'domain' },
+      { flag: 'dmarcPolicy', description: 'DMARC policy to use in the _dmarc TXT record (none, quarantine, reject)', default: 'none', value: 'policy' },
     ],
   },
   verify: {
@@ -24,6 +25,7 @@ export const COMMANDS: Record<string, { description: string; args: ArgumentDef[]
     ],
     options: [
       { flag: 'noMx', short: 'o', description: 'Skip MX records (verify DNS for outbound email only)', default: false },
+      { flag: 'dmarcPolicy', description: 'Expected DMARC policy in the _dmarc TXT record (none, quarantine, reject)', default: 'none', value: 'policy' },
     ],
   },
   list: {

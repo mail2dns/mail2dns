@@ -22,7 +22,7 @@
     { "type": "MX",  "name": "@",              "value": "mx2.zoho.com", "priority": 20 },
     { "type": "MX",  "name": "@",              "value": "mx3.zoho.com", "priority": 50 },
     { "type": "TXT", "name": "@",              "value": "v=spf1 include:zoho.com ~all" },
-    { "type": "TXT", "name": "_dmarc",         "value": "v=DMARC1; p=none;" },
+    { "type": "TXT", "name": "_dmarc",         "value": "v=DMARC1; p={DMARC_POLICY};", "verifyPattern": "^v=DMARC1" },
     { "type": "TXT", "name": "zoho._domainkey","value": "{DKIM_KEY}" }
   ]
 }

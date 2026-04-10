@@ -10,7 +10,7 @@
   ],
   "records": [
     { "type": "TXT",   "name": "@",            "value": "v=spf1 include:spf.mtasv.net ~all" },
-    { "type": "TXT",   "name": "_dmarc",        "value": "v=DMARC1; p=none;" },
+    { "type": "TXT",   "name": "_dmarc",        "value": "v=DMARC1; p={DMARC_POLICY};", "verifyPattern": "^v=DMARC1" },
     { "type": "CNAME", "name": "pm._domainkey", "value": "{DKIM}" }
   ]
 }

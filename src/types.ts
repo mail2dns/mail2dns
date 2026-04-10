@@ -31,6 +31,7 @@ export interface InputDef {
   instructions?: string
   optional?: boolean
   secret?: boolean
+  default?: string
 }
 
 export interface SetupRecordsOptions {
@@ -70,6 +71,7 @@ export interface EmailTemplateRecord {
   name: string
   value: string
   priority?: number
+  verifyPattern?: string
 }
 
 export interface EmailTemplate {

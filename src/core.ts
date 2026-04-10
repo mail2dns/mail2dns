@@ -46,9 +46,9 @@ export async function buildRecords({ domain, emailProvider, emailInputs, noMx }:
   return result
 }
 
-export function buildVerifyRecords(template: EmailTemplate, domain: string): VerifyRecord[] {
+export function buildVerifyRecords(template: EmailTemplate, domain: string, extraVars: Record<string, string> = {}): VerifyRecord[] {
   const toScreamingSnake = (k: string) => k.replace(/([A-Z])/g, '_$1').toUpperCase()
-  const domainVars: Record<string, string> = { domain, domainDashes: domain.replaceAll('.', '-') }
+  const domainVars: Record<string, string> = { domain, domainDashes: domain.replaceAll('.', '-'), ...extraVars }
 
   return template.records.map(record => {
     let name = record.name
@@ -57,6 +57,9 @@ export function buildVerifyRecords(template: EmailTemplate, domain: string): Ver
       const ph = `{${toScreamingSnake(k)}}`
       name = name.replaceAll(ph, v)
       content = content.replaceAll(ph, v)
+    }
+    if (record.verifyPattern) {
+      return { type: record.type as DnsRecord['type'], name, match: 'pattern' as const, pattern: new RegExp(record.verifyPattern, 'i'), display: content }
     }
     if (/\{[A-Z_]+\}/.test(content)) {
       const pattern = new RegExp(
@@ -92,28 +95,29 @@ export function removePrefix(name: string, prefix: string): string {
 
 type DnsResolver = Pick<typeof dnsPromises, 'resolveMx' | 'resolveTxt' | 'resolveCname' | 'resolveSrv'>
 
-export async function checkDnsRecord(vr: VerifyRecord, fullName: string, resolver: DnsResolver = dnsPromises): Promise<boolean> {
-  const matches = (c: string) =>
+export async function checkDnsRecord(vr: VerifyRecord, fullName: string, resolver: DnsResolver = dnsPromises): Promise<string | null> {
+  const find = (candidates: string[]) => candidates.find(c =>
     vr.match === 'exact' ? c.toLowerCase() === vr.content.toLowerCase() : vr.pattern.test(c)
+  ) ?? null
   try {
     if (vr.type === 'MX') {
       const results = await resolver.resolveMx(fullName)
-      return results.map(r => r.exchange).some(matches)
+      return find(results.map(r => r.exchange))
     }
     if (vr.type === 'TXT') {
       const results = await resolver.resolveTxt(fullName)
-      return results.map(r => r.join('')).some(matches)
+      return find(results.map(r => r.join('')))
     }
     if (vr.type === 'CNAME') {
       const results = await resolver.resolveCname(fullName)
-      return results.some(matches)
+      return find(results)
     }
     if (vr.type === 'SRV') {
       const results = await resolver.resolveSrv(fullName)
-      return results.map(r => `${r.priority} ${r.weight} ${r.port} ${r.name}`).some(matches)
+      return find(results.map(r => `${r.priority} ${r.weight} ${r.port} ${r.name}`))
     }
   } catch {
     // ENOTFOUND / ENODATA → record doesn't exist
   }
-  return false
+  return null
 }

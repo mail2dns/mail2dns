@@ -68,6 +68,7 @@ export async function resolveInputs(inputs: InputDef[], argv: Record<string, str
   for (const input of inputs) {
     let value = argv[input.flag]
     if (!value && input.env) value = process.env[input.env]
+    if (!value && input.default) value = input.default
     if (!value) {
       if (input.optional) continue
       if (nonInteractive) throw new Error(`${input.name} is required${input.env ? ` (or set ${input.env})` : ''}`)

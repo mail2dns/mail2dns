@@ -16,7 +16,7 @@ export async function verify(
   let verifyRecords: VerifyRecord[]
 
   if (emailDef.type === 'template') {
-    verifyRecords = buildVerifyRecords(emailDef.template, domain)
+    verifyRecords = buildVerifyRecords(emailDef.template, domain, { dmarcPolicy: opts.dmarcPolicy ?? 'none' })
     if (opts.noMx) verifyRecords = verifyRecords.filter(r => r.type !== 'MX')
   } else {
     const emailInputs = await resolveInputs(emailDef.inputs, opts, false)
@@ -32,7 +32,7 @@ export async function verify(
   for (const vr of verifyRecords) {
     const fullName = toFullName(vr.name, domain)
     const found = await checkDnsRecord(vr, fullName)
-    const label = vr.match === 'exact' ? vr.content : vr.display
+    const label = found ?? (vr.match === 'exact' ? vr.content : vr.display)
     const line = `  [${vr.type.padEnd(5)}] ${vr.name} → ${label}`
     if (found) {
       log.success(`  ✓${line}`)
