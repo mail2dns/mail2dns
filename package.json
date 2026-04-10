@@ -4,7 +4,7 @@
   "description": "CLI to automatically create MX, SPF, DKIM, DMARC and email verification DNS records for multiple email and DNS providers.",
   "main": "dist/cli.js",
   "bin": {
-    "mail2dns": "./dist/cli.js"
+    "mail2dns": "dist/cli.js"
   },
   "files": [
     "dist"
