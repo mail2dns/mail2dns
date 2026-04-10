@@ -1,12 +1,14 @@
 {
   "name": "mail2dns",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "CLI to automatically create MX, SPF, DKIM, DMARC and email verification DNS records for multiple email and DNS providers.",
   "main": "dist/cli.js",
   "bin": {
     "mail2dns": "./dist/cli.js"
   },
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "scripts": {
     "prepare": "git config core.hooksPath .githooks",
