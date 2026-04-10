@@ -17,7 +17,7 @@
     }
   ],
   "records": [
-    { "type": "TXT", "name": "@",              "value": "{VERIFY_TXT}" },
+    { "type": "TXT", "name": "@",              "value": "{VERIFY_TXT}", "verifyPattern": "^zoho-verification=" },
     { "type": "MX",  "name": "@",              "value": "mx.zoho.com",  "priority": 10 },
     { "type": "MX",  "name": "@",              "value": "mx2.zoho.com", "priority": 20 },
     { "type": "MX",  "name": "@",              "value": "mx3.zoho.com", "priority": 50 },

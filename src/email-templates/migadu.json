@@ -10,7 +10,7 @@
     }
   ],
   "records": [
-    {"type": "TXT", "name": "@", "value": "{VERIFY_TXT}"},
+    {"type": "TXT", "name": "@", "value": "{VERIFY_TXT}", "verifyPattern": "^hosted-email-verify="},
     {"type": "MX", "name": "@", "value": "aspmx1.migadu.com", "priority": 10},
     {"type": "MX", "name": "@", "value": "aspmx2.migadu.com", "priority": 20},
     {"type": "TXT", "name": "@", "value": "v=spf1 include:spf.migadu.com -all"},

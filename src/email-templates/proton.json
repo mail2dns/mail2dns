@@ -31,7 +31,7 @@
     }
   ],
   "records": [
-    { "type": "TXT",   "name": "@",                      "value": "{VERIFY_TXT}" },
+    { "type": "TXT",   "name": "@",                      "value": "{VERIFY_TXT}", "verifyPattern": "^protonmail-verification=" },
     { "type": "MX",    "name": "@",                      "value": "mail.protonmail.ch",    "priority": 10 },
     { "type": "MX",    "name": "@",                      "value": "mailsec.protonmail.ch", "priority": 20 },
     { "type": "TXT",   "name": "@",                      "value": "v=spf1 include:_spf.protonmail.ch ~all" },

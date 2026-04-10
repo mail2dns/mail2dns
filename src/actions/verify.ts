@@ -28,18 +28,24 @@ export async function verify(
 
   log.info(`\nVerifying DNS records for ${domain}:\n`)
 
+  const rows = await Promise.all(verifyRecords.map(async vr => {
+    const found = await checkDnsRecord(vr, toFullName(vr.name, domain))
+    const col1 = `[${vr.type.padEnd(5)}] ${vr.name}`
+    const col2 = vr.match === 'pattern' ? `/${vr.pattern.source}/` : vr.content
+    const col3 = found ?? '(not found)'
+    return { found, col1, col2, col3 }
+  }))
+
   let missing = 0
-  for (const vr of verifyRecords) {
-    const fullName = toFullName(vr.name, domain)
-    const found = await checkDnsRecord(vr, fullName)
-    const label = found ?? (vr.match === 'exact' ? vr.content : vr.display)
-    const line = `  [${vr.type.padEnd(5)}] ${vr.name} → ${label}`
+  for (const { found, col1, col2, col3 } of rows) {
+    log.dim(`  Expected: ${col1} → ${col2}`)
     if (found) {
-      log.success(`  ✓${line}`)
+      log.success(`  Actual:   ${col1} → ${col3}`)
     } else {
-      log.error(`  ✗${line}`)
+      log.error(`  Actual:   ${col1} → ${col3}`)
       missing++
     }
+    log.info('')
   }
 
   log.info('')
