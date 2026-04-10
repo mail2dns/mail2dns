@@ -21,7 +21,6 @@ Choose the bump type based on what changed since the last release:
 
 `npm version` will:
 - Update the version in `package.json`
-- Regenerate `src/buildInfo.ts` with the new version
 - Create a git commit and tag (e.g. `v1.2.0`)
 
 **3. Push the commit and tag.**

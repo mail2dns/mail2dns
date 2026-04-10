@@ -21,11 +21,16 @@ jobs:
 
       - run: npm test
 
-      - run: node scripts/generate-buildinfo.mjs
-
       - run: npm run build
 
-      - run: npm publish
+      - name: Publish to npm
+        run: |
+          MAJOR=$(node -p "require('./package.json').version.split('.')[0]")
+          if [ "$MAJOR" = "0" ]; then
+            npm publish --tag beta
+          else
+            npm publish
+          fi
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
