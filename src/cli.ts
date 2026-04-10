@@ -43,7 +43,7 @@ function registerProviderOptions(cmd: Command): void {
 }
 
 function formatInputLine(input: InputDef): string {
-  const flag = `--${camelToKebab(input.flag)} <value>`
+  const flag = `--${camelToKebab(input.flag)} <${input.value || 'value'}>`
   const env = input.env ? `  [env: ${input.env}]` : ''
   const optional = input.optional ? ' (optional)' : ''
   return `    ${flag.padEnd(38)} ${input.name}${optional}${env}`

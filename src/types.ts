@@ -32,6 +32,7 @@ export interface InputDef {
   optional?: boolean
   secret?: boolean
   default?: string
+  value?: string
 }
 
 export interface SetupRecordsOptions {

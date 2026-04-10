@@ -12,7 +12,8 @@ export const inputs: InputDef[] = [
     name: 'AWS profile to use',
     env: 'AWS_PROFILE',
     example: 'my-profile',
-    optional: true
+    optional: true,
+    value: 'profile',
   }
 ]
 

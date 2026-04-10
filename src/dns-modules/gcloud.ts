@@ -14,7 +14,8 @@ export const inputs: InputDef[] = [
     env: 'CLOUDSDK_CORE_PROJECT',
     example: 'my-project-123',
     optional: true,
-    instructions: 'Defaults to the active gcloud project if not set.'
+    instructions: 'Defaults to the active gcloud project if not set.',
+    value: 'project-id'
   }
 ]
 

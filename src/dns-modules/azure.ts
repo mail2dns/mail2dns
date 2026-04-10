@@ -13,7 +13,8 @@ export const inputs: InputDef[] = [
     env: 'AZURE_SUBSCRIPTION_ID',
     example: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
     optional: true,
-    instructions: 'Defaults to the active Azure subscription if not set.'
+    instructions: 'Defaults to the active Azure subscription if not set.',
+    value: 'subscription-id'
   }
 ]
 
