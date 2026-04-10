@@ -34,6 +34,21 @@ export function ask(question: string): Promise<string> {
   })
 }
 
+export function askSecret(question: string): Promise<string> {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stderr })
+  return new Promise(resolve => {
+    let muted = false
+    const origWrite = (rl as any)._writeToOutput.bind(rl)
+    ;(rl as any)._writeToOutput = (s: string) => { if (!muted) origWrite(s) }
+    rl.question(question, (answer: string) => {
+      process.stderr.write('\n')
+      rl.close()
+      resolve(answer.trim())
+    })
+    muted = true
+  })
+}
+
 export async function confirm(question: string): Promise<boolean> {
   const answer = await ask(question)
   return answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes'
@@ -73,7 +88,7 @@ export async function resolveInputs(inputs: InputDef[], argv: Record<string, str
       if (input.optional) continue
       if (nonInteractive) throw new Error(`${input.name} is required${input.env ? ` (or set ${input.env})` : ''}`)
       if (input.instructions) log.dim(`\n${input.instructions}`)
-      value = await ask(`${input.name}: `)
+      value = input.secret ? await askSecret(`${input.name}: `) : await ask(`${input.name}: `)
     }
     if (!value) throw new Error(`${input.name} is required`)
     result[input.flag] = value
