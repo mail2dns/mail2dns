@@ -2,6 +2,7 @@
   "name": "mail2dns",
   "version": "0.1.2",
   "description": "CLI that automates DNS setup for email.",
+  "license": "MIT",
   "main": "dist/cli.js",
   "bin": {
     "mail2dns": "dist/cli.js"

@@ -1,4 +1,24 @@
-# 🚀 mail2dns
+<p align="center">
+  <a href="https://mail2dns.com" target="blank">
+    <img src="https://raw.githubusercontent.com/mail2dns/mail2dns/refs/heads/assets/banner.svg" width="320" alt="mail2dns Logo" />
+  </a>
+</p>
+
+<p align="center">
+    <a href="https://npmjs.com/mail2dns" title="Project status">
+        <img src="https://img.shields.io/badge/BETA-ff0000" alt="Project status badge"/>
+    </a>
+    <a href="https://npmjs.com/mail2dns" title="NPM version">
+        <img src="https://img.shields.io/npm/v/mail2dns/beta" alt="NPM version badge" />
+    </a>
+    <a href="https://github.com/mail2dns/mail2dns" title="Build status">
+        <img src="https://img.shields.io/github/actions/workflow/status/mail2dns/mail2dns/ci.yml" alt="Build status badge" />
+    </a>
+    <a href="https://npmjs.com/mail2dns/mail2dns/blob/main/LICENSE" title="License">
+        <img src="https://img.shields.io/github/license/mail2dns/mail2dns" alt="License badge" />
+    </a>
+</p>
+
 
 **CLI that automatically creates MX, SPF, DKIM, DMARC and verification DNS records
 for email providers. Supports multiple DNS providers.**
