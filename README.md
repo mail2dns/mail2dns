@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://mail2dns.com" target="blank">
-    <img src="https://raw.githubusercontent.com/mail2dns/mail2dns/refs/heads/assets/banner.svg" width="320" alt="mail2dns Logo" />
+    <img src="https://raw.githubusercontent.com/mail2dns/mail2dns/refs/heads/main/banner.svg" width="320" alt="mail2dns Banner" />
   </a>
 </p>
 
