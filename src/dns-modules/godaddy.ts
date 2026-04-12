@@ -1,4 +1,4 @@
-import { confirm as utilsConfirm, log } from '../utils.js'
+import { confirm as utilsConfirm, log, logPlan, countCreated, logCreated, formatDnsRecord } from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
 import { findContainingZone } from '../utils.js'
@@ -43,7 +43,8 @@ async function gdFetch<T>(path: string, options: RequestInit, key: string, secre
     throw new Error(`GoDaddy API error: ${data.message ?? res.statusText}`)
   }
   if (res.status === 204) return undefined as T
-  return res.json() as Promise<T>
+  const text = await res.text()
+  return (text ? JSON.parse(text) : undefined) as T
 }
 
 async function fetchRecords(domain: string, key: string, secret: string): Promise<GdRecord[]> {
@@ -70,14 +71,6 @@ export async function listRecords(domain: string, { key, secret }: Record<string
     }))
 }
 
-async function deleteRecords(domain: string, type: string, name: string, key: string, secret: string): Promise<void> {
-  await gdFetch(
-    `/v1/domains/${encodeURIComponent(domain)}/records/${type}/${encodeURIComponent(name)}`,
-    { method: 'DELETE' },
-    key, secret
-  )
-}
-
 async function addRecords(domain: string, records: GdRecord[], key: string, secret: string): Promise<void> {
   await gdFetch(`/v1/domains/${encodeURIComponent(domain)}/records`, {
     method: 'PATCH',
@@ -85,40 +78,28 @@ async function addRecords(domain: string, records: GdRecord[], key: string, secr
   }, key, secret)
 }
 
-interface ConflictKey { type: string; name: string }
+async function replaceRecords(domain: string, type: string, name: string, records: GdRecord[], key: string, secret: string): Promise<void> {
+  await gdFetch(`/v1/domains/${encodeURIComponent(domain)}/records/${type}/${encodeURIComponent(name)}`, {
+    method: 'PUT',
+    body: JSON.stringify(records)
+  }, key, secret)
+}
 
-function findConflicts(existing: GdRecord[], records: DnsRecord[], verificationPrefix?: string): ConflictKey[] {
-  const conflicts: ConflictKey[] = []
-
-  function addConflict(type: string, name: string) {
-    if (!conflicts.find(c => c.type === type && c.name === name)) {
-      conflicts.push({ type, name })
-    }
+function isConflicting(e: GdRecord, record: DnsRecord, verificationPrefix?: string): boolean {
+  if (e.type !== record.type) return false
+  if (record.type === 'MX') return true
+  if (record.type === 'TXT') {
+    if (record.content.includes('v=spf1') && e.data.includes('v=spf1')) return true
+    if (verificationPrefix && record.content.includes(verificationPrefix) && e.data.includes(verificationPrefix)) return true
+    if (record.content.includes('v=DMARC1') && e.name === record.name) return true
   }
-
-  for (const record of records) {
-    for (const e of existing) {
-      if (record.type === 'MX' && e.type === 'MX') {
-        addConflict(e.type, e.name)
-      } else if (record.type === 'TXT' && e.type === 'TXT') {
-        if (record.content.includes('v=spf1') && e.data.includes('v=spf1')) {
-          addConflict(e.type, e.name)
-        } else if (verificationPrefix && record.content.includes(verificationPrefix) && e.data.includes(verificationPrefix)) {
-          addConflict(e.type, e.name)
-        } else if (record.content.includes('v=DMARC1') && e.name === record.name) {
-          addConflict(e.type, e.name)
-        }
-      } else if (record.type === 'CNAME' && (e.type === 'CNAME' || e.type === 'TXT') && e.name === record.name) {
-        addConflict(e.type, e.name)
-      }
-    }
-  }
-
-  return conflicts
+  if (record.type === 'CNAME') return true
+  return false
 }
 
 function toGdRecord(record: DnsRecord): GdRecord {
-  const r: GdRecord = { type: record.type, name: record.name, data: record.content, ttl: record.ttl ?? 3600 }
+  const gdMinTtl = 600
+  const r: GdRecord = { type: record.type, name: record.name, data: record.content, ttl: Math.max(record.ttl ?? 3600, gdMinTtl) }
   if (record.priority !== undefined) r.priority = record.priority
   return r
 }
@@ -137,22 +118,31 @@ export async function setupRecords(
   const doConfirm = confirmFn ?? utilsConfirm
 
   const existing = await fetchRecords(domain, key, secret)
-  const conflictKeys = findConflicts(existing, records, verificationPrefix)
-  const conflictRecords = existing.filter(e => conflictKeys.find(c => c.type === e.type && c.name === e.name))
 
-  if (conflictRecords.length > 0) {
-    log.warn('\nThe following existing records will be removed:')
-    for (const r of conflictRecords) {
-      log.dim(formatRecord(r))
-    }
-  } else {
-    log.info('\nNo conflicting records found.')
+  // Group new records by type+name and determine conflicts per group
+  const groups = new Map<string, DnsRecord[]>()
+  for (const record of records) {
+    const k = `${record.type}:${record.name}`
+    if (!groups.has(k)) groups.set(k, [])
+    groups.get(k)!.push(record)
   }
 
-  log.info('\nThe following records will be created:')
-  for (const r of records) {
-    log.dim(formatRecord({ type: r.type, name: r.name, data: r.content, priority: r.priority }))
-  }
+  const conflictRecords: GdRecord[] = []
+  const groupPlans = [...groups.entries()].map(([k, newRecords]) => {
+    const sep = k.indexOf(':')
+    const type = k.slice(0, sep)
+    const name = k.slice(sep + 1)
+    const existingAtGroup = existing.filter(e => e.type === type && e.name === name)
+    const conflicts = existingAtGroup.filter(e => newRecords.some(r => isConflicting(e, r, verificationPrefix)))
+    const retained = existingAtGroup.filter(e => !newRecords.some(r => isConflicting(e, r, verificationPrefix)))
+    conflictRecords.push(...conflicts)
+    return { type, name, newRecords, hasConflict: conflicts.length > 0, retained }
+  })
+
+  logPlan(
+    conflictRecords.map(r => formatRecord(r)),
+    records.map(r => formatDnsRecord(r))
+  )
 
   if (dryRun) return
 
@@ -163,29 +153,23 @@ export async function setupRecords(
     return
   }
 
-  for (const { type, name } of conflictKeys) {
-    await deleteRecords(domain, type, name, key, secret)
+  const toAppend: GdRecord[] = []
+  for (const { type, name, newRecords, hasConflict, retained } of groupPlans) {
+    if (hasConflict) {
+      await replaceRecords(domain, type, name, [...retained, ...newRecords.map(toGdRecord)], key, secret)
+    } else {
+      toAppend.push(...newRecords.map(toGdRecord))
+    }
   }
-  if (conflictKeys.length > 0) {
-    log.info(`\nRemoved ${conflictKeys.length} conflicting record group${conflictKeys.length !== 1 ? 's' : ''}`)
-  }
-
-  await addRecords(domain, records.map(toGdRecord), key, secret)
-
-  const created = { verification: 0, mx: 0, spf: 0, dmarc: 0, dkim: 0 }
-  for (const record of records) {
-    if (verificationPrefix && record.content.includes(verificationPrefix)) created.verification++
-    else if (record.type === 'MX') created.mx++
-    else if (record.content.includes('v=spf1')) created.spf++
-    else if (record.content.includes('v=DMARC1')) created.dmarc++
-    else if (record.name.includes('_domainkey') && (record.type === 'CNAME' || record.type === 'TXT')) created.dkim++
+  if (toAppend.length > 0) {
+    await addRecords(domain, toAppend, key, secret)
   }
 
-  console.log()
-  if (created.verification) log.success('Created TXT verification record')
-  if (created.mx) log.success('Created MX records')
-  if (created.spf) log.success('Created SPF record')
-  if (created.dmarc) log.success('Created DMARC record')
-  if (created.dkim) log.success('Created DKIM CNAME records')
+  logCreated(countCreated(records, verificationPrefix))
+
+  if (conflictRecords.length > 0) {
+    log.info(`\nRemoved ${conflictRecords.length} conflicting record${conflictRecords.length !== 1 ? 's' : ''}`)
+  }
+
   log.success('\nSetup complete.')
 }

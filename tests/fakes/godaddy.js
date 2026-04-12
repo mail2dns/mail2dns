@@ -54,6 +54,22 @@ export function makeServer() {
       return json(res, 200, {})
     }
 
+    // PUT /v1/domains/:domain/records/:type/:name  (replace entire type+name group)
+    if (method === 'PUT' && typeNamePath) {
+      const domain = decodeURIComponent(typeNamePath[1])
+      const type = typeNamePath[2]
+      const name = decodeURIComponent(typeNamePath[3])
+      const k = key(type, name)
+      const body = await readBody(req)
+      if (!records.has(domain)) records.set(domain, new Map())
+      const domainRecords = records.get(domain)
+      const old = domainRecords.get(k) ?? []
+      for (const r of old) requests.deleted.push(r)
+      domainRecords.set(k, body)
+      for (const r of body) requests.added.push(r)
+      return json(res, 200, {})
+    }
+
     // DELETE /v1/domains/:domain/records/:type/:name
     if (method === 'DELETE' && typeNamePath) {
       const domain = decodeURIComponent(typeNamePath[1])
