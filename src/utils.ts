@@ -59,6 +59,40 @@ export function formatDnsRecord(r: DnsRecord): string {
   return `  [${r.type.padEnd(5)}] ${r.name} → ${r.content}${priority}`
 }
 
+export function logPlan(toRemove: string[], toAdd: string[]): void {
+  if (toRemove.length > 0) {
+    log.warn('\nThe following existing records will be removed:')
+    for (const r of toRemove) log.dim(r)
+  } else {
+    log.info('\nNo conflicting records found.')
+  }
+  log.info('\nThe following records will be created:')
+  for (const r of toAdd) log.dim(r)
+}
+
+export type CreatedCounts = { verification: number; mx: number; spf: number; dmarc: number; dkim: number }
+
+export function countCreated(records: DnsRecord[], verificationPrefix?: string): CreatedCounts {
+  const counts: CreatedCounts = { verification: 0, mx: 0, spf: 0, dmarc: 0, dkim: 0 }
+  for (const record of records) {
+    if (verificationPrefix && record.content.includes(verificationPrefix)) counts.verification++
+    else if (record.type === 'MX') counts.mx++
+    else if (record.content.includes('v=spf1')) counts.spf++
+    else if (record.content.includes('v=DMARC1')) counts.dmarc++
+    else if (record.name.includes('_domainkey') && (record.type === 'CNAME' || record.type === 'TXT')) counts.dkim++
+  }
+  return counts
+}
+
+export function logCreated(counts: CreatedCounts): void {
+  console.log()
+  if (counts.verification) log.success('Created TXT verification record')
+  if (counts.mx) log.success('Created MX records')
+  if (counts.spf) log.success('Created SPF record')
+  if (counts.dmarc) log.success('Created DMARC record')
+  if (counts.dkim) log.success('Created DKIM CNAME records')
+}
+
 export function assertNoInsecureFlags(inputs: InputDef[], argv: Record<string, string | undefined>, docsUrl?: string): void {
   for (const input of inputs) {
     if (argv[input.flag] && input.secret) {

@@ -1,4 +1,4 @@
-import { confirm as utilsConfirm, log } from '../utils.js'
+import { confirm as utilsConfirm, log, logPlan, countCreated, logCreated, formatDnsRecord } from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
 import { findContainingZone } from '../utils.js'
@@ -151,19 +151,10 @@ export async function setupRecords(
   const existing = await fetchRecords(zoneId, token)
   const conflicts = findConflicts(existing, records, domain, verificationPrefix)
 
-  if (conflicts.length > 0) {
-    log.warn('\nThe following existing records will be removed:')
-    for (const r of conflicts) {
-      log.dim(formatRecord(r, domain))
-    }
-  } else {
-    log.info('\nNo conflicting records found.')
-  }
-
-  log.info('\nThe following records will be created:')
-  for (const r of records) {
-    log.dim(formatRecord({ type: r.type, hostname: r.name, value: r.content, priority: r.priority }, domain))
-  }
+  logPlan(
+    conflicts.map(r => formatRecord(r, domain)),
+    records.map(r => formatDnsRecord(r))
+  )
 
   if (dryRun) return
 
@@ -174,6 +165,12 @@ export async function setupRecords(
     return
   }
 
+  for (const record of records) {
+    await createRecord(zoneId, record, domain, token)
+  }
+
+  logCreated(countCreated(records, verificationPrefix))
+
   if (conflicts.length > 0) {
     for (const r of conflicts) {
       await deleteRecord(zoneId, r.id, token)
@@ -181,22 +178,5 @@ export async function setupRecords(
     log.info(`\nRemoved ${conflicts.length} conflicting record${conflicts.length !== 1 ? 's' : ''}`)
   }
 
-  const created = { verification: 0, mx: 0, spf: 0, dmarc: 0, dkim: 0 }
-
-  for (const record of records) {
-    await createRecord(zoneId, record, domain, token)
-    if (verificationPrefix && record.content.includes(verificationPrefix)) created.verification++
-    else if (record.type === 'MX') created.mx++
-    else if (record.content.includes('v=spf1')) created.spf++
-    else if (record.content.includes('v=DMARC1')) created.dmarc++
-    else if (record.name.includes('_domainkey') && (record.type === 'CNAME' || record.type === 'TXT')) created.dkim++
-  }
-
-  console.log()
-  if (created.verification) log.success('Created TXT verification record')
-  if (created.mx) log.success('Created MX records')
-  if (created.spf) log.success('Created SPF record')
-  if (created.dmarc) log.success('Created DMARC record')
-  if (created.dkim) log.success('Created DKIM CNAME records')
   log.success('\nSetup complete.')
 }

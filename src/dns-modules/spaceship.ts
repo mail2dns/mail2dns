@@ -1,4 +1,4 @@
-import { confirm as utilsConfirm, log } from '../utils.js'
+import { confirm as utilsConfirm, log, logPlan, countCreated, logCreated, formatDnsRecord } from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
 import { findContainingZone } from '../utils.js'
@@ -135,11 +135,6 @@ function formatExisting(r: SpRecord): string {
   return `  [${r.type.padEnd(5)}] ${r.name} → ${r.value}${priority}`
 }
 
-function formatRecord(r: DnsRecord): string {
-  const priority = r.priority !== undefined ? ` (priority ${r.priority})` : ''
-  return `  [${r.type.padEnd(5)}] ${r.name} → ${r.content}${priority}`
-}
-
 type Opts = SetupRecordsOptions & { confirm?: (q: string) => Promise<boolean> }
 
 export async function setupRecords(
@@ -153,19 +148,10 @@ export async function setupRecords(
 
   const conflicts = findConflicts(existing, records, verificationPrefix)
 
-  if (conflicts.length > 0) {
-    log.warn('\nThe following existing records will be removed:')
-    for (const r of conflicts) {
-      log.dim(formatExisting(r))
-    }
-  } else {
-    log.info('\nNo conflicting records found.')
-  }
-
-  log.info('\nThe following records will be created:')
-  for (const r of records) {
-    log.dim(formatRecord(r))
-  }
+  logPlan(
+    conflicts.map(r => formatExisting(r)),
+    records.map(r => formatDnsRecord(r))
+  )
 
   if (dryRun) return
 
@@ -174,11 +160,6 @@ export async function setupRecords(
   if (!ok) {
     log.warn('Aborted.')
     return
-  }
-
-  if (conflicts.length > 0) {
-    await deleteRecords(domain, conflicts, apiKey, apiSecret)
-    log.info(`\nRemoved ${conflicts.length} conflicting record${conflicts.length !== 1 ? 's' : ''}`)
   }
 
   const spRecords: SpRecord[] = records.map(r => ({
@@ -191,20 +172,12 @@ export async function setupRecords(
 
   await createRecords(domain, spRecords, apiKey, apiSecret)
 
-  const created = { verification: 0, mx: 0, spf: 0, dmarc: 0, dkim: 0 }
-  for (const record of records) {
-    if (verificationPrefix && record.content.includes(verificationPrefix)) created.verification++
-    else if (record.type === 'MX') created.mx++
-    else if (record.content.includes('v=spf1')) created.spf++
-    else if (record.content.includes('v=DMARC1')) created.dmarc++
-    else if (record.name.includes('_domainkey') && (record.type === 'CNAME' || record.type === 'TXT')) created.dkim++
+  logCreated(countCreated(records, verificationPrefix))
+
+  if (conflicts.length > 0) {
+    await deleteRecords(domain, conflicts, apiKey, apiSecret)
+    log.info(`\nRemoved ${conflicts.length} conflicting record${conflicts.length !== 1 ? 's' : ''}`)
   }
 
-  console.log()
-  if (created.verification) log.success('Created TXT verification record')
-  if (created.mx) log.success('Created MX records')
-  if (created.spf) log.success('Created SPF record')
-  if (created.dmarc) log.success('Created DMARC record')
-  if (created.dkim) log.success('Created DKIM CNAME records')
   log.success('\nSetup complete.')
 }

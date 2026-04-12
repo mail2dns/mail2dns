@@ -1,4 +1,4 @@
-import { confirm as utilsConfirm, log } from '../utils.js'
+import { confirm as utilsConfirm, log, logPlan, countCreated, logCreated } from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
 import { findContainingZone } from '../utils.js'
@@ -158,19 +158,10 @@ export async function setupRecords(
 
   const conflicts = findConflicts(existing, records, verificationPrefix)
 
-  if (conflicts.length > 0) {
-    log.warn('\nThe following existing RRSets will be removed:')
-    for (const r of conflicts) {
-      log.dim(formatRRSet(r))
-    }
-  } else {
-    log.info('\nNo conflicting records found.')
-  }
-
-  log.info('\nThe following records will be created:')
-  for (const r of records) {
-    log.dim(formatRecord(r))
-  }
+  logPlan(
+    conflicts.map(r => formatRRSet(r)),
+    records.map(r => formatRecord(r))
+  )
 
   if (dryRun) return
 
@@ -181,35 +172,22 @@ export async function setupRecords(
     return
   }
 
-  if (conflicts.length > 0) {
-    for (const r of conflicts) {
-      await deleteRRSet(domain, r.name, r.type, token)
-    }
-    log.info(`\nRemoved ${conflicts.length} conflicting RRSet${conflicts.length !== 1 ? 's' : ''}`)
-  }
-
-  const created = { verification: 0, mx: 0, spf: 0, dmarc: 0, dkim: 0 }
   const groups = groupRecords(records)
 
   for (const group of groups.values()) {
     const first = group[0]
     const rrRecords = group.map(r => ({ value: recordValue(r) }))
     await createRRSet(domain, first.name, first.type, rrRecords, first.ttl ?? 300, token)
-
-    for (const record of group) {
-      if (verificationPrefix && record.content.includes(verificationPrefix)) created.verification++
-      else if (record.type === 'MX') created.mx++
-      else if (record.content.includes('v=spf1')) created.spf++
-      else if (record.content.includes('v=DMARC1')) created.dmarc++
-      else if (record.name.includes('_domainkey') && (record.type === 'CNAME' || record.type === 'TXT')) created.dkim++
-    }
   }
 
-  console.log()
-  if (created.verification) log.success('Created TXT verification record')
-  if (created.mx) log.success('Created MX records')
-  if (created.spf) log.success('Created SPF record')
-  if (created.dmarc) log.success('Created DMARC record')
-  if (created.dkim) log.success('Created DKIM CNAME records')
+  logCreated(countCreated(records, verificationPrefix))
+
+  if (conflicts.length > 0) {
+    for (const r of conflicts) {
+      await deleteRRSet(domain, r.name, r.type, token)
+    }
+    log.info(`\nRemoved ${conflicts.length} conflicting record${conflicts.length !== 1 ? 's' : ''}`)
+  }
+
   log.success('\nSetup complete.')
 }
