@@ -15,7 +15,7 @@
   "scripts": {
     "prepare": "git config core.hooksPath .githooks",
     "build": "node node_modules/tsup/dist/cli-default.js && node node_modules/tsx/dist/cli.mjs scripts/export-schema.ts > schema.json",
-    "dev": "node node_modules/tsx/dist/cli.mjs src/cli.ts",
+    "dev": "node --env-file-if-exists=.env node_modules/tsx/dist/cli.mjs src/cli.ts",
     "typecheck": "node node_modules/typescript/lib/tsc.js",
     "test": "node --import tsx/esm --test tests/**/*.test.js",
     "export:schema": "node node_modules/tsx/dist/cli.mjs scripts/export-schema.ts",
