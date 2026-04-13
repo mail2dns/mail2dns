@@ -2,7 +2,8 @@ import { describe, it, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { setupRecords } from '../src/dns-modules/route53.js'
 import { makeFake } from './fakes/route53.js'
-
+import {setConfirm} from "../src/utils.js";
+import {setConfirmNo, setConfirmYes} from "./helpers/setConfirm.js";
 const fake = makeFake()
 beforeEach(() => fake.reset())
 
@@ -17,12 +18,13 @@ describe('confirm behaviour', () => {
   it('calls confirm before any mutations', async () => {
     fake.seedZone(DOMAIN, ZONE_ID)
     let changesAtConfirm = null
+    setConfirm(async () => {
+      changesAtConfirm = fake.state.changes.length
+      return false
+    })
 
     await setupRecords(
-      { domain: DOMAIN, records: RECORDS, aws: fake.aws, confirm: async () => {
-        changesAtConfirm = fake.state.changes.length
-        return false
-      }},
+      { domain: DOMAIN, records: RECORDS, aws: fake.aws},
       {}
     )
 
@@ -32,9 +34,10 @@ describe('confirm behaviour', () => {
 
   it('makes no mutations when confirm returns false', async () => {
     fake.seedZone(DOMAIN, ZONE_ID)
+    setConfirmNo()
 
     await setupRecords(
-      { domain: DOMAIN, records: RECORDS, aws: fake.aws, confirm: async () => false },
+      { domain: DOMAIN, records: RECORDS, aws: fake.aws},
       {}
     )
 
@@ -43,9 +46,10 @@ describe('confirm behaviour', () => {
 
   it('creates all records when confirmed', async () => {
     fake.seedZone(DOMAIN, ZONE_ID)
+    setConfirmYes()
 
     await setupRecords(
-      { domain: DOMAIN, records: RECORDS, aws: fake.aws, confirm: async () => true },
+      { domain: DOMAIN, records: RECORDS, aws: fake.aws},
       {}
     )
 
@@ -59,9 +63,11 @@ describe('confirm behaviour', () => {
 
 describe('route53-specific', () => {
   it('throws if hosted zone not found', async () => {
+    setConfirmYes()
+
     await assert.rejects(
       () => setupRecords(
-        { domain: DOMAIN, records: RECORDS, aws: fake.aws, confirm: async () => true },
+        { domain: DOMAIN, records: RECORDS, aws: fake.aws},
         {}
       ),
       /Hosted zone not found for domain/
@@ -77,13 +83,13 @@ describe('route53-specific', () => {
         { Value: '20 old-mx2.example.com.' }
       ]
     })
+    setConfirmYes()
 
     await setupRecords(
       {
         domain: DOMAIN,
         records: [{ type: 'MX', name: '@', content: 'new-mx.example.com', priority: 10, ttl: 1 }],
-        aws: fake.aws,
-        confirm: async () => true
+        aws: fake.aws
       },
       {}
     )
@@ -99,13 +105,13 @@ describe('route53-specific', () => {
       Name: `_dmarc.${DOMAIN}.`, Type: 'TXT', TTL: 300,
       ResourceRecords: [{ Value: '"v=DMARC1; p=none"' }]
     })
+    setConfirmYes()
 
     await setupRecords(
       {
         domain: DOMAIN,
         records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=quarantine', ttl: 1 }],
-        aws: fake.aws,
-        confirm: async () => true
+        aws: fake.aws
       },
       {}
     )
@@ -120,13 +126,13 @@ describe('route53-specific', () => {
       Name: `email.${DOMAIN}.`, Type: 'CNAME', TTL: 300,
       ResourceRecords: [{ Value: 'old.mailgun.org.' }]
     })
+    setConfirmYes()
 
     await setupRecords(
       {
         domain: DOMAIN,
         records: [{ type: 'CNAME', name: 'email', content: 'mailgun.org', ttl: 1 }],
-        aws: fake.aws,
-        confirm: async () => true
+        aws: fake.aws
       },
       {}
     )
@@ -141,13 +147,13 @@ describe('route53-specific', () => {
       Name: `other.${DOMAIN}.`, Type: 'TXT', TTL: 300,
       ResourceRecords: [{ Value: '"v=DMARC1; p=reject"' }]
     })
+    setConfirmYes()
 
     await setupRecords(
       {
         domain: DOMAIN,
         records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=quarantine', ttl: 1 }],
-        aws: fake.aws,
-        confirm: async () => true
+        aws: fake.aws
       },
       {}
     )
@@ -165,13 +171,13 @@ describe('route53-specific', () => {
         { Value: '"some-other-verification=keep-me"' }
       ]
     })
+    setConfirmYes()
 
     await setupRecords(
       {
         domain: DOMAIN,
         records: [{ type: 'TXT', name: '@', content: 'v=spf1 include:new.example.com ~all', ttl: 1 }],
-        aws: fake.aws,
-        confirm: async () => true
+        aws: fake.aws
       },
       {}
     )

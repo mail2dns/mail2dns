@@ -1,7 +1,7 @@
 import { describe, it, before, after, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { makeServer } from './fakes/godaddy.js'
-
+import {setConfirmYes} from "./helpers/setConfirm.js";
 let setupRecords
 const fake = makeServer()
 
@@ -19,11 +19,11 @@ const INPUTS = { key: 'test-key', secret: 'test-secret' }
 
 describe('godaddy-specific', () => {
   it('sends records with data field instead of content', async () => {
+    setConfirmYes()
     await setupRecords(
       {
         domain: DOMAIN,
         records: [{ type: 'MX', name: '@', content: 'mail.example.com', priority: 10 }],
-        confirm: async () => true
       },
       INPUTS
     )

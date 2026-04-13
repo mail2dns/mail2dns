@@ -1,9 +1,15 @@
 import { execFile } from 'child_process'
 import { promisify } from 'util'
-import { confirm as utilsConfirm, log } from '../utils.js'
+import {
+  log,
+  logPlan,
+  logDone,
+  isConflict,
+  findContainingZone,
+  confirmProceed
+} from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
-import { findContainingZone } from '../utils.js'
 
 const execFileAsync = promisify(execFile) as (file: string, args: string[]) => Promise<{ stdout: string; stderr: string }>
 
@@ -132,16 +138,14 @@ function unquoteTxt(value: string): string {
   return value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1) : value
 }
 
-function isConflictingValue(existingValue: string, newRecord: DnsRecord, verificationPrefix?: string): boolean {
-  if (newRecord.type === 'MX') return true
-  const raw = unquoteTxt(existingValue)
-  if (newRecord.type === 'TXT') {
-    if (newRecord.content.includes('v=spf1') && raw.includes('v=spf1')) return true
-    if (verificationPrefix && newRecord.content.includes(verificationPrefix) && raw.includes(verificationPrefix)) return true
-    if (newRecord.content.includes('v=DMARC1') && raw.includes('v=DMARC1')) return true
+function valueToRecord(name: string, type: string, value: string): DnsRecord {
+  if (type === 'MX') {
+    const spaceIdx = value.indexOf(' ')
+    const priority = parseInt(value.slice(0, spaceIdx), 10)
+    const content = value.slice(spaceIdx + 1).replace(/\.$/, '')
+    return { type: 'MX', name, content, priority }
   }
-  if (newRecord.type === 'CNAME') return true
-  return false
+  return { type: type as DnsRecord['type'], name, content: unquoteTxt(value) }
 }
 
 function formatRecord(name: string, type: string, value: string): string {
@@ -150,15 +154,13 @@ function formatRecord(name: string, type: string, value: string): string {
 }
 
 type Opts = SetupRecordsOptions & {
-  confirm?: (q: string) => Promise<boolean>
   gcloud?: GcloudFn
 }
 
 export async function setupRecords(
-  { domain, records, verificationPrefix, confirm: confirmFn, dryRun, gcloud: gcloudFn }: Opts,
+  { domain, records, verificationPrefix, dryRun, gcloud: gcloudFn }: Opts,
   { project }: Record<string, string>
 ): Promise<void> {
-  const confirmCmd = confirmFn ?? utilsConfirm
   const gcloudCmd = makeGcloudCmd(project, gcloudFn ?? gcloud)
 
   const zoneName = await getManagedZone(domain, gcloudCmd)
@@ -186,7 +188,7 @@ export async function setupRecords(
 
     const retained: string[] = []
     for (const value of existingValues) {
-      if (newRecords.some(r => isConflictingValue(value, r, verificationPrefix))) {
+      if (newRecords.some(r => isConflict(valueToRecord(name, type, value), r, verificationPrefix))) {
         toRemove.push(formatRecord(normalizeName(fqdn, domain), type, value))
       } else {
         retained.push(value)
@@ -201,22 +203,9 @@ export async function setupRecords(
     ops.push({ fqdn, type, rrdatas: [...retained, ...newValues], hasExisting: !!existingSet })
   }
 
-  if (toRemove.length > 0) {
-    log.warn('\nThe following existing records will be removed:')
-    for (const r of toRemove) log.dim(r)
-  } else {
-    log.info('\nNo conflicting records found.')
-  }
+  logPlan(toRemove, toAdd)
 
-  log.info('\nThe following records will be created:')
-  for (const r of toAdd) log.dim(r)
-
-  if (dryRun) return
-
-  console.log()
-  const ok = await confirmCmd('Proceed? (y/N) ')
-  if (!ok) {
-    log.warn('Aborted.')
+  if(!await confirmProceed(!!dryRun, toRemove.length > 0 || toAdd.length > 0)) {
     return
   }
 
@@ -224,20 +213,5 @@ export async function setupRecords(
     await upsertRecordSet(op.fqdn, op.type, op.rrdatas, zoneName, op.hasExisting, gcloudCmd)
   }
 
-  const created = { verification: 0, mx: 0, spf: 0, dmarc: 0, dkim: 0 }
-  for (const record of records) {
-    if (verificationPrefix && record.content.includes(verificationPrefix)) created.verification++
-    else if (record.type === 'MX') created.mx++
-    else if (record.content.includes('v=spf1')) created.spf++
-    else if (record.content.includes('v=DMARC1')) created.dmarc++
-    else if (record.name.includes('_domainkey') && (record.type === 'CNAME' || record.type === 'TXT')) created.dkim++
-  }
-
-  console.log()
-  if (created.verification) log.success('Created TXT verification record')
-  if (created.mx) log.success('Created MX records')
-  if (created.spf) log.success('Created SPF record')
-  if (created.dmarc) log.success('Created DMARC record')
-  if (created.dkim) log.success('Created DKIM records')
-  log.success('\nSetup complete.')
+  logDone(records, verificationPrefix, toRemove.length)
 }

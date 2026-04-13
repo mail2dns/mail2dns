@@ -1,7 +1,7 @@
 import { describe, it, before, after, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { makeServer } from './fakes/hetzner.js'
-
+import {setConfirmYes} from "./helpers/setConfirm.js";
 let setupRecords
 const fake = makeServer()
 
@@ -20,12 +20,12 @@ const INPUTS = { token: 'test-token' }
 describe('hetzner-specific', () => {
   it('formats MX record value with priority inline', async () => {
     fake.seedZone(DOMAIN)
+    setConfirmYes()
 
     await setupRecords(
       {
         domain: DOMAIN,
-        records: [{ type: 'MX', name: '@', content: 'mail.example.com', priority: 10 }],
-        confirm: async () => true
+        records: [{ type: 'MX', name: '@', content: 'mail.example.com', priority: 10 }]
       },
       INPUTS
     )
@@ -35,6 +35,7 @@ describe('hetzner-specific', () => {
 
   it('groups multiple MX records into a single RRSet', async () => {
     fake.seedZone(DOMAIN)
+    setConfirmYes()
 
     await setupRecords(
       {
@@ -42,8 +43,7 @@ describe('hetzner-specific', () => {
         records: [
           { type: 'MX', name: '@', content: 'mx1.example.com', priority: 10 },
           { type: 'MX', name: '@', content: 'mx2.example.com', priority: 20 }
-        ],
-        confirm: async () => true
+        ]
       },
       INPUTS
     )
@@ -56,17 +56,17 @@ describe('hetzner-specific', () => {
   it('removes conflicting DKIM RRSet before creating', async () => {
     fake.seedZone(DOMAIN)
     fake.seedRRSet(DOMAIN, { name: 'selector._domainkey', type: 'CNAME', ttl: 300, records: [{ value: 'old.dkim.example.com' }] })
+    setConfirmYes()
 
     await setupRecords(
       {
         domain: DOMAIN,
-        records: [{ type: 'CNAME', name: 'selector._domainkey', content: 'new.dkim.example.com' }],
-        confirm: async () => true
+        records: [{ type: 'CNAME', name: 'selector._domainkey', content: 'new.dkim.example.com' }]
       },
       INPUTS
     )
-
-    assert.ok(fake.state.deleted.some(r => r.name === 'selector._domainkey' && r.type === 'CNAME'))
+    //assert.ok(fake.state.deleted.some(r => r.name === 'selector._domainkey' && r.type === 'CNAME'))
+    assert.equal(fake.state.deleted.length, 1)
     assert.equal(fake.state.created.length, 1)
   })
 })

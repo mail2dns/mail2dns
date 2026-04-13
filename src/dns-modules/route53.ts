@@ -1,6 +1,6 @@
 import { execFile } from 'child_process'
 import { promisify } from 'util'
-import { confirm, log, logPlan, countCreated, logCreated } from '../utils.js'
+import { log, logPlan, logDone, isConflict, confirmProceed } from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
 
@@ -131,16 +131,14 @@ function toR53Value(record: DnsRecord): string {
   return record.content
 }
 
-function isConflictingValue(existingValue: string, newRecord: DnsRecord, verificationPrefix?: string): boolean {
-  if (newRecord.type === 'MX') return true
-  const raw = unquoteTxt(existingValue)
-  if (newRecord.type === 'TXT') {
-    if (newRecord.content.includes('v=spf1') && raw.includes('v=spf1')) return true
-    if (verificationPrefix && newRecord.content.includes(verificationPrefix) && raw.includes(verificationPrefix)) return true
-    if (newRecord.content.includes('v=DMARC1') && raw.includes('v=DMARC1')) return true
+function valueToRecord(name: string, type: string, value: string): DnsRecord {
+  if (type === 'MX') {
+    const spaceIdx = value.indexOf(' ')
+    const priority = parseInt(value.slice(0, spaceIdx), 10)
+    const content = value.slice(spaceIdx + 1).replace(/\.$/, '')
+    return { type: 'MX', name, content, priority }
   }
-  if (newRecord.type === 'CNAME') return true
-  return false
+  return { type: type as DnsRecord['type'], name, content: unquoteTxt(value) }
 }
 
 function formatRecord(name: string, type: string, value: string): string {
@@ -149,16 +147,14 @@ function formatRecord(name: string, type: string, value: string): string {
 }
 
 type Opts = SetupRecordsOptions & {
-  confirm?: (q: string) => Promise<boolean>
   aws?: <T>(args: string[]) => Promise<T>
 }
 
 export async function setupRecords(
-  { domain, records, verificationPrefix, confirm: confirmFn, dryRun, aws: awsFn }: Opts,
+  { domain, records, verificationPrefix, dryRun, aws: awsFn }: Opts,
   { awsProfile }: Record<string, string>
 ): Promise<void> {
   const awsCmd = makeAwsCmd(awsProfile, awsFn ?? aws)
-  const confirmCmd = confirmFn ?? confirm
   const zoneId = await getHostedZoneId(domain, awsCmd)
   log.success(`Hosted zone found: ${domain}`)
 
@@ -184,7 +180,7 @@ export async function setupRecords(
 
     const retained: string[] = []
     for (const value of existingValues) {
-      if (newRecords.some(r => isConflictingValue(value, r, verificationPrefix))) {
+      if (newRecords.some(r => isConflict(valueToRecord(name, type, value), r, verificationPrefix))) {
         toRemove.push(formatRecord(name, type, value))
       } else {
         retained.push(value)
@@ -209,17 +205,11 @@ export async function setupRecords(
 
   logPlan(toRemove, toAdd)
 
-  if (dryRun) return
-
-  console.log()
-  const ok = await confirmCmd('Proceed? (y/N) ')
-  if (!ok) {
-    log.warn('Aborted.')
+  if(!await confirmProceed(!!dryRun, toAdd.length > 0 || toRemove.length > 0)) {
     return
   }
 
   await applyChanges(zoneId, changes, awsCmd)
 
-  logCreated(countCreated(records, verificationPrefix))
-  log.success('\nSetup complete.')
+  logDone(records, verificationPrefix, toRemove.length)
 }

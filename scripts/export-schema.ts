@@ -5,6 +5,7 @@ import { version } from '../package.json'
 
 const output = {
     version,
+    commands: COMMANDS,
     setup: {
         options: COMMANDS.setup.options,
         dnsProviders: Object.fromEntries(

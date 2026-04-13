@@ -44,7 +44,6 @@ export interface SetupRecordsOptions {
   domain: string
   records: DnsRecord[]
   verificationPrefix?: string
-  confirm?: (q: string) => Promise<boolean>
   dryRun?: boolean
 }
 

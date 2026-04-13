@@ -1,4 +1,11 @@
-import { confirm as utilsConfirm, log, logPlan, countCreated, logCreated, formatDnsRecord } from '../utils.js'
+import {
+  log,
+  logPlan,
+  logDone,
+  formatDnsRecord,
+  findAndFilterConflicts,
+  confirmProceed
+} from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
 import { findContainingZone } from '../utils.js'
@@ -102,82 +109,44 @@ async function createRecords(domain: string, records: SpRecord[], apiKey: string
   )
 }
 
-function findConflicts(existing: SpRecord[], records: DnsRecord[], verificationPrefix?: string): SpRecord[] {
-  const conflicts: SpRecord[] = []
-
-  for (const record of records) {
-    const matches = existing.filter(e => {
-      if (record.type === 'MX' && e.type === 'MX') return true
-
-      if (record.type === 'TXT' && e.type === 'TXT' && e.name === record.name) {
-        if (record.content.includes('v=spf1') && e.value.includes('v=spf1')) return true
-        if (verificationPrefix && record.content.includes(verificationPrefix) && e.value.includes(verificationPrefix)) return true
-        if (record.content.includes('v=DMARC1') && e.name === record.name) return true
-      }
-
-      if (record.type === 'CNAME' && (e.type === 'CNAME' || e.type === 'TXT') && e.name === record.name) return true
-
-      return false
-    })
-
-    for (const m of matches) {
-      if (!conflicts.find(c => c.name === m.name && c.type === m.type && c.value === m.value)) {
-        conflicts.push(m)
-      }
-    }
-  }
-
-  return conflicts
-}
-
-function formatExisting(r: SpRecord): string {
-  const priority = r.priority !== undefined ? ` (priority ${r.priority})` : ''
-  return `  [${r.type.padEnd(5)}] ${r.name} → ${r.value}${priority}`
-}
-
-type Opts = SetupRecordsOptions & { confirm?: (q: string) => Promise<boolean> }
-
 export async function setupRecords(
-  { domain, records, verificationPrefix, confirm: confirmFn, dryRun }: Opts,
+  { domain, records, verificationPrefix, dryRun }: SetupRecordsOptions,
   { 'api-key': apiKey, 'api-secret': apiSecret }: Record<string, string>
 ): Promise<void> {
-  const confirm = confirmFn ?? utilsConfirm
-
-  const existing = await fetchRecords(domain, apiKey, apiSecret)
+  const rawExisting = (await fetchRecords(domain, apiKey, apiSecret)).filter(r => isMailDnsType(r.type))
   log.success(`Zone found: ${domain}`)
 
-  const conflicts = findConflicts(existing, records, verificationPrefix)
+  const toRecord = (r: SpRecord): DnsRecord => ({
+    type: r.type as DnsRecord['type'],
+    name: r.name,
+    content: r.value,
+    ...(r.priority !== undefined && { priority: r.priority })
+  })
+  const { toDelete, conflictRecords, toCreate } = findAndFilterConflicts(rawExisting, toRecord, records, verificationPrefix)
 
   logPlan(
-    conflicts.map(r => formatExisting(r)),
-    records.map(r => formatDnsRecord(r))
+    conflictRecords.map(r => formatDnsRecord(r)),
+    toCreate.map(r => formatDnsRecord(r))
   )
 
-  if (dryRun) return
-
-  console.log()
-  const ok = await confirm('Proceed? (y/N) ')
-  if (!ok) {
-    log.warn('Aborted.')
+  if(!await confirmProceed(!!dryRun, toDelete.length > 0 || toCreate.length > 0)) {
     return
   }
 
-  const spRecords: SpRecord[] = records.map(r => ({
-    name: r.name,
-    type: r.type,
-    ttl: r.ttl ?? 300,
-    value: r.content,
-    ...(r.priority !== undefined && { priority: r.priority })
-  }))
-
-  await createRecords(domain, spRecords, apiKey, apiSecret)
-
-  logCreated(countCreated(records, verificationPrefix))
-
-  if (conflicts.length > 0) {
-    await deleteRecords(domain, conflicts, apiKey, apiSecret)
-    log.info(`\nRemoved ${conflicts.length} conflicting record${conflicts.length !== 1 ? 's' : ''}`)
+  if (toCreate.length > 0) {
+    const spRecords: SpRecord[] = toCreate.map(r => ({
+      name: r.name,
+      type: r.type,
+      ttl: r.ttl ?? 300,
+      value: r.content,
+      ...(r.priority !== undefined && { priority: r.priority })
+    }))
+    await createRecords(domain, spRecords, apiKey, apiSecret)
   }
 
-  log.success('\nSetup complete.')
+  if (toDelete.length > 0) {
+    await deleteRecords(domain, toDelete, apiKey, apiSecret)
+  }
+
+  logDone(toCreate, verificationPrefix, toDelete.length)
 }

@@ -2,7 +2,6 @@ import { describe, it, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { buildRecordsFromExec } from '../src/email-modules/ses.js'
 import { makeFake } from './fakes/ses.js'
-
 const fake = makeFake()
 beforeEach(() => fake.reset())
 

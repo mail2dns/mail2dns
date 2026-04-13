@@ -1,7 +1,7 @@
 import { describe, it, before, after, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { makeServer } from './fakes/vercel.js'
-
+import {setConfirmYes} from "./helpers/setConfirm.js";
 let setupRecords
 const fake = makeServer()
 
@@ -17,6 +17,8 @@ beforeEach(() => fake.reset())
 const DOMAIN = 'example.com'
 const INPUTS = { token: 'test-token' }
 
+setConfirmYes()
+
 describe('vercel-specific', () => {
   it('sends @ as empty string for root records', async () => {
     fake.seedDomain(DOMAIN)
@@ -24,8 +26,7 @@ describe('vercel-specific', () => {
     await setupRecords(
       {
         domain: DOMAIN,
-        records: [{ type: 'MX', name: '@', content: 'mail.example.com', priority: 10 }],
-        confirm: async () => true
+        records: [{ type: 'MX', name: '@', content: 'mail.example.com', priority: 10 }]
       },
       INPUTS
     )
@@ -41,8 +42,7 @@ describe('vercel-specific', () => {
     await setupRecords(
       {
         domain: DOMAIN,
-        records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=none' }],
-        confirm: async () => true
+        records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=none' }]
       },
       INPUTS
     )
@@ -56,8 +56,7 @@ describe('vercel-specific', () => {
     await setupRecords(
       {
         domain: DOMAIN,
-        records: [{ type: 'MX', name: '@', content: 'mail.example.com', priority: 10 }],
-        confirm: async () => true
+        records: [{ type: 'MX', name: '@', content: 'mail.example.com', priority: 10 }]
       },
       { token: 'test-token', 'team-id': 'team_abc123' }
     )

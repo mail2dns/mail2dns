@@ -1,9 +1,11 @@
-import { describe, it, before, after, beforeEach } from 'node:test'
+import {describe, it, before, after, beforeEach} from 'node:test'
 import assert from 'node:assert/strict'
 import { makeServer } from './fakes/spaceship.js'
+import {setConfirmYes} from "./helpers/setConfirm.js";
 
 let setupRecords
 const fake = makeServer()
+setConfirmYes()
 
 before(async () => {
   process.env.SPACESHIP_API_URL = `${await fake.listen()}/v1`
@@ -24,8 +26,7 @@ describe('spaceship-specific', () => {
     await setupRecords(
       {
         domain: DOMAIN,
-        records: [{ type: 'MX', name: '@', content: 'mail.example.com', priority: 20 }],
-        confirm: async () => true
+        records: [{ type: 'MX', name: '@', content: 'mail.example.com', priority: 20 }]
       },
       INPUTS
     )
@@ -40,8 +41,7 @@ describe('spaceship-specific', () => {
     await setupRecords(
       {
         domain: DOMAIN,
-        records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=none' }],
-        confirm: async () => true
+        records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=none' }]
       },
       INPUTS
     )

@@ -4,7 +4,6 @@ import { normalizeRecords as normalizeRoute53 } from '../src/dns-modules/route53
 import { normalizeRecords as normalizeGcloud } from '../src/dns-modules/gcloud.js'
 import { normalizeRecords as normalizeHetzner } from '../src/dns-modules/hetzner.js'
 import { normalizeRecords as normalizeAzure } from '../src/dns-modules/azure.js'
-
 const DOMAIN = 'example.com'
 
 // ---------------------------------------------------------------------------

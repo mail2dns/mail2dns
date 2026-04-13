@@ -1,4 +1,4 @@
-import { confirm as utilsConfirm, log, logPlan, countCreated, logCreated, formatDnsRecord } from '../utils.js'
+import { logPlan, logDone, formatDnsRecord, isConflict, confirmProceed } from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
 import { findContainingZone } from '../utils.js'
@@ -85,16 +85,13 @@ async function replaceRecords(domain: string, type: string, name: string, record
   }, key, secret)
 }
 
-function isConflicting(e: GdRecord, record: DnsRecord, verificationPrefix?: string): boolean {
-  if (e.type !== record.type) return false
-  if (record.type === 'MX') return true
-  if (record.type === 'TXT') {
-    if (record.content.includes('v=spf1') && e.data.includes('v=spf1')) return true
-    if (verificationPrefix && record.content.includes(verificationPrefix) && e.data.includes(verificationPrefix)) return true
-    if (record.content.includes('v=DMARC1') && e.name === record.name) return true
+function toRecord(e: GdRecord): DnsRecord {
+  return {
+    type: e.type as DnsRecord['type'],
+    name: e.name,
+    content: e.data,
+    ...(e.priority !== undefined && { priority: e.priority })
   }
-  if (record.type === 'CNAME') return true
-  return false
 }
 
 function toGdRecord(record: DnsRecord): GdRecord {
@@ -109,14 +106,10 @@ function formatRecord(r: { type: string; name: string; data: string; priority?: 
   return `  [${r.type.padEnd(5)}] ${r.name} → ${r.data}${priority}`
 }
 
-type Opts = SetupRecordsOptions & { confirm?: (q: string) => Promise<boolean> }
-
 export async function setupRecords(
-  { domain, records, verificationPrefix, confirm: confirmFn, dryRun }: Opts,
+  { domain, records, verificationPrefix, dryRun }: SetupRecordsOptions,
   { key, secret }: Record<string, string>
 ): Promise<void> {
-  const doConfirm = confirmFn ?? utilsConfirm
-
   const existing = await fetchRecords(domain, key, secret)
 
   // Group new records by type+name and determine conflicts per group
@@ -133,8 +126,8 @@ export async function setupRecords(
     const type = k.slice(0, sep)
     const name = k.slice(sep + 1)
     const existingAtGroup = existing.filter(e => e.type === type && e.name === name)
-    const conflicts = existingAtGroup.filter(e => newRecords.some(r => isConflicting(e, r, verificationPrefix)))
-    const retained = existingAtGroup.filter(e => !newRecords.some(r => isConflicting(e, r, verificationPrefix)))
+    const conflicts = existingAtGroup.filter(e => newRecords.some(r => isConflict(toRecord(e), r, verificationPrefix)))
+    const retained = existingAtGroup.filter(e => !newRecords.some(r => isConflict(toRecord(e), r, verificationPrefix)))
     conflictRecords.push(...conflicts)
     return { type, name, newRecords, hasConflict: conflicts.length > 0, retained }
   })
@@ -144,12 +137,10 @@ export async function setupRecords(
     records.map(r => formatDnsRecord(r))
   )
 
-  if (dryRun) return
+  const hasChanges =
+      conflictRecords.length > 0 || groupPlans.some(g => g.newRecords.length > 0)
 
-  console.log()
-  const ok = await doConfirm('Proceed? (y/N) ')
-  if (!ok) {
-    log.warn('Aborted.')
+  if(!await confirmProceed(!!dryRun, hasChanges)) {
     return
   }
 
@@ -165,11 +156,5 @@ export async function setupRecords(
     await addRecords(domain, toAppend, key, secret)
   }
 
-  logCreated(countCreated(records, verificationPrefix))
-
-  if (conflictRecords.length > 0) {
-    log.info(`\nRemoved ${conflictRecords.length} conflicting record${conflictRecords.length !== 1 ? 's' : ''}`)
-  }
-
-  log.success('\nSetup complete.')
+  logDone(records, verificationPrefix, conflictRecords.length)
 }

@@ -7,7 +7,8 @@ import { makeServer as makeNetlify }      from './fakes/netlify.js'
 import { makeServer as makeVercel }       from './fakes/vercel.js'
 import { makeServer as makeSpaceship }    from './fakes/spaceship.js'
 import { makeServer as makeHetzner }      from './fakes/hetzner.js'
-
+import {setConfirmNo, setConfirmYes} from "./helpers/setConfirm.js";
+import {setConfirm} from "../src/utils.js";
 const DOMAIN = 'example.com'
 const RECORDS = [
   { type: 'MX',  name: '@', content: 'mail.example.com', priority: 10 },
@@ -41,7 +42,7 @@ const providers = [
       },
       verifySpfConflictDeleted: () => assert.ok(fake.state.deleted.includes('spf-old')),
       seedDmarcConflict:  () => fake.seedRecord(ZONE_ID, { id: 'dmarc-old', type: 'TXT', name: '_dmarc.example.com', content: 'v=DMARC1; p=none' }),
-      seedCnameConflict:  () => fake.seedRecord(ZONE_ID, { id: 'email-old', type: 'CNAME', name: 'email.example.com', content: 'mailgun.org' }),
+      seedCnameConflict:  () => fake.seedRecord(ZONE_ID, { id: 'email-old', type: 'CNAME', name: 'email.example.com', content: 'old.mailgun.org' }),
       seedUnrelatedDmarc: () => fake.seedRecord(ZONE_ID, { id: 'dmarc-other', type: 'TXT', name: 'other.example.com', content: 'v=DMARC1; p=reject' }),
       verifyDmarcConflictDeleted: () => assert.ok(fake.state.deleted.includes('dmarc-old')),
       verifyCnameConflictDeleted: () => assert.ok(fake.state.deleted.includes('email-old')),
@@ -77,7 +78,7 @@ const providers = [
       },
       verifySpfConflictDeleted: () => assert.ok(fake.state.deleted.includes(1)),
       seedDmarcConflict:  () => fake.seedRecord(DOMAIN, { id: 10, type: 'TXT', name: '_dmarc', data: 'v=DMARC1; p=none' }),
-      seedCnameConflict:  () => fake.seedRecord(DOMAIN, { id: 11, type: 'CNAME', name: 'email', data: 'mailgun.org' }),
+      seedCnameConflict:  () => fake.seedRecord(DOMAIN, { id: 11, type: 'CNAME', name: 'email', data: 'old.mailgun.org' }),
       seedUnrelatedDmarc: () => fake.seedRecord(DOMAIN, { id: 12, type: 'TXT', name: 'other', data: 'v=DMARC1; p=reject' }),
       verifyDmarcConflictDeleted: () => assert.ok(fake.state.deleted.includes(10)),
       verifyCnameConflictDeleted: () => assert.ok(fake.state.deleted.includes(11)),
@@ -149,7 +150,7 @@ const providers = [
       },
       verifySpfConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.id === 'spf-old')),
       seedDmarcConflict:  () => fake.seedRecord(ZONE_ID, { id: 'dmarc-old', type: 'TXT', hostname: '_dmarc.example.com', value: 'v=DMARC1; p=none' }),
-      seedCnameConflict:  () => fake.seedRecord(ZONE_ID, { id: 'email-old', type: 'CNAME', hostname: 'email.example.com', value: 'mailgun.org' }),
+      seedCnameConflict:  () => fake.seedRecord(ZONE_ID, { id: 'email-old', type: 'CNAME', hostname: 'email.example.com', value: 'old.mailgun.org' }),
       seedUnrelatedDmarc: () => fake.seedRecord(ZONE_ID, { id: 'dmarc-other', type: 'TXT', hostname: 'other.example.com', value: 'v=DMARC1; p=reject' }),
       verifyDmarcConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.id === 'dmarc-old')),
       verifyCnameConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.id === 'email-old')),
@@ -185,7 +186,7 @@ const providers = [
       },
       verifySpfConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.id === 'spf-old')),
       seedDmarcConflict:  () => fake.seedRecord(DOMAIN, { id: 'dmarc-old', type: 'TXT', name: '_dmarc', value: 'v=DMARC1; p=none' }),
-      seedCnameConflict:  () => fake.seedRecord(DOMAIN, { id: 'email-old', type: 'CNAME', name: 'email', value: 'mailgun.org' }),
+      seedCnameConflict:  () => fake.seedRecord(DOMAIN, { id: 'email-old', type: 'CNAME', name: 'email', value: 'old.mailgun.org' }),
       seedUnrelatedDmarc: () => fake.seedRecord(DOMAIN, { id: 'dmarc-other', type: 'TXT', name: 'other', value: 'v=DMARC1; p=reject' }),
       verifyDmarcConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.id === 'dmarc-old')),
       verifyCnameConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.id === 'email-old')),
@@ -221,7 +222,7 @@ const providers = [
       },
       verifySpfConflictDeleted: () => assert.ok(fake.state.deleted[0].value.includes('v=spf1')),
       seedDmarcConflict:  () => fake.seedRecord(DOMAIN, { name: '_dmarc', type: 'TXT', value: 'v=DMARC1; p=none', ttl: 300 }),
-      seedCnameConflict:  () => fake.seedRecord(DOMAIN, { name: 'email', type: 'CNAME', value: 'mailgun.org', ttl: 300 }),
+      seedCnameConflict:  () => fake.seedRecord(DOMAIN, { name: 'email', type: 'CNAME', value: 'old.mailgun.org', ttl: 300 }),
       seedUnrelatedDmarc: () => fake.seedRecord(DOMAIN, { name: 'other', type: 'TXT', value: 'v=DMARC1; p=reject', ttl: 300 }),
       verifyDmarcConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.name === '_dmarc' && r.type === 'TXT')),
       verifyCnameConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.name === 'email' && r.type === 'CNAME')),
@@ -284,15 +285,15 @@ for (const p of providers) {
       it('calls confirm before any mutations', async () => {
         p.seedDomain()
         let mutationsAtConfirm = null
+        setConfirm(async () => {
+          mutationsAtConfirm = p.fake.state[p.createdKey].length + p.fake.state.deleted.length
+          return false
+        })
 
         await setupRecords(
           {
             domain: DOMAIN,
-            records: RECORDS,
-            confirm: async () => {
-              mutationsAtConfirm = p.fake.state[p.createdKey].length + p.fake.state.deleted.length
-              return false
-            }
+            records: RECORDS
           },
           p.inputs
         )
@@ -303,9 +304,10 @@ for (const p of providers) {
 
       it('makes no mutations when confirm returns false', async () => {
         p.seedDomain()
+        setConfirmNo()
 
         await setupRecords(
-          { domain: DOMAIN, records: RECORDS, confirm: async () => false },
+          { domain: DOMAIN, records: RECORDS},
           p.inputs
         )
 
@@ -315,9 +317,10 @@ for (const p of providers) {
 
       it('creates all records when confirmed', async () => {
         p.seedDomain()
+        setConfirmYes()
 
         await setupRecords(
-          { domain: DOMAIN, records: RECORDS, confirm: async () => true },
+          { domain: DOMAIN, records: RECORDS},
           p.inputs
         )
 
@@ -334,9 +337,10 @@ for (const p of providers) {
 
     if (p.throwsOnMissingDomain) {
       it('throws if domain/zone not found', async () => {
+        setConfirmYes()
         await assert.rejects(
           () => setupRecords(
-            { domain: DOMAIN, records: RECORDS, confirm: async () => true },
+            { domain: DOMAIN, records: RECORDS},
             p.inputs
           ),
           p.expectedError
@@ -347,12 +351,12 @@ for (const p of providers) {
     it('removes conflicting MX records before creating', async () => {
       p.seedDomain()
       p.seedMxConflicts()
+      setConfirmYes()
 
       await setupRecords(
         {
           domain: DOMAIN,
-          records: [{ type: 'MX', name: '@', content: 'new-mx.example.com', priority: 10 }],
-          confirm: async () => true
+          records: [{ type: 'MX', name: '@', content: 'new-mx.example.com', priority: 10 }]
         },
         p.inputs
       )
@@ -366,12 +370,12 @@ for (const p of providers) {
     it('removes conflicting SPF record before creating', async () => {
       p.seedDomain()
       p.seedSpfConflict()
+      setConfirmYes()
 
       await setupRecords(
         {
           domain: DOMAIN,
-          records: [{ type: 'TXT', name: '@', content: 'v=spf1 include:new.example.com ~all' }],
-          confirm: async () => true
+          records: [{ type: 'TXT', name: '@', content: 'v=spf1 include:new.example.com ~all' }]
         },
         p.inputs
       )
@@ -385,12 +389,12 @@ for (const p of providers) {
     it('does not remove unrelated TXT records', async () => {
       p.seedDomain()
       p.seedUnrelatedTxt()
+      setConfirmYes()
 
       await setupRecords(
         {
           domain: DOMAIN,
-          records: [{ type: 'TXT', name: '@', content: 'v=spf1 include:spf.example.com ~all' }],
-          confirm: async () => true
+          records: [{ type: 'TXT', name: '@', content: 'v=spf1 include:spf.example.com ~all' }]
         },
         p.inputs
       )
@@ -402,12 +406,12 @@ for (const p of providers) {
     it('removes conflicting DMARC record before creating', async () => {
       p.seedDomain()
       p.seedDmarcConflict()
+      setConfirmYes()
 
       await setupRecords(
         {
           domain: DOMAIN,
-          records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=quarantine' }],
-          confirm: async () => true
+          records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=quarantine' }]
         },
         p.inputs
       )
@@ -418,12 +422,12 @@ for (const p of providers) {
     it('removes conflicting CNAME record before creating', async () => {
       p.seedDomain()
       p.seedCnameConflict()
+      setConfirmYes()
 
       await setupRecords(
         {
           domain: DOMAIN,
-          records: [{ type: 'CNAME', name: 'email', content: 'mailgun.org' }],
-          confirm: async () => true
+          records: [{ type: 'CNAME', name: 'email', content: 'mailgun.org' }]
         },
         p.inputs
       )
@@ -434,12 +438,12 @@ for (const p of providers) {
     it('does not remove DMARC-like TXT at a different name', async () => {
       p.seedDomain()
       p.seedUnrelatedDmarc()
+      setConfirmYes()
 
       await setupRecords(
         {
           domain: DOMAIN,
-          records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=quarantine' }],
-          confirm: async () => true
+          records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=quarantine' }]
         },
         p.inputs
       )

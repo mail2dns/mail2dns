@@ -1,8 +1,14 @@
 import { execFile } from 'child_process'
 import { promisify } from 'util'
-import { confirm as utilsConfirm, log, logPlan, countCreated, logCreated } from '../utils.js'
+import {
+  log,
+  logPlan,
+  logDone,
+  isConflict,
+  findContainingZone,
+  confirmProceed
+} from '../utils.js'
 import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
-import { findContainingZone } from '../utils.js'
 
 const execFileAsync = promisify(execFile) as (file: string, args: string[]) => Promise<{ stdout: string; stderr: string }>
 
@@ -113,16 +119,12 @@ function unquote(s: string): string {
   return s.startsWith('"') && s.endsWith('"') ? s.slice(1, -1) : s
 }
 
-function isConflictingValue(existing: string, newRecord: DnsRecord, verificationPrefix?: string): boolean {
-  if (newRecord.type === 'MX') return true
-  const raw = unquote(existing)
-  if (newRecord.type === 'TXT') {
-    if (newRecord.content.includes('v=spf1') && raw.includes('v=spf1')) return true
-    if (verificationPrefix && newRecord.content.includes(verificationPrefix) && raw.includes(verificationPrefix)) return true
-    if (newRecord.content.includes('v=DMARC1') && raw.includes('v=DMARC1')) return true
+function valueToRecord(name: string, type: string, value: string): DnsRecord {
+  if (type === 'MX') {
+    const [priorityStr, content] = value.split(' ', 2)
+    return { type: 'MX', name, content: content.replace(/\.$/, ''), priority: parseInt(priorityStr, 10) }
   }
-  if (newRecord.type === 'CNAME') return true
-  return false
+  return { type: type as DnsRecord['type'], name, content: unquote(value) }
 }
 
 function formatRecord(name: string, type: string, value: string): string {
@@ -172,15 +174,13 @@ function buildAddArgs(rg: string, zone: string, record: DnsRecord): string[] {
 }
 
 type Opts = SetupRecordsOptions & {
-  confirm?: (q: string) => Promise<boolean>
   az?: AzFn
 }
 
 export async function setupRecords(
-  { domain, records, verificationPrefix, confirm: confirmFn, dryRun, az: azFn }: Opts,
+  { domain, records, verificationPrefix, dryRun, az: azFn }: Opts,
   { subscription }: Record<string, string>
 ): Promise<void> {
-  const confirmCmd = confirmFn ?? utilsConfirm
   const azCmd = makeAzCmd(subscription, azFn ?? az)
 
   const zone = await getZone(domain, azCmd)
@@ -214,7 +214,7 @@ export async function setupRecords(
     }
 
     for (const value of existingValues) {
-      if (newRecords.some(r => isConflictingValue(value, r, verificationPrefix))) {
+      if (newRecords.some(r => isConflict(valueToRecord(name, type, value), r, verificationPrefix))) {
         toRemove.push(formatRecord(name, type, value))
         if (existingSet) {
           const args = buildRemoveArgs(rg, domain, name, type, existingSet, value)
@@ -234,18 +234,12 @@ export async function setupRecords(
 
   logPlan(toRemove, toAdd)
 
-  if (dryRun) return
-
-  console.log()
-  const ok = await confirmCmd('Proceed? (y/N) ')
-  if (!ok) {
-    log.warn('Aborted.')
+  if(!await confirmProceed(!!dryRun, toRemove.length > 0 || toAdd.length > 0)) {
     return
   }
 
   for (const args of removeOps) await azCmd(args)
   for (const args of addOps)    await azCmd(args)
 
-  logCreated(countCreated(records, verificationPrefix))
-  log.success('\nSetup complete.')
+  logDone(records, verificationPrefix, toRemove.length)
 }

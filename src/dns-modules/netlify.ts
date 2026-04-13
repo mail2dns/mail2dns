@@ -1,4 +1,11 @@
-import { confirm as utilsConfirm, log, logPlan, countCreated, logCreated, formatDnsRecord } from '../utils.js'
+import {
+  log,
+  logPlan,
+  logDone,
+  formatDnsRecord,
+  findAndFilterConflicts,
+  confirmProceed
+} from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
 import { findContainingZone } from '../utils.js'
@@ -102,81 +109,40 @@ function normalizeName(hostname: string, domain: string): string {
   return hostname
 }
 
-function findConflicts(existing: NlRecord[], records: DnsRecord[], domain: string, verificationPrefix?: string): NlRecord[] {
-  const conflicts: NlRecord[] = []
-
-  for (const record of records) {
-    const matches = existing.filter(e => {
-      const eName = normalizeName(e.hostname, domain)
-
-      if (record.type === 'MX' && e.type === 'MX') return true
-
-      if (record.type === 'TXT' && e.type === 'TXT') {
-        if (record.content.includes('v=spf1') && e.value.includes('v=spf1')) return true
-        if (verificationPrefix && record.content.includes(verificationPrefix) && e.value.includes(verificationPrefix)) return true
-        if (record.content.includes('v=DMARC1') && eName === record.name) return true
-      }
-
-      if (record.type === 'CNAME' && (e.type === 'CNAME' || e.type === 'TXT') && eName === record.name) return true
-
-      return false
-    })
-
-    for (const m of matches) {
-      if (!conflicts.find(c => c.id === m.id)) {
-        conflicts.push(m)
-      }
-    }
-  }
-
-  return conflicts
-}
-
-function formatRecord(r: { type: string; hostname: string; value: string; priority?: number }, domain: string): string {
-  const name = normalizeName(r.hostname, domain)
-  const priority = r.priority !== undefined ? ` (priority ${r.priority})` : ''
-  return `  [${r.type.padEnd(5)}] ${name} → ${r.value}${priority}`
-}
-
-type Opts = SetupRecordsOptions & { confirm?: (q: string) => Promise<boolean> }
-
 export async function setupRecords(
-  { domain, records, verificationPrefix, confirm: confirmFn, dryRun }: Opts,
+  { domain, records, verificationPrefix, dryRun }: SetupRecordsOptions,
   { token }: Record<string, string>
 ): Promise<void> {
-  const confirm = confirmFn ?? utilsConfirm
   const zoneId = await getZoneId(domain, token)
   log.success(`Zone found: ${domain}`)
 
-  const existing = await fetchRecords(zoneId, token)
-  const conflicts = findConflicts(existing, records, domain, verificationPrefix)
+  const rawExisting = (await fetchRecords(zoneId, token)).filter(r => isMailDnsType(r.type))
+  const toRecord = (r: NlRecord): DnsRecord => ({
+    type: r.type as DnsRecord['type'],
+    name: normalizeName(r.hostname, domain),
+    content: r.value,
+    ...(r.priority !== undefined && { priority: r.priority })
+  })
+  const { toDelete, conflictRecords, toCreate } = findAndFilterConflicts(rawExisting, toRecord, records, verificationPrefix)
 
   logPlan(
-    conflicts.map(r => formatRecord(r, domain)),
-    records.map(r => formatDnsRecord(r))
+    conflictRecords.map(r => formatDnsRecord(r)),
+    toCreate.map(r => formatDnsRecord(r))
   )
 
-  if (dryRun) return
-
-  console.log()
-  const ok = await confirm('Proceed? (y/N) ')
-  if (!ok) {
-    log.warn('Aborted.')
+  if(!await confirmProceed(!!dryRun, toDelete.length > 0 || toCreate.length > 0)) {
     return
   }
 
-  for (const record of records) {
+  for (const record of toCreate) {
     await createRecord(zoneId, record, domain, token)
   }
 
-  logCreated(countCreated(records, verificationPrefix))
-
-  if (conflicts.length > 0) {
-    for (const r of conflicts) {
+  if (toDelete.length > 0) {
+    for (const r of toDelete) {
       await deleteRecord(zoneId, r.id, token)
     }
-    log.info(`\nRemoved ${conflicts.length} conflicting record${conflicts.length !== 1 ? 's' : ''}`)
   }
 
-  log.success('\nSetup complete.')
+  logDone(toCreate, verificationPrefix, toDelete.length)
 }

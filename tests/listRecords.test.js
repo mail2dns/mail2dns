@@ -7,7 +7,6 @@ import { makeServer as makeNetlify }      from './fakes/netlify.js'
 import { makeServer as makeVercel }       from './fakes/vercel.js'
 import { makeServer as makeSpaceship }    from './fakes/spaceship.js'
 import { makeServer as makeHetzner }      from './fakes/hetzner.js'
-
 const DOMAIN = 'example.com'
 
 const providers = [

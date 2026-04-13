@@ -1,5 +1,5 @@
 import { DNS_PROVIDERS } from '../providers.js'
-import { resolveInputs, assertNoInsecureFlags } from '../utils.js'
+import {resolveInputs, assertNoInsecureFlags, setConfirm} from '../utils.js'
 import { validateDomain, validateEmailProvider, validateDnsProvider } from '../validate.js'
 import { buildRecords, getEmailInputDefs, zonePrefix, applyPrefix } from '../core.js'
 
@@ -35,6 +35,6 @@ export async function setup(
   const prefix = zonePrefix(domain, zone)
   const adjustedRecords = prefix ? records.map(r => ({ ...r, name: applyPrefix(r.name, prefix) })) : records
 
-  const confirm = yes ? async () => true : undefined
-  await dnsDef.setupRecords({ domain: zone, records: adjustedRecords, verificationPrefix, confirm, dryRun }, dnsInputs)
+  if(yes) setConfirm(async() => true)
+  await dnsDef.setupRecords({ domain: zone, records: adjustedRecords, verificationPrefix, dryRun }, dnsInputs)
 }

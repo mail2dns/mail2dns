@@ -2,7 +2,8 @@ import { describe, it, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { setupRecords } from '../src/dns-modules/gcloud.js'
 import { makeFake } from './fakes/gcloud.js'
-
+import {setConfirm} from "../src/utils.js";
+import {setConfirmNo, setConfirmYes} from "./helpers/setConfirm.js";
 const fake = makeFake()
 beforeEach(() => fake.reset())
 
@@ -16,13 +17,15 @@ const RECORDS = [
 describe('confirm behaviour', () => {
   it('calls confirm before any mutations', async () => {
     fake.seedZone(ZONE, DOMAIN)
+
+    setConfirm(async () => {
+      mutationsAtConfirm = fake.state.mutations.length
+      return false
+    })
     let mutationsAtConfirm = null
 
     await setupRecords(
-      { domain: DOMAIN, records: RECORDS, gcloud: fake.gcloud, confirm: async () => {
-        mutationsAtConfirm = fake.state.mutations.length
-        return false
-      }},
+      { domain: DOMAIN, records: RECORDS, gcloud: fake.gcloud},
       {}
     )
 
@@ -32,9 +35,10 @@ describe('confirm behaviour', () => {
 
   it('makes no mutations when confirm returns false', async () => {
     fake.seedZone(ZONE, DOMAIN)
+    setConfirmNo()
 
     await setupRecords(
-      { domain: DOMAIN, records: RECORDS, gcloud: fake.gcloud, confirm: async () => false },
+      { domain: DOMAIN, records: RECORDS, gcloud: fake.gcloud},
       {}
     )
 
@@ -43,9 +47,10 @@ describe('confirm behaviour', () => {
 
   it('creates all records when confirmed', async () => {
     fake.seedZone(ZONE, DOMAIN)
+    setConfirmYes()
 
     await setupRecords(
-      { domain: DOMAIN, records: RECORDS, gcloud: fake.gcloud, confirm: async () => true },
+      { domain: DOMAIN, records: RECORDS, gcloud: fake.gcloud},
       {}
     )
 
@@ -59,9 +64,10 @@ describe('confirm behaviour', () => {
 
 describe('gcloud-specific', () => {
   it('throws if managed zone not found', async () => {
+    setConfirmYes()
     await assert.rejects(
       () => setupRecords(
-        { domain: DOMAIN, records: RECORDS, gcloud: fake.gcloud, confirm: async () => true },
+        { domain: DOMAIN, records: RECORDS, gcloud: fake.gcloud},
         {}
       ),
       /Managed zone not found for domain/
@@ -74,13 +80,13 @@ describe('gcloud-specific', () => {
       name: `${DOMAIN}.`, type: 'MX', ttl: 300,
       rrdatas: ['10 old-mx1.example.com.', '20 old-mx2.example.com.']
     })
+    setConfirmYes()
 
     await setupRecords(
       {
         domain: DOMAIN,
         records: [{ type: 'MX', name: '@', content: 'new-mx.example.com', priority: 10, ttl: 1 }],
         gcloud: fake.gcloud,
-        confirm: async () => true
       },
       {}
     )
@@ -97,13 +103,13 @@ describe('gcloud-specific', () => {
       name: `_dmarc.${DOMAIN}.`, type: 'TXT', ttl: 300,
       rrdatas: ['"v=DMARC1; p=none"']
     })
+    setConfirmYes()
 
     await setupRecords(
       {
         domain: DOMAIN,
         records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=quarantine', ttl: 1 }],
         gcloud: fake.gcloud,
-        confirm: async () => true
       },
       {}
     )
@@ -118,13 +124,13 @@ describe('gcloud-specific', () => {
       name: `email.${DOMAIN}.`, type: 'CNAME', ttl: 300,
       rrdatas: ['old.mailgun.org.']
     })
+    setConfirmYes()
 
     await setupRecords(
       {
         domain: DOMAIN,
         records: [{ type: 'CNAME', name: 'email', content: 'mailgun.org', ttl: 1 }],
         gcloud: fake.gcloud,
-        confirm: async () => true
       },
       {}
     )
@@ -139,13 +145,13 @@ describe('gcloud-specific', () => {
       name: `other.${DOMAIN}.`, type: 'TXT', ttl: 300,
       rrdatas: ['"v=DMARC1; p=reject"']
     })
+    setConfirmYes()
 
     await setupRecords(
       {
         domain: DOMAIN,
         records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=quarantine', ttl: 1 }],
-        gcloud: fake.gcloud,
-        confirm: async () => true
+        gcloud: fake.gcloud
       },
       {}
     )
@@ -159,13 +165,13 @@ describe('gcloud-specific', () => {
       name: `${DOMAIN}.`, type: 'TXT', ttl: 300,
       rrdatas: ['"v=spf1 include:old.example.com ~all"', '"some-other-verification=keep-me"']
     })
+    setConfirmYes()
 
     await setupRecords(
       {
         domain: DOMAIN,
         records: [{ type: 'TXT', name: '@', content: 'v=spf1 include:new.example.com ~all', ttl: 1 }],
-        gcloud: fake.gcloud,
-        confirm: async () => true
+        gcloud: fake.gcloud
       },
       {}
     )
@@ -179,13 +185,13 @@ describe('gcloud-specific', () => {
 
   it('uses create when no existing record set', async () => {
     fake.seedZone(ZONE, DOMAIN)
+    setConfirmYes()
 
     await setupRecords(
       {
         domain: DOMAIN,
         records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=none;', ttl: 1 }],
         gcloud: fake.gcloud,
-        confirm: async () => true
       },
       {}
     )
@@ -201,9 +207,10 @@ describe('gcloud-specific', () => {
       return fake.gcloud(args.filter(a => a !== '--project' && a !== 'my-project'))
     }
     fake.seedZone(ZONE, DOMAIN)
+    setConfirmYes()
 
     await setupRecords(
-      { domain: DOMAIN, records: RECORDS, gcloud: trackingGcloud, confirm: async () => false },
+      { domain: DOMAIN, records: RECORDS, gcloud: trackingGcloud},
       { project: 'my-project' }
     )
 

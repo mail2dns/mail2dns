@@ -1,7 +1,7 @@
 import { describe, it, before, after, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { makeServer } from './fakes/netlify.js'
-
+import {setConfirmYes} from "./helpers/setConfirm.js";
 let setupRecords
 const fake = makeServer()
 
@@ -21,12 +21,12 @@ const INPUTS = { token: 'test-token' }
 describe('netlify-specific', () => {
   it('sends records with hostname expanded from domain', async () => {
     fake.seedZone(DOMAIN, ZONE_ID)
+    setConfirmYes()
 
     await setupRecords(
       {
         domain: DOMAIN,
         records: [{ type: 'MX', name: '@', content: 'mail.example.com', priority: 10 }],
-        confirm: async () => true
       },
       INPUTS
     )
@@ -38,12 +38,12 @@ describe('netlify-specific', () => {
 
   it('expands subdomain names to full hostname', async () => {
     fake.seedZone(DOMAIN, ZONE_ID)
+    setConfirmYes()
 
     await setupRecords(
       {
         domain: DOMAIN,
-        records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=none' }],
-        confirm: async () => true
+        records: [{ type: 'TXT', name: '_dmarc', content: 'v=DMARC1; p=none' }]
       },
       INPUTS
     )

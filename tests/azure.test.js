@@ -2,8 +2,11 @@ import { describe, it, beforeEach } from 'node:test'
 import assert from 'node:assert/strict'
 import { setupRecords } from '../src/dns-modules/azure.js'
 import { makeFake } from './fakes/azure.js'
+import { setConfirm } from '../src/utils.js'
+import {setConfirmYes} from "./helpers/setConfirm.js";
 
 const fake = makeFake()
+
 beforeEach(() => fake.reset())
 
 const DOMAIN = 'example.com'
@@ -15,14 +18,15 @@ const RECORDS = [
 
 describe('confirm behaviour', () => {
   it('calls confirm before any mutations', async () => {
+    setConfirm(async () => {
+      mutationsAtConfirm = fake.state.mutations.length
+      return false
+    })
     fake.seedZone(DOMAIN, RG)
     let mutationsAtConfirm = null
 
     await setupRecords(
-      { domain: DOMAIN, records: RECORDS, az: fake.az, confirm: async () => {
-        mutationsAtConfirm = fake.state.mutations.length
-        return false
-      }},
+      { domain: DOMAIN, records: RECORDS, az: fake.az},
       {}
     )
 
@@ -31,10 +35,11 @@ describe('confirm behaviour', () => {
   })
 
   it('makes no mutations when confirm returns false', async () => {
+    setConfirm(async () => false)
     fake.seedZone(DOMAIN, RG)
 
     await setupRecords(
-      { domain: DOMAIN, records: RECORDS, az: fake.az, confirm: async () => false },
+      { domain: DOMAIN, records: RECORDS, az: fake.az },
       {}
     )
 
@@ -42,6 +47,7 @@ describe('confirm behaviour', () => {
   })
 
   it('creates all records when confirmed', async () => {
+    setConfirmYes()
     fake.seedZone(DOMAIN, RG)
 
     await setupRecords(
@@ -69,6 +75,7 @@ describe('azure-specific', () => {
   })
 
   it('replaces conflicting MX records', async () => {
+    setConfirmYes()
     fake.seedZone(DOMAIN, RG)
     fake.seedRecordSet(DOMAIN, {
       name: '@', type: 'Microsoft.Network/dnszones/MX', ttl: 300,
@@ -80,7 +87,6 @@ describe('azure-specific', () => {
         domain: DOMAIN,
         records: [{ type: 'MX', name: '@', content: 'new-mx.example.com', priority: 10, ttl: 1 }],
         az: fake.az,
-        confirm: async () => true
       },
       {}
     )

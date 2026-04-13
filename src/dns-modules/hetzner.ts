@@ -1,4 +1,4 @@
-import { confirm as utilsConfirm, log, logPlan, countCreated, logCreated } from '../utils.js'
+import { log, logPlan, logDone, isConflict, confirmProceed } from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
 import { findContainingZone } from '../utils.js'
@@ -114,19 +114,9 @@ function findConflicts(existing: HzRRSet[], records: DnsRecord[], verificationPr
   const conflicts: HzRRSet[] = []
 
   for (const record of records) {
-    const match = existing.find(e => {
-      if (record.type === 'MX' && e.type === 'MX' && e.name === record.name) return true
-
-      if (record.type === 'TXT' && e.type === 'TXT' && e.name === record.name) {
-        if (record.content.includes('v=spf1') && e.records.some(r => r.value.includes('v=spf1'))) return true
-        if (verificationPrefix && record.content.includes(verificationPrefix) && e.records.some(r => r.value.includes(verificationPrefix))) return true
-        if (record.content.includes('v=DMARC1') && e.name === record.name) return true
-      }
-
-      if (record.type === 'CNAME' && (e.type === 'CNAME' || e.type === 'TXT') && e.name === record.name) return true
-
-      return false
-    })
+    const match = existing.find(e =>
+      normalizeRecords([e]).some(n => isConflict(n, record, verificationPrefix))
+    )
 
     if (match && !conflicts.find(c => c.name === match.name && c.type === match.type)) {
       conflicts.push(match)
@@ -145,14 +135,10 @@ function formatRecord(r: DnsRecord): string {
   return `  [${r.type.padEnd(5)}] ${r.name} → ${recordValue(r)}`
 }
 
-type Opts = SetupRecordsOptions & { confirm?: (q: string) => Promise<boolean> }
-
 export async function setupRecords(
-  { domain, records, verificationPrefix, confirm: confirmFn, dryRun }: Opts,
+  { domain, records, verificationPrefix, dryRun }: SetupRecordsOptions,
   { token }: Record<string, string>
 ): Promise<void> {
-  const confirm = confirmFn ?? utilsConfirm
-
   const existing = await listRRSets(domain, token)
   log.success(`Zone found: ${domain}`)
 
@@ -163,12 +149,7 @@ export async function setupRecords(
     records.map(r => formatRecord(r))
   )
 
-  if (dryRun) return
-
-  console.log()
-  const ok = await confirm('Proceed? (y/N) ')
-  if (!ok) {
-    log.warn('Aborted.')
+  if(!await confirmProceed(!!dryRun, conflicts.length > 0 || records.length > 0)) {
     return
   }
 
@@ -180,14 +161,9 @@ export async function setupRecords(
     await createRRSet(domain, first.name, first.type, rrRecords, first.ttl ?? 300, token)
   }
 
-  logCreated(countCreated(records, verificationPrefix))
-
-  if (conflicts.length > 0) {
-    for (const r of conflicts) {
-      await deleteRRSet(domain, r.name, r.type, token)
-    }
-    log.info(`\nRemoved ${conflicts.length} conflicting record${conflicts.length !== 1 ? 's' : ''}`)
+  for (const r of conflicts) {
+    await deleteRRSet(domain, r.name, r.type, token)
   }
 
-  log.success('\nSetup complete.')
+  logDone(records, verificationPrefix, conflicts.length)
 }
