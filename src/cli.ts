@@ -142,10 +142,19 @@ process.on('unhandledRejection', (reason) => {
   process.exit(1)
 })
 
-try {
-  await program.parseAsync()
-  process.exit(0)
-} catch (err: any) {
-  log.error(err instanceof Error ? err.message : String(err))
-  process.exit(1)
+process.on('SIGINT', () => {
+  log.error('Interrupted')
+  process.exit(130)
+})
+
+async function main(): Promise<void> {
+  try {
+    await program.parseAsync()
+    process.exit(0)
+  } catch (err: any) {
+    log.error(err instanceof Error ? err.message : String(err))
+    process.exit(1)
+  }
 }
+
+main()

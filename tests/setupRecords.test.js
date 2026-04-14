@@ -114,7 +114,7 @@ const providers = [
       },
       verifySpfConflictDeleted: () => assert.ok(fake.state.deleted[0].data.includes('v=spf1')),
       seedDmarcConflict:  () => fake.seedRecord(DOMAIN, { type: 'TXT', name: '_dmarc', data: 'v=DMARC1; p=none' }),
-      seedCnameConflict:  () => fake.seedRecord(DOMAIN, { type: 'CNAME', name: 'email', data: 'mailgun.org' }),
+      seedCnameConflict:  () => fake.seedRecord(DOMAIN, { type: 'CNAME', name: 'email', data: 'old.mailgun.org' }),
       seedUnrelatedDmarc: () => fake.seedRecord(DOMAIN, { type: 'TXT', name: 'other', data: 'v=DMARC1; p=reject' }),
       verifyDmarcConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.name === '_dmarc' && r.type === 'TXT')),
       verifyCnameConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.name === 'email' && r.type === 'CNAME')),

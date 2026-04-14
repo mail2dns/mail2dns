@@ -68,12 +68,19 @@ export function formatDnsRecord(r: DnsRecord): string {
 export function isConflict(
   e: DnsRecord,
   record: DnsRecord,
-  verificationPrefix?: string
+  verificationPrefix?: string,
+  willReplaceDupes: boolean = false
 ): boolean {
   if (record.type === 'MX' && e.type === 'MX') return true
   if (record.type === 'TXT' && e.type === 'TXT') {
     if (record.content.includes('v=spf1') && e.content.includes('v=spf1')) return true
-    if (verificationPrefix && record.content.includes(verificationPrefix) && e.content.includes(verificationPrefix)) return true
+    if (verificationPrefix && record.content.includes(verificationPrefix) && e.content.includes(verificationPrefix)) {
+      if (willReplaceDupes) {
+        return true
+      } else {
+        return e.content !== record.content;
+      }
+    }
     if (record.content.includes('v=DMARC1') && e.name === record.name) return true
   }
   if (record.type === 'CNAME' && (e.type === 'CNAME' || e.type === 'TXT') && e.name === record.name) return true
@@ -116,6 +123,7 @@ export function findAndFilterConflicts<T>(
   })
 
   const effective = conflicts.filter((_, i) => !noopIndices.has(i))
+
   return {
     toDelete: effective.map(e => e.raw),
     conflictRecords: effective.map(e => e.normalized),
@@ -156,10 +164,10 @@ export function countCreated(records: DnsRecord[], verificationPrefix?: string):
 export function logCreated(counts: CreatedCounts): void {
   console.log()
   if (counts.verification) log.success('Created TXT verification record')
-  if (counts.mx) log.success('Created MX records')
+  if (counts.mx) log.success(`Created ${counts.mx} MX record${counts.mx > 1 ? 's' : ''}`)
   if (counts.spf) log.success('Created SPF record')
   if (counts.dmarc) log.success('Created DMARC record')
-  if (counts.dkim) log.success('Created DKIM CNAME records')
+  if (counts.dkim) log.success(`Created ${counts.dkim} DKIM record${counts.dkim > 1 ? 's' : ''}`)
 }
 
 export function logRemoved(count: number): void {

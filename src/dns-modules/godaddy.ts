@@ -1,4 +1,4 @@
-import { logPlan, logDone, formatDnsRecord, isConflict, confirmProceed } from '../utils.js'
+import { logPlan, logDone, isConflict, confirmProceed } from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
 import { findContainingZone } from '../utils.js'
@@ -85,6 +85,12 @@ async function replaceRecords(domain: string, type: string, name: string, record
   }, key, secret)
 }
 
+async function deleteRecords(domain: string, type: string, name: string, key: string, secret: string): Promise<void> {
+  await gdFetch(`/v1/domains/${encodeURIComponent(domain)}/records/${type}/${encodeURIComponent(name)}`, {
+    method: 'DELETE'
+  }, key, secret)
+}
+
 function toRecord(e: GdRecord): DnsRecord {
   return {
     type: e.type as DnsRecord['type'],
@@ -112,49 +118,56 @@ export async function setupRecords(
 ): Promise<void> {
   const existing = await fetchRecords(domain, key, secret)
 
-  // Group new records by type+name and determine conflicts per group
   const groups = new Map<string, DnsRecord[]>()
-  for (const record of records) {
-    const k = `${record.type}:${record.name}`
-    if (!groups.has(k)) groups.set(k, [])
-    groups.get(k)!.push(record)
+  for (const r of records) {
+    const k = `${r.type}:${r.name}`
+    groups.set(k, [...(groups.get(k) ?? []), r])
   }
 
-  const conflictRecords: GdRecord[] = []
-  const groupPlans = [...groups.entries()].map(([k, newRecords]) => {
-    const sep = k.indexOf(':')
-    const type = k.slice(0, sep)
-    const name = k.slice(sep + 1)
-    const existingAtGroup = existing.filter(e => e.type === type && e.name === name)
-    const conflicts = existingAtGroup.filter(e => newRecords.some(r => isConflict(toRecord(e), r, verificationPrefix)))
-    const retained = existingAtGroup.filter(e => !newRecords.some(r => isConflict(toRecord(e), r, verificationPrefix)))
-    conflictRecords.push(...conflicts)
-    return { type, name, newRecords, hasConflict: conflicts.length > 0, retained }
-  })
+  const groupPlans = []
+  const allRemoved: GdRecord[] = []
+
+  for (const [keyStr, newRecords] of groups.entries()) {
+    const [type, name] = keyStr.split(':')
+    const existingInGroup = existing.filter(e => e.type === type && e.name === name)
+
+    const isIdentical = newRecords.every(nr => existingInGroup.some(er => {
+      return er.data === nr.content
+    }))
+
+    if (isIdentical) continue
+
+    const conflicts = existingInGroup.filter(e => {
+        return newRecords.some(nr => isConflict(toRecord(e), nr, verificationPrefix, true))
+    })
+
+    if (conflicts.length > 0) allRemoved.push(...existingInGroup)
+
+    groupPlans.push({ type, name, newRecords, conflicts, existingInGroup })
+  }
 
   logPlan(
-    conflictRecords.map(r => formatRecord(r)),
-    records.map(r => formatDnsRecord(r))
+    allRemoved.map(formatRecord),
+    groupPlans.flatMap(g => g.newRecords.map(toGdRecord)).map(formatRecord)
   )
 
-  const hasChanges =
-      conflictRecords.length > 0 || groupPlans.some(g => g.newRecords.length > 0)
-
-  if(!await confirmProceed(!!dryRun, hasChanges)) {
-    return
-  }
+  if (!await confirmProceed(!!dryRun, groupPlans.length > 0)) return
 
   const toAppend: GdRecord[] = []
-  for (const { type, name, newRecords, hasConflict, retained } of groupPlans) {
-    if (hasConflict) {
-      await replaceRecords(domain, type, name, [...retained, ...newRecords.map(toGdRecord)], key, secret)
+  for (const { type, name, newRecords, conflicts, existingInGroup } of groupPlans) {
+    if (conflicts.length > 0) {
+      // PUT group if there are conflicts
+      await replaceRecords(domain, type, name, newRecords.map(toGdRecord), key, secret)
     } else {
-      toAppend.push(...newRecords.map(toGdRecord))
+      // Filter out records already present to prevent duplicates when appending
+      const missing = newRecords.filter(nr =>
+          !existingInGroup.some(er => er.data === nr.content && (er.priority ?? 0) === (nr.priority ?? 0))
+      )
+      toAppend.push(...missing.map(toGdRecord))
     }
   }
-  if (toAppend.length > 0) {
-    await addRecords(domain, toAppend, key, secret)
-  }
 
-  logDone(records, verificationPrefix, conflictRecords.length)
+  if (toAppend.length > 0) await addRecords(domain, toAppend, key, secret)
+
+  logDone(groupPlans.flatMap(g => g.newRecords), verificationPrefix, allRemoved.length)
 }
