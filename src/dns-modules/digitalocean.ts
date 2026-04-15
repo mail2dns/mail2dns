@@ -20,6 +20,8 @@ export const inputs: RawInputDef[] = [
   }
 ]
 
+const minTtl = 30
+
 const BASE_URL = process.env.DIGITALOCEAN_API_URL ?? 'https://api.digitalocean.com/v2'
 
 interface DoRecord {
@@ -101,8 +103,8 @@ export async function createRecord(domain: string, record: DnsRecord, token: str
   const body: Record<string, unknown> = {
     type: record.type,
     name: record.name,
-    ttl: record.ttl ?? 3600
     data: addTrailingDot(record.content, record.type),
+    ttl: minTtl
   }
   if (record.priority !== undefined) body.priority = record.priority
   const data = await doFetch<{ domain_record: DoRecord }>(`/domains/${domain}/records`, {

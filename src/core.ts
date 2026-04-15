@@ -13,7 +13,7 @@ function buildFromTemplate(template: EmailTemplate, domain: string, emailInputs:
       name = name.replaceAll(placeholder, val)
       content = content.replaceAll(placeholder, val)
     }
-    const normalized: DnsRecord = { type: record.type as DnsRecord['type'], name, content, ttl: 1 }
+    const normalized: DnsRecord = { type: record.type as DnsRecord['type'], name, content }
     if (record.priority !== undefined) normalized.priority = record.priority
     return normalized
   })
