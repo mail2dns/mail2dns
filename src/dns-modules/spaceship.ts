@@ -16,33 +16,101 @@ export const inputs: RawInputDef[] = [
     name: 'Spaceship API key',
     env: 'SPACESHIP_API_KEY',
     secret: true,
-    instructions: 'Create an API key at https://www.spaceship.com/account/api-management/'
+    instructions: 'Create an API key at https://www.spaceship.com/application/api-manager/'
   },
   {
     flag: 'api-secret',
     name: 'Spaceship API secret',
     env: 'SPACESHIP_API_SECRET',
     secret: true,
-    instructions: 'Shown when creating an API key at https://www.spaceship.com/account/api-management/'
+    instructions: 'Shown when creating an API key at https://www.spaceship.com/application/api-manager/'
   }
 ]
+
+export const minTtl = 60
 
 const BASE_URL = process.env.SPACESHIP_API_URL ?? 'https://spaceship.dev/api/v1'
 
 interface SpRecord {
   name: string
   type: string
-  ttl?: number
+  ttl: number
+}
+
+interface SpMxRecord extends SpRecord {
+  exchange: string
+  preference: number
+}
+
+interface SpCnameRecord extends SpRecord {
+  cname: string
+}
+
+interface SpTxtRecord extends SpRecord {
   value: string
-  priority?: number
+}
+
+type AnySpRecord = SpMxRecord | SpCnameRecord | SpTxtRecord
+
+function dnsToSp(record: DnsRecord) {
+  const base = {
+    name: record.name,
+    type: record.type,
+  }
+  if (record.type === 'MX') {
+    return {
+      ...base,
+      exchange: record.content,
+      preference: record.priority ?? 0
+    } as SpMxRecord
+  }
+  if (record.type === 'CNAME') {
+    return {
+      ...base,
+      cname: record.content
+    } as SpCnameRecord
+  }
+  if (record.type === 'TXT') {
+    return {
+      ...base,
+      value: record.content
+    } as SpTxtRecord
+  }
+  throw new Error(`Unsupported record type: ${record.type}`)
+}
+
+function spToDns(record: AnySpRecord): DnsRecord {
+  if (record.type === 'MX') {
+    return {
+      type: 'MX',
+      name: record.name,
+      content: (record as SpMxRecord).exchange,
+      priority: (record as SpMxRecord).preference
+    }
+  }
+  if (record.type === 'CNAME') {
+    return {
+      type: 'CNAME',
+      name: record.name,
+      content: (record as SpCnameRecord).cname,
+    }
+  }
+  if (record.type === 'TXT') {
+    return {
+      type: 'TXT',
+      name: record.name,
+      content: (record as SpTxtRecord).value,
+    }
+  }
+  throw new Error(`Unsupported record type: ${record.type}`)
 }
 
 async function spFetch<T>(path: string, options: RequestInit, apiKey: string, apiSecret: string): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     ...options,
     headers: {
-      'X-API-Key': apiKey,
-      'X-API-Secret': apiSecret,
+      'X-Api-Key': apiKey,
+      'X-Api-Secret': apiSecret,
       'Content-Type': 'application/json',
       ...(options?.headers as Record<string, string> | undefined)
     }
@@ -55,19 +123,20 @@ async function spFetch<T>(path: string, options: RequestInit, apiKey: string, ap
   return res.json() as Promise<T>
 }
 
-async function fetchRecords(domain: string, apiKey: string, apiSecret: string): Promise<SpRecord[]> {
-  const data = await spFetch<{ records: SpRecord[] }>(
-    `/domains/${encodeURIComponent(domain)}/dns`,
+async function fetchRecords(domain: string, apiKey: string, apiSecret: string): Promise<AnySpRecord[]> {
+  const data = await spFetch<{ items: AnySpRecord[] }>(
+    `/dns/records/${domain}?take=100&skip=0`,
     {},
     apiKey,
     apiSecret
   )
-  return data.records ?? []
+  return data.items ?? []
 }
 
 export async function resolveZone(domain: string, { 'api-key': apiKey, 'api-secret': apiSecret }: Record<string, string>): Promise<string> {
-  const data = await spFetch<{ items: Array<{ domain: string }> }>('/domains?take=200', {}, apiKey, apiSecret)
-  const containingZone = findContainingZone(domain, (data.items ?? []).map(d => d.domain))
+  const data = await spFetch<{ items: Array<{
+    name: string }> }>('/domains?take=100&skip=0', {}, apiKey, apiSecret)
+  const containingZone = findContainingZone(domain, (data.items ?? []).map(d => d.name))
   if (!containingZone) throw new Error(`No zone found for domain: ${domain}`)
   return containingZone
 }
@@ -76,33 +145,27 @@ export async function listRecords(domain: string, { 'api-key': apiKey, 'api-secr
   const records = await fetchRecords(domain, apiKey, apiSecret)
   return records
     .filter(r => isMailDnsType(r.type))
-    .map(r => ({
-      type: r.type as DnsRecord['type'],
-      name: r.name,
-      content: r.value,
-      ...(r.priority !== undefined && { priority: r.priority }),
-      ...(r.ttl !== undefined && { ttl: r.ttl })
-    }))
+    .map(spToDns)
 }
 
-async function deleteRecords(domain: string, records: SpRecord[], apiKey: string, apiSecret: string): Promise<void> {
+async function deleteRecords(domain: string, records: AnySpRecord[], apiKey: string, apiSecret: string): Promise<void> {
   await spFetch(
-    `/domains/${encodeURIComponent(domain)}/dns`,
+    `/dns/records/${encodeURIComponent(domain)}`,
     {
       method: 'DELETE',
-      body: JSON.stringify({ records })
+      body: JSON.stringify(records)
     },
     apiKey,
     apiSecret
   )
 }
 
-async function createRecords(domain: string, records: SpRecord[], apiKey: string, apiSecret: string): Promise<void> {
+async function createRecords(domain: string, records: AnySpRecord[], apiKey: string, apiSecret: string): Promise<void> {
   await spFetch(
-    `/domains/${encodeURIComponent(domain)}/dns`,
+    `/dns/records/${encodeURIComponent(domain)}`,
     {
       method: 'PUT',
-      body: JSON.stringify({ records })
+      body: JSON.stringify({ items: records })
     },
     apiKey,
     apiSecret
@@ -116,13 +179,7 @@ export async function setupRecords(
   const rawExisting = (await fetchRecords(domain, apiKey, apiSecret)).filter(r => isMailDnsType(r.type))
   log.success(`Zone found: ${domain}`)
 
-  const toRecord = (r: SpRecord): DnsRecord => ({
-    type: r.type as DnsRecord['type'],
-    name: r.name,
-    content: r.value,
-    ...(r.priority !== undefined && { priority: r.priority })
-  })
-  const { toDelete, conflictRecords, toCreate } = findAndFilterConflicts(rawExisting, toRecord, records, verificationPrefix)
+  const { toDelete, conflictRecords, toCreate } = findAndFilterConflicts(rawExisting, spToDns, records, verificationPrefix)
 
   logPlan(
     conflictRecords.map(r => formatDnsRecord(r)),
@@ -134,13 +191,7 @@ export async function setupRecords(
   }
 
   if (toCreate.length > 0) {
-    const spRecords: SpRecord[] = toCreate.map(r => ({
-      name: r.name,
-      type: r.type,
-      ttl: r.ttl ?? 300,
-      value: r.content,
-      ...(r.priority !== undefined && { priority: r.priority })
-    }))
+    const spRecords: AnySpRecord[] = toCreate.map(dnsToSp)
     await createRecords(domain, spRecords, apiKey, apiSecret)
   }
 

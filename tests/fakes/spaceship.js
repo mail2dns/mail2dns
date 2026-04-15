@@ -26,33 +26,33 @@ export function makeServer() {
     const path = url.pathname
     const method = req.method
 
-    // /v1/domains/:domain/dns
-    const match = path.match(/^\/v1\/domains\/([^/]+)\/dns$/)
+    // /v1/dns/records/:domain/
+    const match = path.match(/^\/v1\/dns\/records\/([^/]+)/)
     if (!match) return json(res, 404, { message: 'Not found' })
 
     const domain = decodeURIComponent(match[1])
 
     if (method === 'GET') {
       if (!records.has(domain)) return json(res, 404, { message: `Domain not found: ${domain}` })
-      return json(res, 200, { records: records.get(domain) })
+      return json(res, 200, { items: records.get(domain) })
     }
 
     if (method === 'PUT') {
       const body = await readBody(req)
-      const incoming = body?.records ?? []
+      const incoming = body?.items ?? []
       if (!records.has(domain)) records.set(domain, [])
       records.get(domain).push(...incoming)
       requests.created.push(...incoming)
-      return json(res, 200, { records: incoming })
+      return json(res, 200, { items: incoming })
     }
 
     if (method === 'DELETE') {
       const body = await readBody(req)
-      const toDelete = body?.records ?? []
+      const toDelete = body ?? []
       if (records.has(domain)) {
         const current = records.get(domain)
         for (const d of toDelete) {
-          const idx = current.findIndex(r => r.name === d.name && r.type === d.type && r.value === d.value)
+          const idx = current.findIndex(r => r.name === d.name && r.type === d.type)
           if (idx !== -1) {
             requests.deleted.push(current[idx])
             current.splice(idx, 1)

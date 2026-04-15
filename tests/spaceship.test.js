@@ -31,8 +31,8 @@ describe('spaceship-specific', () => {
       INPUTS
     )
 
-    assert.equal(fake.state.created[0].value, 'mail.example.com')
-    assert.equal(fake.state.created[0].priority, 20)
+    assert.equal(fake.state.created[0].exchange, 'mail.example.com')
+    assert.equal(fake.state.created[0].preference, 20)
   })
 
   it('sends subdomain names as-is', async () => {

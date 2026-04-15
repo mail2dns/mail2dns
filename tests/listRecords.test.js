@@ -126,9 +126,9 @@ const providers = [
       moduleUrl: '../src/dns-modules/spaceship.js',
       inputs: { 'api-key': 'test-key', 'api-secret': 'test-secret' },
       seedDomain:       () => fake.seedDomain(DOMAIN),
-      seedMxRecord:     () => fake.seedRecord(DOMAIN, { name: '@',      type: 'MX',  value: 'mail.example.com', priority: 10,  ttl: 300 }),
+      seedMxRecord:     () => fake.seedRecord(DOMAIN, { name: '@',      type: 'MX',  exchange: 'mail.example.com', preference: 10,  ttl: 300 }),
       seedSubdomainTxt: () => fake.seedRecord(DOMAIN, { name: '_dmarc', type: 'TXT', value: 'v=DMARC1; p=none;',              ttl: 300 }),
-      seedARecord:      () => fake.seedRecord(DOMAIN, { name: '@',      type: 'A',   value: '1.2.3.4',                        ttl: 300 }),
+      seedARecord:      () => fake.seedRecord(DOMAIN, { name: '@',      type: 'A',   address: '1.2.3.4',                        ttl: 300 }),
       throwsOnMissingDomain: true,
       expectedError: /Spaceship API error/
     }

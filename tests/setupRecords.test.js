@@ -9,6 +9,7 @@ import { makeServer as makeSpaceship }    from './fakes/spaceship.js'
 import { makeServer as makeHetzner }      from './fakes/hetzner.js'
 import {setConfirmNo, setConfirmYes} from "./helpers/setConfirm.js";
 import {setConfirm} from "../src/utils.js";
+import {writeFileSync} from "fs";
 const DOMAIN = 'example.com'
 const RECORDS = [
   { type: 'MX',  name: '@', content: 'mail.example.com.', priority: 10 },
@@ -27,7 +28,7 @@ const providers = [
       moduleUrl: '../src/dns-modules/cloudflare.js',
       inputs: { token: 'tok' },
       createdKey: 'created',
-      contentField: 'content',
+      contentField: () => 'content',
       seedDomain:       () => fake.seedZone(DOMAIN, ZONE_ID),
       seedMxConflicts:  () => {
         fake.seedRecord(ZONE_ID, { id: 'mx-old-1', type: 'MX', name: DOMAIN, content: 'old-mx1.example.com', priority: 10 })
@@ -63,7 +64,7 @@ const providers = [
       moduleUrl: '../src/dns-modules/digitalocean.js',
       inputs: { token: 'tok' },
       createdKey: 'created',
-      contentField: 'data',
+      contentField: () => 'data',
       seedDomain:       () => fake.seedDomain(DOMAIN),
       seedMxConflicts:  () => {
         fake.seedRecord(DOMAIN, { id: 1, type: 'MX', name: '@', data: 'old-mx1.example.com', priority: 10 })
@@ -99,7 +100,7 @@ const providers = [
       moduleUrl: '../src/dns-modules/godaddy.js',
       inputs: { key: 'test-key', secret: 'test-secret' },
       createdKey: 'added',
-      contentField: 'data',
+      contentField: () => 'data',
       seedDomain:       () => {},
       seedMxConflicts:  () => {
         fake.seedRecord(DOMAIN, { type: 'MX', name: '@', data: 'old-mx1.example.com', priority: 10 })
@@ -135,7 +136,7 @@ const providers = [
       moduleUrl: '../src/dns-modules/netlify.js',
       inputs: { token: 'tok' },
       createdKey: 'created',
-      contentField: 'value',
+      contentField: () => 'value',
       seedDomain:       () => fake.seedZone(DOMAIN, ZONE_ID),
       seedMxConflicts:  () => {
         fake.seedRecord(ZONE_ID, { id: 'mx-old-1', type: 'MX', hostname: DOMAIN, value: 'old-mx1.example.com', priority: 10 })
@@ -171,7 +172,7 @@ const providers = [
       moduleUrl: '../src/dns-modules/vercel.js',
       inputs: { token: 'tok' },
       createdKey: 'created',
-      contentField: 'value',
+      contentField: () => 'value',
       seedDomain:       () => fake.seedDomain(DOMAIN),
       seedMxConflicts:  () => {
         fake.seedRecord(DOMAIN, { id: 'mx-old-1', type: 'MX', name: '', value: 'old-mx1.example.com', mxPriority: 10 })
@@ -207,26 +208,30 @@ const providers = [
       moduleUrl: '../src/dns-modules/spaceship.js',
       inputs: { 'api-key': 'test-key', 'api-secret': 'test-secret' },
       createdKey: 'created',
-      contentField: 'value',
+      contentField: (type) => {
+        if (type === 'MX') return 'exchange'
+        if (type === 'CNAME') return 'cname'
+        return 'value'
+      },
       seedDomain:       () => fake.seedDomain(DOMAIN),
       seedMxConflicts:  () => {
-        fake.seedRecord(DOMAIN, { name: '@', type: 'MX', value: 'old-mx1.example.com', priority: 10, ttl: 300 })
-        fake.seedRecord(DOMAIN, { name: '@', type: 'MX', value: 'old-mx2.example.com', priority: 20, ttl: 300 })
+        fake.seedRecord(DOMAIN, { name: '@', type: 'MX', exchange: 'old-mx1.example.com', preference: 10, ttl: 300 })
+        fake.seedRecord(DOMAIN, { name: '@', type: 'MX', exchange: 'old-mx2.example.com', preference: 20, ttl: 300 })
       },
       seedSpfConflict:  () => fake.seedRecord(DOMAIN, { name: '@', type: 'TXT', value: 'v=spf1 include:old.example.com ~all', ttl: 300 }),
       seedUnrelatedTxt: () => fake.seedRecord(DOMAIN, { name: '@', type: 'TXT', value: 'some-other-verification=abc123', ttl: 300 }),
       verifyMxConflictsDeleted: () => {
         assert.equal(fake.state.deleted.length, 2)
-        assert.ok(fake.state.deleted.some(r => r.value === 'old-mx1.example.com'))
-        assert.ok(fake.state.deleted.some(r => r.value === 'old-mx2.example.com'))
+        assert.ok(fake.state.deleted.some(r => r.exchange === 'old-mx1.example.com'))
+        assert.ok(fake.state.deleted.some(r => r.exchange === 'old-mx2.example.com'))
       },
       verifySpfConflictDeleted: () => assert.ok(fake.state.deleted[0].value.includes('v=spf1')),
       seedDmarcConflict:  () => fake.seedRecord(DOMAIN, { name: '_dmarc', type: 'TXT', value: 'v=DMARC1; p=none', ttl: 300 }),
-      seedCnameConflict:  () => fake.seedRecord(DOMAIN, { name: 'email', type: 'CNAME', value: 'old.mailgun.org', ttl: 300 }),
+      seedCnameConflict:  () => fake.seedRecord(DOMAIN, { name: 'email', type: 'CNAME', cname: 'old.mailgun.org', ttl: 300 }),
       seedUnrelatedDmarc: () => fake.seedRecord(DOMAIN, { name: 'other', type: 'TXT', value: 'v=DMARC1; p=reject', ttl: 300 }),
       verifyDmarcConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.name === '_dmarc' && r.type === 'TXT')),
       verifyCnameConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.name === 'email' && r.type === 'CNAME')),
-      getCreatedValue: r => r.value,
+      getCreatedValue: r => r.value || r.exchange || r.cname,
       expectedNewMxValue: 'new-mx.example.com',
       throwsOnMissingDomain: true,
       expectedError: /Spaceship API error/
@@ -243,7 +248,7 @@ const providers = [
       moduleUrl: '../src/dns-modules/hetzner.js',
       inputs: { token: 'test-token' },
       createdKey: 'created',
-      contentField: null,  // RRSets — skip per-record content check in confirm test
+      contentField: () => null,  // RRSets — skip per-record content check in confirm test
       seedDomain:       () => fake.seedZone(DOMAIN),
       seedMxConflicts:  () => fake.seedRRSet(DOMAIN, {
         name: '@', type: 'MX', ttl: 300,
@@ -325,10 +330,11 @@ for (const p of providers) {
         )
 
         const created = p.fake.state[p.createdKey]
+
         assert.equal(created.length, RECORDS.length)
-        if (p.contentField) {
+        if (p.contentField()) {
           for (const expected of RECORDS) {
-            const found = created.find(r => r.type === expected.type && r[p.contentField] === expected.content)
+            const found = created.find(r => r.type === expected.type && r[p.contentField(expected.type)] === expected.content)
             assert.ok(found, `record not created: ${expected.type} ${expected.content}`)
           }
         }
@@ -348,7 +354,7 @@ for (const p of providers) {
       })
     }
 
-    it('removes conflicting MX records before creating', async () => {
+    it(p.name + ' removes conflicting MX records before creating', async () => {
       p.seedDomain()
       p.seedMxConflicts()
       setConfirmYes()
@@ -365,9 +371,10 @@ for (const p of providers) {
       const created = p.fake.state[p.createdKey]
       assert.equal(created.length, 1)
       assert.equal(p.getCreatedValue(created[0]), p.expectedNewMxValue)
+
     })
 
-    it('removes conflicting SPF record before creating', async () => {
+    it(p.name + ' removes conflicting SPF record before creating', async () => {
       p.seedDomain()
       p.seedSpfConflict()
       setConfirmYes()
