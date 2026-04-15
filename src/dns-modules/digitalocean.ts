@@ -90,12 +90,19 @@ async function deleteRecord(domain: string, id: number, token: string): Promise<
   await doFetch(`/domains/${domain}/records/${id}`, { method: 'DELETE' }, token)
 }
 
-async function createRecord(domain: string, record: DnsRecord, token: string): Promise<DoRecord> {
+function addTrailingDot(content: string, type: string): string {
+  if(['CNAME', 'MX', 'NS'].includes(type) && !content.endsWith('.')) {
+    return content + '.'
+  }
+  return content
+}
+
+export async function createRecord(domain: string, record: DnsRecord, token: string): Promise<DoRecord> {
   const body: Record<string, unknown> = {
     type: record.type,
     name: record.name,
-    data: record.content,
     ttl: record.ttl ?? 3600
+    data: addTrailingDot(record.content, record.type),
   }
   if (record.priority !== undefined) body.priority = record.priority
   const data = await doFetch<{ domain_record: DoRecord }>(`/domains/${domain}/records`, {

@@ -11,7 +11,7 @@ import {setConfirmNo, setConfirmYes} from "./helpers/setConfirm.js";
 import {setConfirm} from "../src/utils.js";
 const DOMAIN = 'example.com'
 const RECORDS = [
-  { type: 'MX',  name: '@', content: 'mail.example.com', priority: 10 },
+  { type: 'MX',  name: '@', content: 'mail.example.com.', priority: 10 },
   { type: 'TXT', name: '@', content: 'v=spf1 include:spf.example.com ~all' }
 ]
 
@@ -83,7 +83,7 @@ const providers = [
       verifyDmarcConflictDeleted: () => assert.ok(fake.state.deleted.includes(10)),
       verifyCnameConflictDeleted: () => assert.ok(fake.state.deleted.includes(11)),
       getCreatedValue: r => r.data,
-      expectedNewMxValue: 'new-mx.example.com',
+      expectedNewMxValue: 'new-mx.example.com.',
       throwsOnMissingDomain: true,
       expectedError: /DigitalOcean API error/
     }
@@ -281,7 +281,7 @@ for (const p of providers) {
     after(() => p.fake.close())
     beforeEach(() => p.fake.reset())
 
-    describe('confirm behaviour', () => {
+    describe(p.name + ' confirm behaviour', () => {
       it('calls confirm before any mutations', async () => {
         p.seedDomain()
         let mutationsAtConfirm = null
@@ -315,7 +315,7 @@ for (const p of providers) {
         assert.equal(p.fake.state.deleted.length, 0)
       })
 
-      it('creates all records when confirmed', async () => {
+      it(p.name + ' creates all records when confirmed', async () => {
         p.seedDomain()
         setConfirmYes()
 
