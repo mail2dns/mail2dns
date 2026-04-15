@@ -68,18 +68,13 @@ export function formatDnsRecord(r: DnsRecord): string {
 export function isConflict(
   e: DnsRecord,
   record: DnsRecord,
-  verificationPrefix?: string,
-  willReplaceDupes: boolean = false
+  verificationPrefix?: string
 ): boolean {
   if (record.type === 'MX' && e.type === 'MX') return true
   if (record.type === 'TXT' && e.type === 'TXT') {
     if (record.content.includes('v=spf1') && e.content.includes('v=spf1')) return true
     if (verificationPrefix && record.content.includes(verificationPrefix) && e.content.includes(verificationPrefix)) {
-      if (willReplaceDupes) {
-        return true
-      } else {
-        return e.content !== record.content;
-      }
+      return true;
     }
     if (record.content.includes('v=DMARC1') && e.name === record.name) return true
   }
@@ -116,7 +111,7 @@ export function findAndFilterConflicts<T>(
       c.type === record.type &&
       c.name === record.name &&
       c.content === record.content &&
-      c.priority === record.priority
+      (record.priority ? c.priority === record.priority : true)
     )
     if (idx >= 0) { noopIndices.add(idx); return false }
     return true

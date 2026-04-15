@@ -138,7 +138,7 @@ export async function setupRecords(
     if (isIdentical) continue
 
     const conflicts = existingInGroup.filter(e => {
-        return newRecords.some(nr => isConflict(toRecord(e), nr, verificationPrefix, true))
+        return newRecords.some(nr => isConflict(toRecord(e), nr, verificationPrefix))
     })
 
     if (conflicts.length > 0) allRemoved.push(...existingInGroup)
