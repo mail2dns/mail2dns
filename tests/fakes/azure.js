@@ -32,27 +32,27 @@ export function makeFake() {
         const value = args[args.indexOf('--value') + 1]
         let set = sets.find(s => s.name === name && s.type === azType)
         if (cmd === 'add-record') {
-          if (!set) { set = { name, type: azType, ttl: 300, txtRecords: [] }; sets.push(set) }
-          set.txtRecords.push({ value: [value] })
+          if (!set) { set = { name, type: azType, ttl: 300, TXTRecords: [] }; sets.push(set) }
+          set.TXTRecords.push({ value: [value] })
         } else if (cmd === 'remove-record') {
-          if (set) set.txtRecords = set.txtRecords.filter(r => r.value.join('') !== value)
+          if (set) set.TXTRecords = set.TXTRecords.filter(r => r.value.join('') !== value)
         }
       } else if (type === 'mx') {
         const preference = Number(args[args.indexOf('--preference') + 1])
         const exchange   = args[args.indexOf('--exchange') + 1]
         let set = sets.find(s => s.name === name && s.type === azType)
         if (cmd === 'add-record') {
-          if (!set) { set = { name, type: azType, ttl: 300, mxRecords: [] }; sets.push(set) }
-          set.mxRecords.push({ preference, exchange })
+          if (!set) { set = { name, type: azType, ttl: 300, MXRecords: [] }; sets.push(set) }
+          set.MXRecords.push({ preference, exchange })
         } else if (cmd === 'remove-record') {
-          if (set) set.mxRecords = set.mxRecords.filter(r => !(r.preference === preference && r.exchange === exchange))
+          if (set) set.MXRecords = set.MXRecords.filter(r => !(r.preference === preference && r.exchange === exchange))
         }
       } else if (type === 'cname') {
         const cname = args[args.indexOf('--cname') + 1]
         let set = sets.find(s => s.name === name && s.type === azType)
         if (cmd === 'set-record') {
-          if (!set) { set = { name, type: azType, ttl: 300, cnameRecord: null }; sets.push(set) }
-          set.cnameRecord = { cname }
+          if (!set) { set = { name, type: azType, ttl: 300, CNAMERecord: null }; sets.push(set) }
+          set.CNAMERecord = { cname }
         }
       }
 

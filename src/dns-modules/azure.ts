@@ -24,6 +24,8 @@ export const inputs: RawInputDef[] = [
   }
 ]
 
+export const minTtl = 10
+
 type AzFn = <T>(args: string[]) => Promise<T>
 
 async function az<T>(args: string[]): Promise<T> {
@@ -47,10 +49,10 @@ export interface AzCnameRecord { cname: string }
 export interface AzRecordSet {
   name: string
   type: string   // e.g. "Microsoft.Network/dnszones/TXT"
-  ttl: number
-  txtRecords?:  AzTxtRecord[]
-  mxRecords?:   AzMxRecord[]
-  cnameRecord?: AzCnameRecord
+  TTL: number
+  TXTRecords?:  AzTxtRecord[]
+  MXRecords?:   AzMxRecord[]
+  CNAMERecord?: AzCnameRecord
 }
 
 async function getZone(domain: string, azFn: AzFn): Promise<AzZone> {
@@ -86,15 +88,16 @@ export function normalizeRecords(sets: AzRecordSet[]): DnsRecord[] {
   for (const set of sets) {
     const type = azRecordType(set)
     if (type === 'TXT') {
-      for (const r of set.txtRecords ?? []) {
-        result.push({ type: 'TXT', name: set.name, content: txtValue(r), ttl: set.ttl })
+      for (const r of set.TXTRecords ?? []) {
+        console.log(`Found TXT record: ${set.name} → ${txtValue(r)}`)
+        result.push({ type: 'TXT', name: set.name, content: txtValue(r), ttl: set.TTL })
       }
     } else if (type === 'MX') {
-      for (const r of set.mxRecords ?? []) {
-        result.push({ type: 'MX', name: set.name, content: r.exchange.replace(/\.$/, ''), priority: r.preference, ttl: set.ttl })
+      for (const r of set.MXRecords ?? []) {
+        result.push({ type: 'MX', name: set.name, content: r.exchange.replace(/\.$/, ''), priority: r.preference, ttl: set.TTL })
       }
-    } else if (type === 'CNAME' && set.cnameRecord) {
-      result.push({ type: 'CNAME', name: set.name, content: cnameValue(set.cnameRecord).replace(/\.$/, ''), ttl: set.ttl })
+    } else if (type === 'CNAME' && set.CNAMERecord) {
+      result.push({ type: 'CNAME', name: set.name, content: cnameValue(set.CNAMERecord).replace(/\.$/, ''), ttl: set.TTL })
     }
   }
   return result
@@ -143,7 +146,7 @@ function buildRemoveArgs(
     return [...base, '--value', value]
   }
   if (type === 'MX') {
-    const mx = (existing.mxRecords ?? []).find(r => mxValue(r) === value)
+    const mx = (existing.MXRecords ?? []).find(r => mxValue(r) === value)
     if (!mx) return base
     return [...base, '--preference', String(mx.preference), '--exchange', mx.exchange]
   }
@@ -171,6 +174,18 @@ function buildAddArgs(rg: string, zone: string, record: DnsRecord): string[] {
       '--cname', cname]
   }
   return []
+}
+
+const isIdenticalSet = (existing: string[], incoming: DnsRecord[], prefix?: string): boolean => {
+  const incomingValues = incoming.map(r => {
+    if (r.type === 'TXT') return r.content
+    if (r.type === 'MX') return `${r.priority ?? 10} ${r.content}`
+    if (r.type === 'CNAME') return r.content
+    return ''
+  })
+  const filteredExisting = prefix ? existing.filter(v => v.includes(prefix)) : existing
+  const filteredIncoming = prefix ? incomingValues.filter(v => v.includes(prefix)) : incomingValues
+  return filteredExisting.length === filteredIncoming.length && filteredExisting.every(v => filteredIncoming.includes(v))
 }
 
 type Opts = SetupRecordsOptions & {
@@ -208,9 +223,13 @@ export async function setupRecords(
 
     const existingValues: string[] = []
     if (existingSet) {
-      if (type === 'TXT')   existingValues.push(...(existingSet.txtRecords ?? []).map(txtValue))
-      if (type === 'MX')    existingValues.push(...(existingSet.mxRecords  ?? []).map(mxValue))
-      if (type === 'CNAME' && existingSet.cnameRecord) existingValues.push(cnameValue(existingSet.cnameRecord))
+      if (type === 'TXT')   existingValues.push(...(existingSet.TXTRecords ?? []).map(txtValue))
+      if (type === 'MX')    existingValues.push(...(existingSet.MXRecords  ?? []).map(mxValue))
+      if (type === 'CNAME' && existingSet.CNAMERecord) existingValues.push(cnameValue(existingSet.CNAMERecord))
+    }
+
+    if(isIdenticalSet(existingValues, newRecords, verificationPrefix)) {
+      continue
     }
 
     for (const value of existingValues) {

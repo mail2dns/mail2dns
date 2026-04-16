@@ -78,8 +78,8 @@ describe('azure-specific', () => {
     setConfirmYes()
     fake.seedZone(DOMAIN, RG)
     fake.seedRecordSet(DOMAIN, {
-      name: '@', type: 'Microsoft.Network/dnszones/MX', ttl: 300,
-      mxRecords: [{ preference: 10, exchange: 'old-mx.example.com.' }]
+      name: '@', type: 'Microsoft.Network/dnszones/MX', TTL: 300,
+      MXRecords: [{ preference: 10, exchange: 'old-mx.example.com.' }]
     })
 
     await setupRecords(
@@ -99,8 +99,8 @@ describe('azure-specific', () => {
   it('replaces conflicting DMARC record', async () => {
     fake.seedZone(DOMAIN, RG)
     fake.seedRecordSet(DOMAIN, {
-      name: '_dmarc', type: 'Microsoft.Network/dnszones/TXT', ttl: 300,
-      txtRecords: [{ value: ['v=DMARC1; p=none'] }]
+      name: '_dmarc', type: 'Microsoft.Network/dnszones/TXT', TTL: 300,
+      TXTRecords: [{ value: ['v=DMARC1; p=none'] }]
     })
 
     await setupRecords(
@@ -120,8 +120,8 @@ describe('azure-specific', () => {
   it('replaces conflicting CNAME record', async () => {
     fake.seedZone(DOMAIN, RG)
     fake.seedRecordSet(DOMAIN, {
-      name: 'email', type: 'Microsoft.Network/dnszones/CNAME', ttl: 300,
-      cnameRecord: { cname: 'old.mailgun.org.' }
+      name: 'email', type: 'Microsoft.Network/dnszones/CNAME', TTL: 300,
+      CNAMERecord: { cname: 'old.mailgun.org.' }
     })
 
     await setupRecords(
@@ -140,8 +140,8 @@ describe('azure-specific', () => {
   it('does not remove DMARC-like TXT at a different name', async () => {
     fake.seedZone(DOMAIN, RG)
     fake.seedRecordSet(DOMAIN, {
-      name: 'other', type: 'Microsoft.Network/dnszones/TXT', ttl: 300,
-      txtRecords: [{ value: ['v=DMARC1; p=reject'] }]
+      name: 'other', type: 'Microsoft.Network/dnszones/TXT', TTL: 300,
+      TXTRecords: [{ value: ['v=DMARC1; p=reject'] }]
     })
 
     await setupRecords(
@@ -160,8 +160,8 @@ describe('azure-specific', () => {
   it('replaces conflicting SPF while preserving other TXT values', async () => {
     fake.seedZone(DOMAIN, RG)
     fake.seedRecordSet(DOMAIN, {
-      name: '@', type: 'Microsoft.Network/dnszones/TXT', ttl: 300,
-      txtRecords: [
+      name: '@', type: 'Microsoft.Network/dnszones/TXT', TTL: 300,
+      TXTRecords: [
         { value: ['v=spf1 include:old.example.com ~all'] },
         { value: ['some-other-verification=keep-me'] }
       ]

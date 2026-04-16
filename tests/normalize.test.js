@@ -237,17 +237,17 @@ describe('hetzner normalizeRecords', () => {
 describe('azure normalizeRecords', () => {
   it('filters out non-mail types (A, NS, SOA)', () => {
     const sets = [
-      { name: '@', type: 'Microsoft.Network/dnszones/A',   ttl: 300, txtRecords: [], mxRecords: [] },
-      { name: '@', type: 'Microsoft.Network/dnszones/NS',  ttl: 300, txtRecords: [], mxRecords: [] },
-      { name: '@', type: 'Microsoft.Network/dnszones/SOA', ttl: 300, txtRecords: [], mxRecords: [] },
+      { name: '@', type: 'Microsoft.Network/dnszones/A',   TTL: 300, txtRecords: [], mxRecords: [] },
+      { name: '@', type: 'Microsoft.Network/dnszones/NS',  TTL: 300, txtRecords: [], mxRecords: [] },
+      { name: '@', type: 'Microsoft.Network/dnszones/SOA', TTL: 300, txtRecords: [], mxRecords: [] },
     ]
     assert.deepEqual(normalizeAzure(sets), [])
   })
 
   it('expands txtRecords into separate DnsRecords', () => {
     const sets = [{
-      name: '@', type: 'Microsoft.Network/dnszones/TXT', ttl: 300,
-      txtRecords: [
+      name: '@', type: 'Microsoft.Network/dnszones/TXT', TTL: 300,
+      TXTRecords: [
         { value: ['v=spf1 include:spf.example.com ~all'] },
         { value: ['some-verification-token'] },
       ]
@@ -261,8 +261,8 @@ describe('azure normalizeRecords', () => {
 
   it('expands mxRecords with priority and strips trailing dot', () => {
     const sets = [{
-      name: '@', type: 'Microsoft.Network/dnszones/MX', ttl: 300,
-      mxRecords: [
+      name: '@', type: 'Microsoft.Network/dnszones/MX', TTL: 300,
+      MXRecords: [
         { preference: 10, exchange: 'aspmx.l.google.com.' },
         { preference: 20, exchange: 'alt1.aspmx.l.google.com.' },
       ]
@@ -277,8 +277,8 @@ describe('azure normalizeRecords', () => {
 
   it('expands cnameRecord and strips trailing dot', () => {
     const sets = [{
-      name: 'mail._domainkey', type: 'Microsoft.Network/dnszones/CNAME', ttl: 300,
-      cnameRecord: { cname: 'dkim.example.com.' }
+      name: 'mail._domainkey', type: 'Microsoft.Network/dnszones/CNAME', TTL: 300,
+      CNAMERecord: { cname: 'dkim.example.com.' }
     }]
     const [r] = normalizeAzure(sets)
     assert.equal(r.type, 'CNAME')
@@ -288,15 +288,15 @@ describe('azure normalizeRecords', () => {
 
   it('skips CNAME set with no cnameRecord', () => {
     const sets = [{
-      name: 'mail._domainkey', type: 'Microsoft.Network/dnszones/CNAME', ttl: 300
+      name: 'mail._domainkey', type: 'Microsoft.Network/dnszones/CNAME', TTL: 300
     }]
     assert.deepEqual(normalizeAzure(sets), [])
   })
 
   it('preserves TTL on all record types', () => {
     const sets = [{
-      name: '@', type: 'Microsoft.Network/dnszones/TXT', ttl: 600,
-      txtRecords: [{ value: ['hello'] }]
+      name: '@', type: 'Microsoft.Network/dnszones/TXT', TTL: 600,
+      TXTRecords: [{ value: ['hello'] }]
     }]
     const [r] = normalizeAzure(sets)
     assert.equal(r.ttl, 600)
@@ -304,10 +304,10 @@ describe('azure normalizeRecords', () => {
 
   it('handles mixed record types in one call', () => {
     const sets = [
-      { name: '@',               type: 'Microsoft.Network/dnszones/MX',   ttl: 300, mxRecords: [{ preference: 10, exchange: 'mx.example.com.' }] },
-      { name: '@',               type: 'Microsoft.Network/dnszones/TXT',  ttl: 300, txtRecords: [{ value: ['v=spf1 ~all'] }] },
-      { name: 'mail._domainkey', type: 'Microsoft.Network/dnszones/CNAME',ttl: 300, cnameRecord: { cname: 'dkim.example.com.' } },
-      { name: '@',               type: 'Microsoft.Network/dnszones/A',    ttl: 300 },
+      { name: '@',               type: 'Microsoft.Network/dnszones/MX',   TTL: 300, MXRecords: [{ preference: 10, exchange: 'mx.example.com.' }] },
+      { name: '@',               type: 'Microsoft.Network/dnszones/TXT',  TTL: 300, TXTRecords: [{ value: ['v=spf1 ~all'] }] },
+      { name: 'mail._domainkey', type: 'Microsoft.Network/dnszones/CNAME',TTL: 300, CNAMERecord: { cname: 'dkim.example.com.' } },
+      { name: '@',               type: 'Microsoft.Network/dnszones/A',    TTL: 300 },
     ]
     const records = normalizeAzure(sets)
     assert.equal(records.length, 3)
