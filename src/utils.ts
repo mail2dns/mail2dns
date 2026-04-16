@@ -82,6 +82,11 @@ export function isConflict(
   return false
 }
 
+const dnsMatch = (a: string, b: string) => {
+  const norm = (s: string) => s.toLowerCase().replace(/\.$/, '');
+  return norm(a) === norm(b);
+};
+
 export function findAndFilterConflicts<T>(
   existing: T[],
   toRecord: (t: T) => DnsRecord,
@@ -109,8 +114,8 @@ export function findAndFilterConflicts<T>(
     const idx = conflicts.findIndex(({ normalized: c }, i) =>
       !noopIndices.has(i) &&
       c.type === record.type &&
-      c.name === record.name &&
-      c.content === record.content &&
+      dnsMatch(c.name, record.name) &&
+      dnsMatch(c.content, record.content) &&
       (record.priority ? c.priority === record.priority : true)
     )
     if (idx >= 0) { noopIndices.add(idx); return false }

@@ -131,14 +131,14 @@ export async function setupRecords(
     return
   }
 
-  for (const record of toCreate) {
-    await createRecord(domain, record, token, teamId)
-  }
-
   if (toDelete.length > 0) {
     for (const r of toDelete) {
       await deleteRecord(domain, r.id, token, teamId)
     }
+  }
+
+  for (const record of toCreate) {
+    await createRecord(domain, record, token, teamId)
   }
 
   logDone(toCreate, verificationPrefix, toDelete.length)
