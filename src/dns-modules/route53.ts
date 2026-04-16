@@ -124,6 +124,20 @@ function unquoteTxt(value: string): string {
   return value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1) : value
 }
 
+function normalizeValue(v: string): string {
+  return v.toLowerCase().replace(/\.$/, '')
+}
+
+function isIdenticalSet(existingValues: string[], newRecords: DnsRecord[], prefix?: string): boolean {
+  const newValues = newRecords.map(toR53Value)
+  const filteredExisting = prefix ? existingValues.filter(v => v.includes(prefix)) : existingValues
+  const filteredNew = prefix ? newValues.filter(v => v.includes(prefix)) : newValues
+  if (filteredExisting.length !== filteredNew.length) return false
+  const normExisting = filteredExisting.map(normalizeValue)
+  const normNew = filteredNew.map(normalizeValue)
+  return normExisting.every(v => normNew.includes(v))
+}
+
 function toR53Value(record: DnsRecord): string {
   if (record.type === 'MX') return `${record.priority} ${record.content}.`
   if (record.type === 'TXT') return `"${record.content}"`
@@ -177,6 +191,8 @@ export async function setupRecords(
     const fqdn = toFqdn(name, domain)
     const existingSet = existing.find(e => e.Name === fqdn && e.Type === type)
     const existingValues = existingSet?.ResourceRecords?.map(r => r.Value) ?? []
+
+    if (isIdenticalSet(existingValues, newRecords, verificationPrefix)) continue
 
     const retained: string[] = []
     for (const value of existingValues) {
