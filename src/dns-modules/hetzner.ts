@@ -13,6 +13,8 @@ export const inputs: RawInputDef[] = [
   }
 ]
 
+export const minTtl = 300
+
 const BASE_URL = process.env.HETZNER_API_URL ?? 'https://api.hetzner.cloud/v1'
 
 export interface HzRRSet {
@@ -59,6 +61,10 @@ async function createRRSet(zone: string, name: string, type: string, records: { 
   }, token)
 }
 
+function unquoteTxt(value: string): string {
+  return value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1) : value
+}
+
 export function normalizeRecords(rrsets: HzRRSet[]): DnsRecord[] {
   const result: DnsRecord[] = []
   for (const rrset of rrsets) {
@@ -72,7 +78,7 @@ export function normalizeRecords(rrsets: HzRRSet[]): DnsRecord[] {
         const content = r.value.slice(spaceIdx + 1).replace(/\.$/, '')
         result.push({ type, name: rrset.name, content, priority, ...ttl })
       } else if (type === 'TXT') {
-        result.push({ type, name: rrset.name, content: r.value, ...ttl })
+        result.push({ type, name: rrset.name, content: unquoteTxt(r.value), ...ttl })
       } else {
         result.push({ type, name: rrset.name, content: r.value.replace(/\.$/, ''), ...ttl })
       }
@@ -111,6 +117,7 @@ function groupRecords(records: DnsRecord[]): Map<string, DnsRecord[]> {
 }
 
 function findConflicts(existing: HzRRSet[], records: DnsRecord[], verificationPrefix?: string): HzRRSet[] {
+  const norm = (s: string) => s.toLowerCase().replace(/\.$/, '')
   const conflicts: HzRRSet[] = []
 
   for (const record of records) {
@@ -118,17 +125,22 @@ function findConflicts(existing: HzRRSet[], records: DnsRecord[], verificationPr
       normalizeRecords([e]).some(n => isConflict(n, record, verificationPrefix))
     )
 
-    if (match && !conflicts.find(c => c.name === match.name && c.type === match.type)) {
-      conflicts.push(match)
-    }
+    if (!match || conflicts.find(c => c.name === match.name && c.type === match.type)) continue
+
+    const desiredForGroup = records.filter(r => r.type === match.type && norm(r.name) === norm(match.name))
+    const existingNormalized = normalizeRecords([match])
+    const isIdentical = existingNormalized.length === desiredForGroup.length &&
+      desiredForGroup.every(d =>
+        existingNormalized.some(e =>
+          norm(e.content) === norm(d.content) &&
+          (d.priority !== undefined ? e.priority === d.priority : true)
+        )
+      )
+
+    if (!isIdentical) conflicts.push(match)
   }
 
   return conflicts
-}
-
-function formatRRSet(r: HzRRSet): string {
-  const values = r.records.map(rec => rec.value).join(', ')
-  return `  [${r.type.padEnd(5)}] ${r.name} → ${values}`
 }
 
 function formatRecord(r: DnsRecord): string {
@@ -143,27 +155,77 @@ export async function setupRecords(
   log.success(`Zone found: ${domain}`)
 
   const conflicts = findConflicts(existing, records, verificationPrefix)
-
-  logPlan(
-    conflicts.map(r => formatRRSet(r)),
-    records.map(r => formatRecord(r))
-  )
-
-  if(!await confirmProceed(!!dryRun, conflicts.length > 0 || records.length > 0)) {
-    return
-  }
+  const norm = (s: string) => s.toLowerCase().replace(/\.$/, '')
 
   const groups = groupRecords(records)
 
-  for (const group of groups.values()) {
+  type GroupPlan = { group: DnsRecord[], retained: string[], needsDelete: boolean }
+  const groupPlans = new Map<string, GroupPlan>()
+
+  for (const [key, group] of groups) {
     const first = group[0]
-    const rrRecords = group.map(r => ({ value: recordValue(r) }))
-    await createRRSet(domain, first.name, first.type, rrRecords, first.ttl ?? 300, token)
+    const existingSet = existing.find(e => e.type === first.type && norm(e.name) === norm(first.name))
+
+    if (!existingSet) {
+      groupPlans.set(key, { group, retained: [], needsDelete: false })
+      continue
+    }
+
+    const conflict = conflicts.find(c => c.name === existingSet.name && c.type === existingSet.type)
+
+    // Retained: existing values that don't conflict with any desired record
+    const existingNorm = normalizeRecords([existingSet])
+    const retained: string[] = []
+    for (let i = 0; i < existingSet.records.length; i++) {
+      if (!group.some(r => isConflict(existingNorm[i], r, verificationPrefix))) {
+        retained.push(existingSet.records[i].value)
+      }
+    }
+
+    const newValues = group.map(r => recordValue(r))
+    const finalValues = [...retained, ...newValues]
+    const existingValues = existingSet.records.map(r => r.value)
+    const isNoop = finalValues.length === existingValues.length &&
+      existingValues.every(v => finalValues.some(f => norm(f) === norm(v)))
+
+    if (isNoop) continue
+
+    groupPlans.set(key, { group, retained, needsDelete: !!conflict })
   }
 
-  for (const r of conflicts) {
-    await deleteRRSet(domain, r.name, r.type, token)
+  const toRemove: string[] = []
+  const toAdd: string[] = []
+
+  for (const conflict of conflicts) {
+    for (const r of conflict.records) {
+      toRemove.push(`  [${conflict.type.padEnd(5)}] ${conflict.name} → ${r.value}`)
+    }
   }
 
-  logDone(records, verificationPrefix, conflicts.length)
+  for (const { group } of groupPlans.values()) {
+    for (const r of group) {
+      toAdd.push(formatRecord(r))
+    }
+  }
+
+  logPlan(toRemove, toAdd)
+
+  if(!await confirmProceed(!!dryRun, toRemove.length > 0 || toAdd.length > 0)) {
+    return
+  }
+
+  for (const { group, retained, needsDelete } of groupPlans.values()) {
+    const first = group[0]
+    if (needsDelete) {
+      const conflict = conflicts.find(c => c.type === first.type && norm(c.name) === norm(first.name))
+      if (conflict) await deleteRRSet(domain, conflict.name, conflict.type, token)
+    }
+    const rrRecords = [
+      ...retained.map(v => ({ value: v })),
+      ...group.map(r => ({ value: recordValue(r) }))
+    ]
+    await createRRSet(domain, first.name, first.type, rrRecords, first.ttl ?? minTtl, token)
+  }
+
+  logDone([...groupPlans.values()].flatMap(p => p.group), verificationPrefix, toRemove.length)
 }

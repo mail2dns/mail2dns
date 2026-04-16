@@ -262,7 +262,7 @@ const providers = [
       },
       verifySpfConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.name === '@' && r.type === 'TXT')),
       seedDmarcConflict:  () => fake.seedRRSet(DOMAIN, { name: '_dmarc', type: 'TXT', ttl: 300, records: [{ value: 'v=DMARC1; p=none' }] }),
-      seedCnameConflict:  () => fake.seedRRSet(DOMAIN, { name: 'email', type: 'CNAME', ttl: 300, records: [{ value: 'mailgun.org' }] }),
+      seedCnameConflict:  () => fake.seedRRSet(DOMAIN, { name: 'email', type: 'CNAME', ttl: 300, records: [{ value: 'old.mailgun.org' }] }),
       seedUnrelatedDmarc: () => fake.seedRRSet(DOMAIN, { name: 'other', type: 'TXT', ttl: 300, records: [{ value: 'v=DMARC1; p=reject' }] }),
       verifyDmarcConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.name === '_dmarc' && r.type === 'TXT')),
       verifyCnameConflictDeleted: () => assert.ok(fake.state.deleted.some(r => r.name === 'email' && r.type === 'CNAME')),
