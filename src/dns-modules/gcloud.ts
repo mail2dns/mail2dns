@@ -1,5 +1,4 @@
-import { execFile } from 'child_process'
-import { promisify } from 'util'
+import { spawn } from 'child_process'
 import {
   log,
   logPlan,
@@ -11,7 +10,21 @@ import {
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
 
-const execFileAsync = promisify(execFile) as (file: string, args: string[]) => Promise<{ stdout: string; stderr: string }>
+const execFileAsync = (file: string, args: string[]) =>
+  new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {
+    const child = spawn(file, args, { stdio: ['ignore', 'pipe', 'pipe'] })
+    let stdout = ''
+    let stderr = ''
+    child.stdout!.setEncoding('utf8')
+    child.stderr!.setEncoding('utf8')
+    child.stdout!.on('data', (d: string) => { stdout += d })
+    child.stderr!.on('data', (d: string) => { stderr += d })
+    child.on('error', (err) => reject(Object.assign(err, { stderr })))
+    child.on('close', (code) => {
+      if (code !== 0) reject(Object.assign(new Error(`gcloud exited with code ${code}`), { stderr }))
+      else resolve({ stdout, stderr })
+    })
+  })
 
 export const inputs: RawInputDef[] = [
   {
@@ -40,7 +53,7 @@ export interface GcpRecord {
 type GcloudFn = <T>(args: string[]) => Promise<T>
 
 async function gcloud<T>(args: string[]): Promise<T> {
-  const { stdout } = await execFileAsync('gcloud', [...args, '--format=json'])
+  const { stdout } = await execFileAsync('gcloud', [...args, '--format=json', '--quiet'])
     .catch((e: { stderr?: string; message: string }) => {
       throw new Error(`gcloud error: ${e.stderr?.trim() || e.message}\nIs the gcloud CLI installed and configured?`)
     })
@@ -124,6 +137,20 @@ function normalizeName(fqdn: string, domain: string): string {
   return fqdn
 }
 
+function normalizeRrData(v: string): string {
+  return v.toLowerCase().replace(/\.$/, '')
+}
+
+function isIdenticalSet(existingValues: string[], newRecords: DnsRecord[], prefix?: string): boolean {
+  const newValues = newRecords.map(toGcpValue)
+  const filteredExisting = prefix ? existingValues.filter(v => v.includes(prefix)) : existingValues
+  const filteredNew = prefix ? newValues.filter(v => v.includes(prefix)) : newValues
+  if (filteredExisting.length !== filteredNew.length) return false
+  const normExisting = filteredExisting.map(normalizeRrData)
+  const normNew = filteredNew.map(normalizeRrData)
+  return normExisting.every(v => normNew.includes(v))
+}
+
 function toGcpValue(record: DnsRecord): string {
   if (record.type === 'MX') {
     const host = record.content.endsWith('.') ? record.content : `${record.content}.`
@@ -185,6 +212,8 @@ export async function setupRecords(
     const fqdn = toFqdn(name, domain)
     const existingSet = existing.find(e => e.name === fqdn && e.type === type)
     const existingValues = existingSet?.rrdatas ?? []
+
+    if (isIdenticalSet(existingValues, newRecords, verificationPrefix)) continue
 
     const retained: string[] = []
     for (const value of existingValues) {
