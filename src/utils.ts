@@ -218,6 +218,10 @@ export function assertNoInsecureFlags(inputs: InputDef[], argv: Record<string, s
   }
 }
 
+export function unquoteTxt(value: string): string {
+  return value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1) : value
+}
+
 export function findContainingZone(domain: string, zones: string[]): string | undefined {
   return zones
     .filter(z => domain === z || domain.endsWith(`.${z}`))

@@ -1,7 +1,6 @@
-import { log, logPlan, logDone, isConflict, confirmProceed } from '../utils.js'
+import { log, logPlan, logDone, isConflict, confirmProceed, unquoteTxt, findContainingZone } from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
-import { findContainingZone } from '../utils.js'
 
 export const inputs: RawInputDef[] = [
   {
@@ -61,9 +60,6 @@ async function createRRSet(zone: string, name: string, type: string, records: { 
   }, token)
 }
 
-function unquoteTxt(value: string): string {
-  return value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1) : value
-}
 
 export function normalizeRecords(rrsets: HzRRSet[]): DnsRecord[] {
   const result: DnsRecord[] = []

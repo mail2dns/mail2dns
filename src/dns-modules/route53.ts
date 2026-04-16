@@ -1,6 +1,6 @@
 import { execFile } from 'child_process'
 import { promisify } from 'util'
-import { log, logPlan, logDone, isConflict, confirmProceed } from '../utils.js'
+import { log, logPlan, logDone, isConflict, confirmProceed, unquoteTxt } from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
 
@@ -120,9 +120,6 @@ function normalizeName(fqdn: string, domain: string): string {
   return fqdn
 }
 
-function unquoteTxt(value: string): string {
-  return value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1) : value
-}
 
 function normalizeValue(v: string): string {
   return v.toLowerCase().replace(/\.$/, '')

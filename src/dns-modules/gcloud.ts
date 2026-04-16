@@ -5,7 +5,8 @@ import {
   logDone,
   isConflict,
   findContainingZone,
-  confirmProceed
+  confirmProceed,
+  unquoteTxt
 } from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
@@ -161,9 +162,6 @@ function toGcpValue(record: DnsRecord): string {
   return record.content
 }
 
-function unquoteTxt(value: string): string {
-  return value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1) : value
-}
 
 function valueToRecord(name: string, type: string, value: string): DnsRecord {
   if (type === 'MX') {
