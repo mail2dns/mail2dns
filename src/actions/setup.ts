@@ -1,7 +1,7 @@
 import { DNS_PROVIDERS } from '../providers.js'
 import {resolveInputs, assertNoInsecureFlags, setConfirm} from '../utils.js'
 import { validateDomain, validateEmailProvider, validateDnsProvider } from '../validate.js'
-import { buildRecords, getEmailInputDefs, zonePrefix, applyPrefix } from '../core.js'
+import { buildRecords, getEmailInputDefs, zonePrefix, normalizePrefix } from '../core.js'
 
 export async function setup(
   domain: string,
@@ -33,7 +33,7 @@ export async function setup(
 
   const zone = opts.zone ?? (dnsDef.resolveZone ? await dnsDef.resolveZone(domain, dnsInputs) : domain)
   const prefix = zonePrefix(domain, zone)
-  const adjustedRecords = prefix ? records.map(r => ({ ...r, name: applyPrefix(r.name, prefix) })) : records
+  const adjustedRecords = prefix ? records.map(r => ({ ...r, name: normalizePrefix(r.name, prefix) })) : records
 
   if(yes) setConfirm(async() => true)
   await dnsDef.setupRecords({ domain: zone, records: adjustedRecords, verificationPrefix, dryRun }, dnsInputs)

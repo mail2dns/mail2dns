@@ -91,6 +91,10 @@ export function removePrefix(name: string, prefix: string): string {
   return name
 }
 
+export function normalizePrefix(name: string, prefix: string): string {
+  return applyPrefix(removePrefix(name, prefix), prefix)
+}
+
 type DnsResolver = Pick<typeof dnsPromises, 'resolveMx' | 'resolveTxt' | 'resolveCname' | 'resolveSrv'>
 
 export async function checkDnsRecord(vr: VerifyRecord, fullName: string, resolver: DnsResolver = dnsPromises): Promise<string | null> {
