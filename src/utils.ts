@@ -176,8 +176,11 @@ export function logRemoved(count: number): void {
   if (count > 0) log.info(`\nRemoved ${count} conflicting record${count !== 1 ? 's' : ''}`)
 }
 
+let suppressComplete = false
+export function setSuppressComplete(v: boolean): void { suppressComplete = v }
+
 export function logSuccess(): void {
-  log.success('\nSetup complete.')
+  if (!suppressComplete) log.success('\nSetup complete.')
 }
 
 export function logDone(created: DnsRecord[], verificationPrefix: string | undefined, removedCount: number): void {

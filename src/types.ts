@@ -35,6 +35,7 @@ export interface RawInputDef {
   secret?: boolean
   default?: string
   value?: string
+  verifyOnly?: boolean
 }
 
 export interface InputDef extends RawInputDef {
@@ -79,6 +80,7 @@ export interface EmailTemplateRecord {
   value: string
   priority?: number
   verifyPattern?: string
+  verifyOnly?: boolean
 }
 
 export interface EmailTemplate {
