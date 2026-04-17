@@ -1,16 +1,23 @@
 {
   "inputs": [
     {
-      "flag": "dkim",
-      "name": "DKIM CNAME value",
-      "env": "POSTMARK_DKIM",
-      "example": "cm.mtasv.net",
-      "instructions": "In the Postmark dashboard, go to Sender Signatures or Domains, add your domain, and copy the value for the 'pm._domainkey' CNAME record."
+      "flag": "dkimName",
+      "name": "DKIM TXT record hostname",
+      "env": "POSTMARK_DKIM_NAME",
+      "example": "202060101010101pm._domainkey",
+      "instructions": "In the Postmark dashboard, go to Sender Signatures, add your domain, and copy the hostname for the DKIM TXT record (e.g. 20260417161410pm._domainkey)."
+    },
+    {
+      "flag": "dkimValue",
+      "name": "DKIM TXT record value",
+      "env": "POSTMARK_DKIM_VALUE",
+      "example": "k=rsa;p=MIGfMA0...",
+      "instructions": "Copy the value for the DKIM TXT record from the Sender Signatures page in the Postmark dashboard."
     }
   ],
   "records": [
-    { "type": "TXT",   "name": "@",            "value": "v=spf1 include:spf.mtasv.net ~all" },
-    { "type": "TXT",   "name": "_dmarc",        "value": "v=DMARC1; p={DMARC_POLICY};", "verifyPattern": "^v=DMARC1" },
-    { "type": "CNAME", "name": "pm._domainkey", "value": "{DKIM}" }
+    { "type": "TXT",   "name": "{DKIM_NAME}",  "value": "{DKIM_VALUE}", "verifyPattern": "^k=rsa;p=" },
+    { "type": "CNAME", "name": "pm-bounces",   "value": "pm.mtasv.net" },
+    { "type": "TXT",   "name": "_dmarc",       "value": "v=DMARC1; p={DMARC_POLICY};", "verifyPattern": "^v=DMARC1" }
   ]
 }
