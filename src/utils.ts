@@ -147,16 +147,17 @@ export function logPlan(toRemove: string[], toAdd: string[]): void {
   }
 }
 
-export type CreatedCounts = { verification: number; mx: number; spf: number; dmarc: number; dkim: number }
+export type CreatedCounts = { verification: number; mx: number; spf: number; dmarc: number; dkim: number; cname: number }
 
 export function countCreated(records: DnsRecord[], verificationPrefix?: string): CreatedCounts {
-  const counts: CreatedCounts = { verification: 0, mx: 0, spf: 0, dmarc: 0, dkim: 0 }
+  const counts: CreatedCounts = { verification: 0, mx: 0, spf: 0, dmarc: 0, dkim: 0, cname: 0 }
   for (const record of records) {
     if (verificationPrefix && record.content.includes(verificationPrefix)) counts.verification++
     else if (record.type === 'MX') counts.mx++
     else if (record.content.includes('v=spf1')) counts.spf++
     else if (record.content.includes('v=DMARC1')) counts.dmarc++
     else if (record.name.includes('_domainkey') && (record.type === 'CNAME' || record.type === 'TXT')) counts.dkim++
+    else if (record.type === 'CNAME') counts.cname++
   }
   return counts
 }
@@ -168,6 +169,7 @@ export function logCreated(counts: CreatedCounts): void {
   if (counts.spf) log.success('Created SPF record')
   if (counts.dmarc) log.success('Created DMARC record')
   if (counts.dkim) log.success(`Created ${counts.dkim} DKIM record${counts.dkim > 1 ? 's' : ''}`)
+  if (counts.cname) log.success(`Created ${counts.cname} CNAME record${counts.cname > 1 ? 's' : ''}`)
 }
 
 export function logRemoved(count: number): void {
