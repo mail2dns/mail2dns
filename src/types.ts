@@ -8,6 +8,7 @@ export interface DnsRecord {
   content: string
   priority?: number
   ttl?: number
+  required?: boolean
 }
 
 export interface ArgumentDef {

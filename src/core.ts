@@ -40,7 +40,7 @@ export async function buildRecords({ domain, emailProvider, emailInputs, noMx }:
     result = { records, verificationPrefix: undefined }
   }
 
-  if (noMx) result.records = result.records.filter(r => r.type !== 'MX')
+  if (noMx) result.records = result.records.filter(r => r.type !== 'MX' || r.required)
   return result
 }
 

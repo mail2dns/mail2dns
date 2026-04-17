@@ -52,9 +52,10 @@ export async function buildRecordsFromExec(domain: string, profileArgs: string[]
   if (!DkimTokens || DkimTokens.length < 3) throw new Error('SES did not return 3 DKIM tokens')
 
   return [
-    { type: 'TXT',   name: '_amazonses',                  content: VerificationToken,                           ttl: 1            },
-    { type: 'MX',    name: '@',                            content: `inbound-smtp.${region}.amazonaws.com`,      ttl: 1, priority: 10 },
-    { type: 'TXT',   name: '@',                            content: 'v=spf1 include:amazonses.com ~all',         ttl: 1            },
+    { type: 'TXT',   name: '_amazonses',                  content: VerificationToken,                                ttl: 1                           },
+    { type: 'MX',    name: '@',                            content: `inbound-smtp.${region}.amazonaws.com`,          ttl: 1, priority: 10              },
+    { type: 'MX',    name: '@',                            content: `feedback-smtp.${region}.amazonses.com`,          ttl: 1, priority: 20, required: true },
+    { type: 'TXT',   name: '@',                            content: 'v=spf1 include:amazonses.com ~all',              ttl: 1                           },
     { type: 'TXT',   name: '_dmarc',                       content: 'v=DMARC1; p=none;',                        ttl: 1            },
     { type: 'CNAME', name: `${DkimTokens[0]}._domainkey`, content: `${DkimTokens[0]}.dkim.amazonses.com`,       ttl: 1            },
     { type: 'CNAME', name: `${DkimTokens[1]}._domainkey`, content: `${DkimTokens[1]}.dkim.amazonses.com`,       ttl: 1            },

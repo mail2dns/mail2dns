@@ -8,9 +8,9 @@ beforeEach(() => fake.reset())
 const DOMAIN = 'example.com'
 
 describe('buildRecordsFromExec', () => {
-  it('returns 7 DNS records', async () => {
+  it('returns 8 DNS records', async () => {
     const records = await buildRecordsFromExec(DOMAIN, [], fake.exec)
-    assert.equal(records.length, 7)
+    assert.equal(records.length, 8)
   })
 
   it('TXT _amazonses contains the verification token', async () => {
@@ -20,12 +20,23 @@ describe('buildRecordsFromExec', () => {
     assert.equal(txt.content, fake.state.verificationToken)
   })
 
-  it('MX record uses the region returned by the CLI', async () => {
+  it('inbound MX record uses the region and has priority 10', async () => {
     fake.setRegion('eu-west-1')
     const records = await buildRecordsFromExec(DOMAIN, [], fake.exec)
-    const mx = records.find(r => r.type === 'MX')
-    assert.ok(mx, 'MX record not found')
+    const mx = records.find(r => r.type === 'MX' && r.content.includes('inbound-smtp'))
+    assert.ok(mx, 'inbound MX record not found')
     assert.ok(mx.content.includes('eu-west-1'), `expected region in MX content, got: ${mx.content}`)
+    assert.equal(mx.priority, 10)
+  })
+
+  it('feedback MX record uses the region, has priority 20, and is required', async () => {
+    fake.setRegion('eu-west-1')
+    const records = await buildRecordsFromExec(DOMAIN, [], fake.exec)
+    const mx = records.find(r => r.type === 'MX' && r.content.includes('feedback-smtp'))
+    assert.ok(mx, 'feedback MX record not found')
+    assert.ok(mx.content.includes('eu-west-1'), `expected region in MX content, got: ${mx.content}`)
+    assert.equal(mx.priority, 20)
+    assert.equal(mx.required, true)
   })
 
   it('includes SPF TXT record at @', async () => {
