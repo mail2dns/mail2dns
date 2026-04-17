@@ -19,6 +19,8 @@ export const inputs: RawInputDef[] = [
   }
 ]
 
+export const minTtl = 600
+
 const BASE_URL = process.env.GODADDY_API_URL ?? 'https://api.godaddy.com'
 
 interface GdRecord {
@@ -67,7 +69,7 @@ export async function listRecords(domain: string, { key, secret }: Record<string
       name: r.name,
       content: r.data,
       ...(r.priority !== undefined && { priority: r.priority }),
-      ...(r.ttl !== undefined && { ttl: r.ttl })
+      ttl: r.ttl ?? minTtl
     }))
 }
 
@@ -101,8 +103,7 @@ function toRecord(e: GdRecord): DnsRecord {
 }
 
 function toGdRecord(record: DnsRecord): GdRecord {
-  const gdMinTtl = 600
-  const r: GdRecord = { type: record.type, name: record.name, data: record.content, ttl: Math.max(record.ttl ?? 3600, gdMinTtl) }
+  const r: GdRecord = { type: record.type, name: record.name, data: record.content, ttl: Math.max(record.ttl ?? minTtl, minTtl) }
   if (record.priority !== undefined) r.priority = record.priority
   return r
 }

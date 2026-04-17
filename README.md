@@ -277,7 +277,8 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| <nobr>`--dkim`</nobr> | `POSTMARK_DKIM` | DKIM CNAME value | `cm.mtasv.net` |
+| <nobr>`--dkim-name`</nobr> | `POSTMARK_DKIM_NAME` | DKIM TXT record hostname | `202060101010101pm._domainkey` |
+| <nobr>`--dkim-value`</nobr> | `POSTMARK_DKIM_VALUE` | DKIM TXT record value | `k=rsa;p=MIGfMA0...` |
 ### Amazon SES
 
 #### Inputs
