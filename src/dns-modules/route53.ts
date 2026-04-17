@@ -127,8 +127,9 @@ function normalizeValue(v: string): string {
 
 function isIdenticalSet(existingValues: string[], newRecords: DnsRecord[], prefix?: string): boolean {
   const newValues = newRecords.map(toR53Value)
-  const filteredExisting = prefix ? existingValues.filter(v => v.includes(prefix)) : existingValues
-  const filteredNew = prefix ? newValues.filter(v => v.includes(prefix)) : newValues
+  const hasPrefix = prefix ? newValues.some(v => v.includes(prefix)) : false
+  const filteredExisting = hasPrefix ? existingValues.filter(v => v.includes(prefix!)) : existingValues
+  const filteredNew = hasPrefix ? newValues.filter(v => v.includes(prefix!)) : newValues
   if (filteredExisting.length !== filteredNew.length) return false
   const normExisting = filteredExisting.map(normalizeValue)
   const normNew = filteredNew.map(normalizeValue)
