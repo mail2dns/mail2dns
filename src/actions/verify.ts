@@ -16,7 +16,8 @@ export async function verify(
   let verifyRecords: VerifyRecord[]
 
   if (emailDef.type === 'template') {
-    verifyRecords = buildVerifyRecords(emailDef.template, domain, { dmarcPolicy: opts.dmarcPolicy as string })
+    const emailInputs = await resolveInputs(emailDef.inputs, opts, false)
+    verifyRecords = buildVerifyRecords(emailDef.template, domain, { ...emailInputs, dmarcPolicy: opts.dmarcPolicy as string })
     if (!opts.mx) verifyRecords = verifyRecords.filter(r => r.type !== 'MX')
   } else {
     const emailInputs = await resolveInputs(emailDef.inputs, opts, false)
