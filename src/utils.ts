@@ -213,11 +213,11 @@ export async function confirmProceed(
 export function assertNoInsecureFlags(inputs: InputDef[], argv: Record<string, string | undefined>, docsUrl?: string): void {
   for (const input of inputs) {
     if (argv[input.flag] && input.secret) {
-      const envHint = input.env ? ` Use the ${input.env} environment variable instead, or provide it interactively.` : ''
-      const urlHint = docsUrl ? `\nFor more information, see ${docsUrl}` : ''
+      const envHint = input.env ? `Use the ${input.env} environment variable instead, or provide it interactively.` : ''
+      const urlHint = docsUrl ? `See ${docsUrl}` : ''
       throw new Error(
-        `${input.name} should not be passed via command-line flags as it will be visible in your shell history and process list.${envHint}\n` +
-        `To override this, pass --allow-insecure-flags or set M2D_ALLOW_INSECURE_FLAGS=true.${urlHint}`
+        `Secret value ${input.cliFlag} [${input.name}] should not be passed via command-line flags as it will be visible in your shell history and process list. ${envHint}\n\n` +
+        `To override this warning, pass --allow-insecure-flags or set M2D_ALLOW_INSECURE_FLAGS=true.\n\n${urlHint}`
       )
     }
   }

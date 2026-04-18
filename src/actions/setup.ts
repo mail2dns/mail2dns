@@ -17,19 +17,19 @@ export async function setup(
   const dryRun = !!opts.dryRun
   const allowInsecureFlags = !!opts.allowInsecureFlags || process.env.M2D_ALLOW_INSECURE_FLAGS === 'true'
   const emailInputDefs = getEmailInputDefs(emailProvider)
-
   const dnsDef = DNS_PROVIDERS[dnsProvider]
-  const dnsInputs = await resolveInputs(dnsDef.inputs, opts, yes)
-  const zone = opts.zone ?? (dnsDef.resolveZone ? await dnsDef.resolveZone(domain, dnsInputs) : domain)
-  const prefix = zonePrefix(domain, zone)
 
   if (!allowInsecureFlags) {
     assertNoInsecureFlags(
-      [...emailInputDefs, ...dnsDef.inputs],
-      opts,
-      `${process.env.M2D_BASE_URL ?? 'https://mail2dns.com'}/setup/${emailProvider}/${dnsProvider}#protecting-secrets`
+        [...emailInputDefs, ...dnsDef.inputs],
+        opts,
+        `${process.env.M2D_BASE_URL ?? 'https://mail2dns.com'}/setup/${emailProvider}/${dnsProvider}#protecting-secrets`
     )
   }
+
+  const dnsInputs = await resolveInputs(dnsDef.inputs, opts, yes)
+  const zone = opts.zone ?? (dnsDef.resolveZone ? await dnsDef.resolveZone(domain, dnsInputs) : domain)
+  const prefix = zonePrefix(domain, zone)
 
   if (yes) setConfirm(async () => true)
 
