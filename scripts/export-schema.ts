@@ -1,5 +1,5 @@
 import {DNS_PROVIDERS, EMAIL_PROVIDERS} from '../src/providers.js'
-import {getEmailInputDefs} from '../src/core.js'
+import {getEmailInputDefs} from '../src/email.js'
 import {COMMANDS} from '../src/commands.js'
 import { version } from '../package.json'
 

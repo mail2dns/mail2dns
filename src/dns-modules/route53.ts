@@ -1,8 +1,9 @@
 import { execFile } from 'child_process'
 import { promisify } from 'util'
-import { log, logPlan, logDone, isConflict, confirmProceed, unquoteTxt } from '../utils.js'
+import { log, logPlan, logDone, confirmProceed, unquoteTxt } from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
+import {isConflict} from "../core.js";
 
 const execFileAsync = promisify(execFile) as (file: string, args: string[]) => Promise<{ stdout: string; stderr: string }>
 

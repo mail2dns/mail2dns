@@ -4,11 +4,10 @@ import {
   log,
   logPlan,
   logDone,
-  isConflict,
-  findContainingZone,
   confirmProceed
 } from '../utils.js'
 import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
+import {findContainingZone, isConflict} from "../core.js";
 
 const execFileAsync = promisify(execFile) as (file: string, args: string[]) => Promise<{ stdout: string; stderr: string }>
 

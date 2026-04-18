@@ -1,55 +1,5 @@
 import { promises as dnsPromises } from 'node:dns'
-import { EMAIL_PROVIDERS } from './providers.js'
-import type { DnsRecord, EmailTemplate, InputDef, VerifyRecord } from './types.js'
-
-function buildFromTemplate(template: EmailTemplate, domain: string, emailInputs: Record<string, string>): { records: DnsRecord[]; verificationPrefix?: string } {
-  const toScreamingSnake = (key: string) => key.replace(/([A-Z])/g, '_$1').toUpperCase()
-  const vars: Record<string, string> = { domain, domainDashes: domain.replaceAll('.', '-'), ...emailInputs }
-  const records: DnsRecord[] = template.records.map(record => {
-    let name = record.name
-    let content = record.value
-    for (const [key, val] of Object.entries(vars)) {
-      const placeholder = `{${toScreamingSnake(key)}}`
-      name = name.replaceAll(placeholder, val)
-      content = content.replaceAll(placeholder, val)
-    }
-    const normalized: DnsRecord = { type: record.type as DnsRecord['type'], name, content }
-    if (record.priority !== undefined) normalized.priority = record.priority
-    return normalized
-  })
-  return { records, verificationPrefix: template.verificationPrefix }
-}
-
-export function getEmailInputDefs(emailProvider: string): InputDef[] {
-  return EMAIL_PROVIDERS[emailProvider].inputs
-}
-
-export async function buildRecords({ domain, emailProvider, emailInputs, noMx, verifyOnly, excludeVerifyOnly }: {
-  domain: string
-  emailProvider: string
-  emailInputs: Record<string, string>
-  noMx?: boolean
-  verifyOnly?: boolean
-  excludeVerifyOnly?: boolean
-}): Promise<{ records: DnsRecord[]; verificationPrefix?: string }> {
-  const emailDef = EMAIL_PROVIDERS[emailProvider]
-
-  let result: { records: DnsRecord[]; verificationPrefix?: string }
-  if (emailDef.type === 'template') {
-    const templateRecords = verifyOnly
-      ? emailDef.template.records.filter(r => r.verifyOnly)
-      : excludeVerifyOnly
-        ? emailDef.template.records.filter(r => !r.verifyOnly)
-        : emailDef.template.records
-    result = buildFromTemplate({ ...emailDef.template, records: templateRecords }, domain, emailInputs)
-  } else {
-    const records = await emailDef.getRecords({ domain, ...emailInputs })
-    result = { records, verificationPrefix: undefined }
-  }
-
-  if (noMx) result.records = result.records.filter(r => r.type !== 'MX' || r.required)
-  return result
-}
+import type { DnsRecord, EmailTemplate, VerifyRecord } from './types.js'
 
 export function buildVerifyRecords(template: EmailTemplate, domain: string, extraVars: Record<string, string> = {}): VerifyRecord[] {
   const toScreamingSnake = (k: string) => k.replace(/([A-Z])/g, '_$1').toUpperCase()
@@ -75,31 +25,6 @@ export function buildVerifyRecords(template: EmailTemplate, domain: string, extr
     }
     return { type: record.type as DnsRecord['type'], name, match: 'exact' as const, content }
   })
-}
-
-export function toFullName(name: string, domain: string): string {
-  return name === '@' ? domain : `${name}.${domain}`
-}
-
-export function zonePrefix(domain: string, zone: string): string {
-  if (domain === zone) return ''
-  return domain.slice(0, domain.length - zone.length - 1)
-}
-
-export function applyPrefix(name: string, prefix: string): string {
-  if (!prefix) return name
-  return name === '@' ? prefix : `${name}.${prefix}`
-}
-
-export function removePrefix(name: string, prefix: string): string {
-  if (!prefix) return name
-  if (name === prefix) return '@'
-  if (name.endsWith(`.${prefix}`)) return name.slice(0, -(prefix.length + 1))
-  return name
-}
-
-export function normalizePrefix(name: string, prefix: string): string {
-  return applyPrefix(removePrefix(name, prefix), prefix)
 }
 
 type DnsResolver = Pick<typeof dnsPromises, 'resolveMx' | 'resolveTxt' | 'resolveCname' | 'resolveSrv'>
@@ -129,4 +54,99 @@ export async function checkDnsRecord(vr: VerifyRecord, fullName: string, resolve
     // ENOTFOUND / ENODATA → record doesn't exist
   }
   return null
+}
+
+export function isConflict(
+  e: DnsRecord,
+  record: DnsRecord,
+  verificationPrefix?: string
+): boolean {
+  if (record.type === 'MX' && e.type === 'MX') return true
+  if (record.type === 'TXT' && e.type === 'TXT') {
+    if (record.content.includes('v=spf1') && e.content.includes('v=spf1')) return true
+    if (verificationPrefix && record.content.includes(verificationPrefix) && e.content.includes(verificationPrefix)) return true
+    if (record.content.includes('v=DMARC1') && e.name === record.name) return true
+  }
+  if (record.type === 'CNAME' && (e.type === 'CNAME' || e.type === 'TXT') && e.name === record.name) return true
+  return false
+}
+
+const dnsMatch = (a: string, b: string) => {
+  const norm = (s: string) => s.toLowerCase().replace(/\.$/, '')
+  return norm(a) === norm(b)
+}
+
+export function findAndFilterConflicts<T>(
+  existing: T[],
+  toRecord: (t: T) => DnsRecord,
+  desired: DnsRecord[],
+  verificationPrefix?: string
+): { toDelete: T[]; conflictRecords: DnsRecord[]; toCreate: DnsRecord[] } {
+  type Entry = { raw: T; normalized: DnsRecord }
+  const conflicts: Entry[] = []
+  const seen = new Set<number>()
+
+  for (const record of desired) {
+    for (let i = 0; i < existing.length; i++) {
+      if (!seen.has(i)) {
+        const normalized = toRecord(existing[i])
+        if (isConflict(normalized, record, verificationPrefix)) {
+          seen.add(i)
+          conflicts.push({ raw: existing[i], normalized })
+        }
+      }
+    }
+  }
+
+  const noopIndices = new Set<number>()
+  const toCreate = desired.filter(record => {
+    const idx = conflicts.findIndex(({ normalized: c }, i) =>
+      !noopIndices.has(i) &&
+      c.type === record.type &&
+      dnsMatch(c.name, record.name) &&
+      dnsMatch(c.content, record.content) &&
+      (record.priority ? c.priority === record.priority : true)
+    )
+    if (idx >= 0) { noopIndices.add(idx); return false }
+    return true
+  })
+
+  const effective = conflicts.filter((_, i) => !noopIndices.has(i))
+
+  return {
+    toDelete: effective.map(e => e.raw),
+    conflictRecords: effective.map(e => e.normalized),
+    toCreate
+  }
+}
+
+export function findContainingZone(domain: string, zones: string[]): string | undefined {
+  return zones
+    .filter(z => domain === z || domain.endsWith(`.${z}`))
+    .sort((a, b) => b.length - a.length)[0]
+}
+
+export function toFullName(name: string, domain: string): string {
+  return name === '@' ? domain : `${name}.${domain}`
+}
+
+export function zonePrefix(domain: string, zone: string): string {
+  if (domain === zone) return ''
+  return domain.slice(0, domain.length - zone.length - 1)
+}
+
+export function applyPrefix(name: string, prefix: string): string {
+  if (!prefix) return name
+  return name === '@' ? prefix : `${name}.${prefix}`
+}
+
+export function removePrefix(name: string, prefix: string): string {
+  if (!prefix) return name
+  if (name === prefix) return '@'
+  if (name.endsWith(`.${prefix}`)) return name.slice(0, -(prefix.length + 1))
+  return name
+}
+
+export function normalizePrefix(name: string, prefix: string): string {
+  return applyPrefix(removePrefix(name, prefix), prefix)
 }

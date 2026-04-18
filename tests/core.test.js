@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildRecords } from '../src/core.js'
+import { buildRecords } from '../src/email.js'
 
 const DOMAIN = 'example.com'
 

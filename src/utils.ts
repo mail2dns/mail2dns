@@ -1,5 +1,5 @@
 import readline from 'readline'
-import type { InputDef, DnsRecord } from './types.js'
+import type {DnsRecord, InputDef} from './types.js'
 
 let confirmImpl: (q: string) => Promise<boolean> = confirm
 
@@ -63,72 +63,6 @@ export function askSecret(question: string): Promise<string> {
 export function formatDnsRecord(r: DnsRecord): string {
   const priority = r.priority !== undefined ? ` (priority ${r.priority})` : ''
   return `  [${r.type.padEnd(5)}] ${r.name} → ${r.content}${priority}`
-}
-
-export function isConflict(
-  e: DnsRecord,
-  record: DnsRecord,
-  verificationPrefix?: string
-): boolean {
-  if (record.type === 'MX' && e.type === 'MX') return true
-  if (record.type === 'TXT' && e.type === 'TXT') {
-    if (record.content.includes('v=spf1') && e.content.includes('v=spf1')) return true
-    if (verificationPrefix && record.content.includes(verificationPrefix) && e.content.includes(verificationPrefix)) {
-      return true;
-    }
-    if (record.content.includes('v=DMARC1') && e.name === record.name) return true
-  }
-  if (record.type === 'CNAME' && (e.type === 'CNAME' || e.type === 'TXT') && e.name === record.name) return true
-  return false
-}
-
-const dnsMatch = (a: string, b: string) => {
-  const norm = (s: string) => s.toLowerCase().replace(/\.$/, '');
-  return norm(a) === norm(b);
-};
-
-export function findAndFilterConflicts<T>(
-  existing: T[],
-  toRecord: (t: T) => DnsRecord,
-  desired: DnsRecord[],
-  verificationPrefix?: string
-): { toDelete: T[]; conflictRecords: DnsRecord[]; toCreate: DnsRecord[] } {
-  type Entry = { raw: T; normalized: DnsRecord }
-  const conflicts: Entry[] = []
-  const seen = new Set<number>()
-
-  for (const record of desired) {
-    for (let i = 0; i < existing.length; i++) {
-      if (!seen.has(i)) {
-        const normalized = toRecord(existing[i])
-        if (isConflict(normalized, record, verificationPrefix)) {
-          seen.add(i)
-          conflicts.push({ raw: existing[i], normalized })
-        }
-      }
-    }
-  }
-
-  const noopIndices = new Set<number>()
-  const toCreate = desired.filter(record => {
-    const idx = conflicts.findIndex(({ normalized: c }, i) =>
-      !noopIndices.has(i) &&
-      c.type === record.type &&
-      dnsMatch(c.name, record.name) &&
-      dnsMatch(c.content, record.content) &&
-      (record.priority ? c.priority === record.priority : true)
-    )
-    if (idx >= 0) { noopIndices.add(idx); return false }
-    return true
-  })
-
-  const effective = conflicts.filter((_, i) => !noopIndices.has(i))
-
-  return {
-    toDelete: effective.map(e => e.raw),
-    conflictRecords: effective.map(e => e.normalized),
-    toCreate
-  }
 }
 
 export function logPlan(toRemove: string[], toAdd: string[]): void {
@@ -227,12 +161,6 @@ export function unquoteTxt(value: string): string {
   return value.startsWith('"') && value.endsWith('"') ? value.slice(1, -1) : value
 }
 
-export function findContainingZone(domain: string, zones: string[]): string | undefined {
-  return zones
-    .filter(z => domain === z || domain.endsWith(`.${z}`))
-    .sort((a, b) => b.length - a.length)[0]
-}
-
 export async function resolveInputs(inputs: InputDef[], argv: Record<string, string | undefined>, nonInteractive = false): Promise<Record<string, string>> {
   const result: Record<string, string> = {}
   for (const input of inputs) {
@@ -250,4 +178,3 @@ export async function resolveInputs(inputs: InputDef[], argv: Record<string, str
   }
   return result
 }
-

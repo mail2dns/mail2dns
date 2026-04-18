@@ -3,13 +3,12 @@ import {
   log,
   logPlan,
   logDone,
-  isConflict,
-  findContainingZone,
   confirmProceed,
   unquoteTxt
 } from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
+import {findContainingZone, isConflict} from "../core.js";
 
 const execFileAsync = (file: string, args: string[]) =>
   new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {

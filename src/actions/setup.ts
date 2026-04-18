@@ -1,7 +1,8 @@
 import { DNS_PROVIDERS, EMAIL_PROVIDERS } from '../providers.js'
 import { resolveInputs, assertNoInsecureFlags, setConfirm, setSuppressComplete, confirm, ask, log } from '../utils.js'
 import { validateDomain, validateEmailProvider, validateDnsProvider } from '../validate.js'
-import { buildRecords, getEmailInputDefs, zonePrefix, normalizePrefix, buildVerifyRecords, checkDnsRecord, toFullName } from '../core.js'
+import { buildRecords, getEmailInputDefs } from '../email.js'
+import { zonePrefix, normalizePrefix, buildVerifyRecords, checkDnsRecord, toFullName } from '../core.js'
 
 export async function setup(
   domain: string,

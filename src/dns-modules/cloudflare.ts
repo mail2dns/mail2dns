@@ -1,6 +1,7 @@
-import { log, logPlan, logDone, confirmProceed, formatDnsRecord, findAndFilterConflicts } from '../utils.js'
+import { log, logPlan, logDone, confirmProceed, formatDnsRecord } from '../utils.js'
 import { isMailDnsType } from '../types.js'
 import type { DnsRecord, RawInputDef, SetupRecordsOptions } from '../types.js'
+import {findAndFilterConflicts} from "../core.js";
 
 
 export const inputs: RawInputDef[] = [
