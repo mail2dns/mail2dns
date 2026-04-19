@@ -265,15 +265,18 @@ mail2dns setup example.com migadu cloudflare
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| <nobr>`--dkim1`</nobr> | `SENDGRID_DKIM1` | DKIM CNAME 1 value | `s1.domainkey.u12345.wl.sendgrid.net` |
-| <nobr>`--dkim2`</nobr> | `SENDGRID_DKIM2` | DKIM CNAME 2 value | `s2.domainkey.u12345.wl.sendgrid.net` |
+| <nobr>`--return-path-name`</nobr> | `SENDGRID_RETURN_PATH_NAME` | SendGrid return path CNAME hostname | `em1234.yourdomain.com` |
+| <nobr>`--return-path-value`</nobr> | `SENDGRID_RETURN_PATH_VALUE` | SendGrid return path CNAME value | `u12345.wl123.sendgrid.net` |
+| <nobr>`--dkim1`</nobr> | `SENDGRID_DKIM1` | DKIM CNAME 1 value | `s1.domainkey.u12345.wl123.sendgrid.net` |
+| <nobr>`--dkim2`</nobr> | `SENDGRID_DKIM2` | DKIM CNAME 2 value | `s2.domainkey.u12345.wl123.sendgrid.net` |
 ### Resend
 
 #### Inputs
 
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
-| <nobr>`--dkim`</nobr> | `RESEND_DKIM` | DKIM CNAME value | `p.resend.com` |
+| <nobr>`--dkim-key`</nobr> | `RESEND_DKIM_KEY` | Resend DKIM TXT value | `p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQ...` |
+| <nobr>`--resend-region`</nobr> | `RESEND_REGION` | Resend region |  |
 ### Postmark
 
 #### Inputs

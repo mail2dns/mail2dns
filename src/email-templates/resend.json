@@ -1,16 +1,25 @@
 {
   "inputs": [
     {
-      "flag": "dkim",
-      "name": "DKIM CNAME value",
-      "env": "RESEND_DKIM",
-      "example": "p.resend.com",
-      "instructions": "In the Resend dashboard, go to Domains, add your domain, and copy the value for the 'resend._domainkey' CNAME record."
+      "flag": "dkimKey",
+      "name": "Resend DKIM TXT value",
+      "env": "RESEND_DKIM_KEY",
+      "example": "p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQ...",
+      "instructions": "In the Resend dashboard, go to Domains, add your domain, and copy the value for the 'resend._domainkey' TXT record."
+    },
+    {
+      "flag": "resendRegion",
+      "name": "Resend region",
+      "env": "RESEND_REGION",
+      "value": "region",
+      "instructions": "Your Resend sending region. Select the region you chose when adding your domain (us-east-1, eu-west-1, sa-east-1, ap-northeast-1)."
     }
   ],
   "records": [
-    { "type": "TXT",   "name": "@",               "value": "v=spf1 include:spf.resend.com ~all" },
-    { "type": "TXT",   "name": "_dmarc",           "value": "v=DMARC1; p={DMARC_POLICY};", "verifyPattern": "^v=DMARC1" },
-    { "type": "CNAME", "name": "resend._domainkey", "value": "{DKIM}" }
+    { "type": "TXT", "name": "resend._domainkey", "value": "{DKIM_KEY}",                                                        "verifyPattern": "^p=" },
+    { "type": "MX",  "name": "send",              "value": "feedback-smtp.{RESEND_REGION}.amazonses.com",                       "priority": 10 },
+    { "type": "TXT", "name": "send",              "value": "v=spf1 include:amazonses.com ~all"                                                   },
+    { "type": "MX",  "name": "@",                 "value": "inbound-smtp.{RESEND_REGION}.amazonaws.com",                        "priority": 10 },
+    { "type": "TXT", "name": "_dmarc",            "value": "v=DMARC1; p={DMARC_POLICY};",                   "verifyPattern": "^v=DMARC1" }
   ]
 }
