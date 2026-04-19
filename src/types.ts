@@ -62,6 +62,7 @@ export interface TemplateEmailProviderDef {
   name: string
   template: EmailTemplate
   inputs: InputDef[]
+  transformInputs?: (inputs: Record<string, string>) => Record<string, string>
 }
 
 export interface ModuleEmailProviderDef {

@@ -6,23 +6,38 @@
       "name": "Zoho Mail domain verification TXT value",
       "env": "ZOHO_VERIFY_TXT",
       "example": "zoho-verification=zb12345678.zmverify.zoho.com",
-      "instructions": "In the Zoho Mail Admin Console, go to Domains > [your domain] > Domain Verification and copy the full TXT record value shown."
+      "instructions": "In the Zoho Mail Admin Console, go to Domains > [your domain] > Domain Verification and copy the full TXT record value shown.",
+      "verifyOnly": true
+    },
+    {
+      "flag": "dkimName",
+      "name": "Zoho Mail DKIM record hostname",
+      "env": "ZOHO_DKIM_NAME",
+      "example": "zmail._domainkey",
+      "instructions": "In the Zoho Mail Admin Console, go to Domains > [your domain] > Email Configuration > DKIM and copy the hostname shown (e.g. zmail._domainkey)."
     },
     {
       "flag": "dkimKey",
       "name": "Zoho Mail DKIM TXT value",
       "env": "ZOHO_DKIM_KEY",
       "example": "v=DKIM1; k=rsa; p=...",
-      "instructions": "In the Zoho Mail Admin Console, go to Domains > [your domain] > Email Authentication (DKIM) and copy the TXT record value shown."
+      "instructions": "In the Zoho Mail Admin Console, go to Domains > [your domain] > Email Configuration > DKIM and copy the TXT value shown."
+    },
+    {
+      "flag": "zohoRegion",
+      "name": "Zoho Mail region",
+      "env": "ZOHO_REGION",
+      "value": "region",
+      "instructions": "Your Zoho datacenter region (global or eu). Check your Zoho Mail URL — mail.zoho.eu = eu, otherwise global."
     }
   ],
   "records": [
-    { "type": "TXT", "name": "@",              "value": "{VERIFY_TXT}", "verifyPattern": "^zoho-verification=" },
-    { "type": "MX",  "name": "@",              "value": "mx.zoho.com",  "priority": 10 },
-    { "type": "MX",  "name": "@",              "value": "mx2.zoho.com", "priority": 20 },
-    { "type": "MX",  "name": "@",              "value": "mx3.zoho.com", "priority": 50 },
-    { "type": "TXT", "name": "@",              "value": "v=spf1 include:zoho.com ~all" },
-    { "type": "TXT", "name": "_dmarc",         "value": "v=DMARC1; p={DMARC_POLICY};", "verifyPattern": "^v=DMARC1" },
-    { "type": "TXT", "name": "zoho._domainkey","value": "{DKIM_KEY}" }
+    { "type": "TXT", "name": "@",            "value": "{VERIFY_TXT}",                    "verifyPattern": "^zoho-verification=", "verifyOnly": true },
+    { "type": "MX",  "name": "@",            "value": "mx.{MX_DOMAIN}",                  "priority": 10 },
+    { "type": "MX",  "name": "@",            "value": "mx2.{MX_DOMAIN}",                 "priority": 20 },
+    { "type": "MX",  "name": "@",            "value": "mx3.{MX_DOMAIN}",                 "priority": 50 },
+    { "type": "TXT", "name": "@",            "value": "v=spf1 include:{SPF_INCLUDE} ~all"               },
+    { "type": "TXT", "name": "_dmarc",       "value": "v=DMARC1; p={DMARC_POLICY};",     "verifyPattern": "^v=DMARC1" },
+    { "type": "TXT", "name": "{DKIM_NAME}",  "value": "{DKIM_KEY}"                                      }
   ]
 }

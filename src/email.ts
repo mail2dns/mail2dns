@@ -40,7 +40,8 @@ export async function buildRecords({ domain, emailProvider, emailInputs, noMx, v
       : excludeVerifyOnly
         ? emailDef.template.records.filter(r => !r.verifyOnly)
         : emailDef.template.records
-    result = buildFromTemplate({ ...emailDef.template, records: templateRecords }, domain, emailInputs)
+    const resolvedInputs = emailDef.transformInputs ? emailDef.transformInputs(emailInputs) : emailInputs
+    result = buildFromTemplate({ ...emailDef.template, records: templateRecords }, domain, resolvedInputs)
   } else {
     const records = await emailDef.getRecords({ domain, ...emailInputs })
     result = { records, verificationPrefix: undefined }

@@ -22,6 +22,18 @@ import resendTemplate from './email-templates/resend.json'
 import postmarkTemplate from './email-templates/postmark.json'
 import type { DnsProviderDef, EmailProviderDef, InputDef, RawInputDef } from './types.js'
 
+const zohoRegions: Record<string, { mxDomain: string; spfInclude: string }> = {
+  global: { mxDomain: 'zoho.com', spfInclude: 'zoho.com' },
+  eu:     { mxDomain: 'zoho.eu',  spfInclude: 'zohomail.eu' },
+}
+
+function zohoTransformInputs(inputs: Record<string, string>): Record<string, string> {
+  const region = inputs.zohoRegion
+  const regionData = zohoRegions[region]
+  if (!regionData) throw new Error(`Unknown Zoho region: "${region}". Valid values: ${Object.keys(zohoRegions).join(', ')}`)
+  return { ...inputs, mxDomain: regionData.mxDomain, spfInclude: regionData.spfInclude }
+}
+
 function withCliFlags(inputs: RawInputDef[]): InputDef[] {
   return inputs.map(i => ({ ...i, cliFlag: `--${camelToKebab(i.flag)}` }))
 }
@@ -146,7 +158,8 @@ export const EMAIL_PROVIDERS: Record<string, EmailProviderDef> = {
     name: 'Zoho Mail',
     type: 'template',
     template: zohoTemplate,
-    inputs: withCliFlags(zohoTemplate.inputs!)
+    inputs: withCliFlags(zohoTemplate.inputs!),
+    transformInputs: zohoTransformInputs
   },
   sendgrid: {
     name: 'Twilio SendGrid',
