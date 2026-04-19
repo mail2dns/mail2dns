@@ -65,7 +65,8 @@ export function isConflict(
   if (record.type === 'TXT' && e.type === 'TXT') {
     if (record.content.includes('v=spf1') && e.content.includes('v=spf1')) return true
     if (verificationPrefix && record.content.includes(verificationPrefix) && e.content.includes(verificationPrefix)) return true
-    if (record.content.includes('v=DMARC1') && e.name === record.name) return true
+    if (record.content.includes('v=DMARC1') && dnsMatch(e.name, record.name)) return true
+    if (record.name.includes('._domainkey') && dnsMatch(e.name, record.name)) return true
   }
   if (record.type === 'CNAME' && (e.type === 'CNAME' || e.type === 'TXT') && e.name === record.name) return true
   return false

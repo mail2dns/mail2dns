@@ -143,9 +143,10 @@ export async function setupRecords(
         return newRecords.some(nr => isConflict(toRecord(e), nr, verificationPrefix))
     })
 
-    if (conflicts.length > 0) allRemoved.push(...existingInGroup)
+    if (conflicts.length > 0) allRemoved.push(...conflicts)
 
-    groupPlans.push({ type, name, newRecords, conflicts, existingInGroup })
+    const preserved = existingInGroup.filter(e => !conflicts.includes(e))
+    groupPlans.push({ type, name, newRecords, conflicts, preserved })
   }
 
   logPlan(
@@ -156,14 +157,13 @@ export async function setupRecords(
   if (!await confirmProceed(!!dryRun, groupPlans.length > 0)) return
 
   const toAppend: GdRecord[] = []
-  for (const { type, name, newRecords, conflicts, existingInGroup } of groupPlans) {
+  for (const { type, name, newRecords, conflicts, preserved } of groupPlans) {
     if (conflicts.length > 0) {
-      // PUT group if there are conflicts
-      await replaceRecords(domain, type, name, newRecords.map(toGdRecord), key, secret)
+      await replaceRecords(domain, type, name, [...preserved, ...newRecords.map(toGdRecord)], key, secret)
     } else {
       // Filter out records already present to prevent duplicates when appending
       const missing = newRecords.filter(nr =>
-          !existingInGroup.some(er => er.data === nr.content && (er.priority ?? 0) === (nr.priority ?? 0))
+          !preserved.some(er => er.data === nr.content && (er.priority ?? 0) === (nr.priority ?? 0))
       )
       toAppend.push(...missing.map(toGdRecord))
     }

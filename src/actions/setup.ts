@@ -16,6 +16,7 @@ export async function setup(
 
   const yes = !!opts.yes
   const dryRun = !!opts.dryRun
+  const skipVerify = !!opts.skipVerify
   const allowInsecureFlags = !!opts.allowInsecureFlags || process.env.M2D_ALLOW_INSECURE_FLAGS === 'true'
   const emailInputDefs = getEmailInputDefs(emailProvider)
   const dnsDef = DNS_PROVIDERS[dnsProvider]
@@ -39,7 +40,7 @@ export async function setup(
 
   let verifyInputs: Record<string, string> = {}
 
-  if (hasVerifyStage && emailDef.type === 'template') {
+  if (hasVerifyStage && !skipVerify && emailDef.type === 'template') {
     const verifyOnlyInputDefs = emailInputDefs.filter(i => i.verifyOnly)
     verifyInputs = await resolveInputs(verifyOnlyInputDefs, opts, yes)
     verifyInputs.dmarcPolicy = opts.dmarcPolicy as string
@@ -71,7 +72,7 @@ export async function setup(
   const emailInputs = { ...verifyInputs, ...(await resolveInputs(remainingInputDefs, opts, yes)) }
   emailInputs.dmarcPolicy = opts.dmarcPolicy as string
 
-  const { records, verificationPrefix } = await buildRecords({ domain, emailProvider, emailInputs, noMx: !opts.mx, excludeVerifyOnly: hasVerifyStage })
+  const { records, verificationPrefix } = await buildRecords({ domain, emailProvider, emailInputs, noMx: !opts.mx, excludeVerifyOnly: hasVerifyStage || skipVerify })
   const adjustedRecords = prefix ? records.map(r => ({ ...r, name: normalizePrefix(r.name, prefix) })) : records
   await dnsDef.setupRecords({ domain: zone, records: adjustedRecords, verificationPrefix, dryRun }, dnsInputs)
 }
