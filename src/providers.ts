@@ -22,18 +22,6 @@ import resendTemplate from './email-templates/resend.json'
 import postmarkTemplate from './email-templates/postmark.json'
 import type { DnsProviderDef, EmailProviderDef, InputDef, RawInputDef } from './types.js'
 
-const zohoRegions: Record<string, { mxDomain: string; spfInclude: string }> = {
-  global: { mxDomain: 'zoho.com', spfInclude: 'zoho.com' },
-  eu:     { mxDomain: 'zoho.eu',  spfInclude: 'zohomail.eu' },
-}
-
-function zohoTransformInputs(inputs: Record<string, string>): Record<string, string> {
-  const region = inputs.zohoRegion
-  const regionData = zohoRegions[region]
-  if (!regionData) throw new Error(`Unknown Zoho region: "${region}". Valid values: ${Object.keys(zohoRegions).join(', ')}`)
-  return { ...inputs, mxDomain: regionData.mxDomain, spfInclude: regionData.spfInclude }
-}
-
 function withCliFlags(inputs: RawInputDef[]): InputDef[] {
   return inputs.map(i => ({ ...i, cliFlag: `--${camelToKebab(i.flag)}` }))
 }
@@ -159,19 +147,40 @@ export const EMAIL_PROVIDERS: Record<string, EmailProviderDef> = {
     type: 'template',
     template: zohoTemplate,
     inputs: withCliFlags(zohoTemplate.inputs!),
-    transformInputs: zohoTransformInputs
+    transformInputs: (inputs: Record<string, string>, _domain: string) => {
+      const region = inputs.zohoRegion
+      const zohoRegions: Record<string, { mxDomain: string; spfInclude: string }> = {
+        global: { mxDomain: 'zoho.com', spfInclude: 'zoho.com' },
+        eu:     { mxDomain: 'zoho.eu',  spfInclude: 'zohomail.eu' },
+      }
+      const regionData = zohoRegions[region]
+      if (!regionData) throw new Error(`Unknown Zoho region: "${region}". Valid values: ${Object.keys(zohoRegions).join(', ')}`)
+      return { ...inputs, mxDomain: regionData.mxDomain, spfInclude: regionData.spfInclude }
+    }
   },
   sendgrid: {
     name: 'Twilio SendGrid',
     type: 'template',
     template: sendgridTemplate,
-    inputs: withCliFlags(sendgridTemplate.inputs!)
+    inputs: withCliFlags(sendgridTemplate.inputs!),
+    transformInputs: (inputs, domain) => {
+      let returnPathName = inputs.returnPathName
+      if (returnPathName?.endsWith(`.${domain}`)) {
+        returnPathName = returnPathName.slice(0, -(domain.length + 1))
+      }
+      return { ...inputs, returnPathName }
+    }
   },
   resend: {
     name: 'Resend',
     type: 'template',
     template: resendTemplate,
-    inputs: withCliFlags(resendTemplate.inputs!)
+    inputs: withCliFlags(resendTemplate.inputs!),
+    transformInputs: (inputs, _domain) => {
+      const valid = ['us-east-1', 'eu-west-1', 'sa-east-1', 'ap-northeast-1']
+      if (!valid.includes(inputs.resendRegion)) throw new Error(`Unknown Resend region: "${inputs.resendRegion}". Valid values: ${valid.join(', ')}`)
+      return inputs
+    }
   },
   postmark: {
     name: 'Postmark',

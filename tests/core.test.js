@@ -59,9 +59,12 @@ describe('buildRecords', () => {
     assert.ok(records.some(r => r.type === 'CNAME'), 'non-MX records should still be present')
   })
 
-  it('noMx has no effect when provider has no MX records', async () => {
-    const { records: withMx }    = await buildRecords({ domain: DOMAIN, emailProvider: 'resend', emailInputs: { dkim: 'p.resend.com' } })
-    const { records: withoutMx } = await buildRecords({ domain: DOMAIN, emailProvider: 'resend', emailInputs: { dkim: 'p.resend.com' }, noMx: true })
-    assert.deepEqual(withMx, withoutMx)
+  it('strips MX records for resend when noMx is true', async () => {
+    const inputs = { dkimKey: 'p=abc123', resendRegion: 'us-east-1' }
+    const { records: withMx }    = await buildRecords({ domain: DOMAIN, emailProvider: 'resend', emailInputs: inputs })
+    const { records: withoutMx } = await buildRecords({ domain: DOMAIN, emailProvider: 'resend', emailInputs: inputs, noMx: true })
+    assert.ok(withMx.some(r => r.type === 'MX'))
+    assert.equal(withoutMx.filter(r => r.type === 'MX').length, 0)
+    assert.ok(withoutMx.some(r => r.type === 'TXT'), 'non-MX records should still be present')
   })
 })
