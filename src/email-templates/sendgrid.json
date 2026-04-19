@@ -1,24 +1,38 @@
 {
   "inputs": [
     {
+      "flag": "returnPathName",
+      "name": "SendGrid return path CNAME hostname",
+      "env": "SENDGRID_RETURN_PATH_NAME",
+      "example": "em1234.yourdomain.com",
+      "instructions": "In the SendGrid dashboard, go to Settings > Sender Authentication > Domain Authentication and copy the HOST name for the return path CNAME record (e.g. em1234.yourdomain.com)."
+    },
+    {
+      "flag": "returnPathValue",
+      "name": "SendGrid return path CNAME value",
+      "env": "SENDGRID_RETURN_PATH_VALUE",
+      "example": "u12345.wl123.sendgrid.net",
+      "instructions": "In the SendGrid dashboard, copy the VALUE for the return path CNAME record (e.g. u12345.wl123.sendgrid.net)."
+    },
+    {
       "flag": "dkim1",
       "name": "DKIM CNAME 1 value",
       "env": "SENDGRID_DKIM1",
-      "example": "s1.domainkey.u12345.wl.sendgrid.net",
-      "instructions": "In the SendGrid dashboard, go to Settings > Sender Authentication > Domain Authentication, set up your domain, and copy the value for the 's1._domainkey' CNAME record."
+      "example": "s1.domainkey.u12345.wl123.sendgrid.net",
+      "instructions": "In the SendGrid dashboard, copy the VALUE for the 's1._domainkey' CNAME record."
     },
     {
       "flag": "dkim2",
       "name": "DKIM CNAME 2 value",
       "env": "SENDGRID_DKIM2",
-      "example": "s2.domainkey.u12345.wl.sendgrid.net",
-      "instructions": "In the SendGrid dashboard, go to Settings > Sender Authentication > Domain Authentication, and copy the value for the 's2._domainkey' CNAME record."
+      "example": "s2.domainkey.u12345.wl123.sendgrid.net",
+      "instructions": "In the SendGrid dashboard, copy the VALUE for the 's2._domainkey' CNAME record."
     }
   ],
   "records": [
-    { "type": "TXT",   "name": "@",             "value": "v=spf1 include:sendgrid.net ~all" },
-    { "type": "TXT",   "name": "_dmarc",         "value": "v=DMARC1; p={DMARC_POLICY};", "verifyPattern": "^v=DMARC1" },
-    { "type": "CNAME", "name": "s1._domainkey",  "value": "{DKIM1}" },
-    { "type": "CNAME", "name": "s2._domainkey",  "value": "{DKIM2}" }
+    { "type": "CNAME", "name": "{RETURN_PATH_NAME}", "value": "{RETURN_PATH_VALUE}"                                   },
+    { "type": "CNAME", "name": "s1._domainkey",      "value": "{DKIM1}"                                               },
+    { "type": "CNAME", "name": "s2._domainkey",      "value": "{DKIM2}"                                               },
+    { "type": "TXT",   "name": "_dmarc",              "value": "v=DMARC1; p={DMARC_POLICY};", "verifyPattern": "^v=DMARC1" }
   ]
 }
