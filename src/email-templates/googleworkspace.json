@@ -6,7 +6,8 @@
       "name": "Google Workspace verification TXT value",
       "env": "GOOGLE_VERIFY_TXT",
       "example": "google-site-verification=abc123",
-      "instructions": "In Google Admin Console, go to Account > Domains > Manage domains, then click 'Verify' next to your domain and copy the full TXT record value shown."
+      "instructions": "In Google Admin Console, go to Account > Domains > Manage domains, then click 'Verify' next to your domain and copy the full TXT record value shown.",
+      "verifyOnly": true
     },
     {
       "flag": "dkimKey",
@@ -17,7 +18,7 @@
     }
   ],
   "records": [
-    {"type": "TXT", "name": "@", "value": "{VERIFY_TXT}", "verifyPattern": "^google-site-verification="},
+    {"type": "TXT", "name": "@", "value": "{VERIFY_TXT}", "verifyPattern": "^google-site-verification=",  "verifyOnly": true},
     {"type": "MX", "name": "@", "value": "smtp.google.com", "priority": 1},
     {"type": "TXT", "name": "@", "value": "v=spf1 include:_spf.google.com ~all"},
     {"type": "TXT", "name": "_dmarc", "value": "v=DMARC1; p={DMARC_POLICY};", "verifyPattern": "^v=DMARC1"},

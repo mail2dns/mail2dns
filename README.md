@@ -75,6 +75,7 @@ Provider-specific options are prompted interactively if not provided via flag or
 | Flag | Description | Default |
 |------|-------------|---------|
 | <nobr>`-o`, `--no-mx`</nobr> | Skip MX records (set up DNS for outbound email only) | `false` |
+| <nobr>`-n`, `--skip-verify`</nobr> | Skip domain verification step (use if domain is already verified) | `false` |
 | <nobr>`-y`, `--yes`</nobr> | Skip confirmation prompts (the command will error if any required inputs are missing) | `false` |
 | <nobr>`--allow-insecure-flags`</nobr> | Allow secrets to be passed via command-line flags (not recommended) | `false` |
 | <nobr>`-d`, `--dry-run`</nobr> | Show records that would be created without applying them | `false` |
@@ -255,7 +256,9 @@ mail2dns setup example.com migadu cloudflare
 | Flag | Env var | Description | Example |
 |------|---------|-------------|---------|
 | <nobr>`--verify-txt`</nobr> | `ZOHO_VERIFY_TXT` | Zoho Mail domain verification TXT value | `zoho-verification=zb12345678.zmverify.zoho.com` |
+| <nobr>`--dkim-name`</nobr> | `ZOHO_DKIM_NAME` | Zoho Mail DKIM record hostname | `zmail._domainkey` |
 | <nobr>`--dkim-key`</nobr> | `ZOHO_DKIM_KEY` | Zoho Mail DKIM TXT value | `v=DKIM1; k=rsa; p=...` |
+| <nobr>`--zoho-region`</nobr> | `ZOHO_REGION` | Zoho Mail region |  |
 ### Twilio SendGrid
 
 #### Inputs

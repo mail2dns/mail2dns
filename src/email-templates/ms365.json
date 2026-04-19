@@ -5,14 +5,15 @@
       "name": "Microsoft 365 domain verification TXT value",
       "env": "MS365_VERIFY_TXT",
       "example": "MS=ms12345678",
-      "instructions": "In the Microsoft 365 admin center, go to Settings > Domains, select your domain, and copy the TXT value shown under 'Verify domain' (starts with MS=ms...)."
+      "instructions": "In the Microsoft 365 admin center, go to Settings > Domains, select your domain, and copy the TXT value shown under 'Verify domain' (starts with MS=ms...).",
+      "verifyOnly": true
     },
     {
       "flag": "dkimSelector1Target",
       "name": "DKIM selector1 CNAME target",
       "env": "MS365_DKIM_SELECTOR1",
       "example": "selector1-example-com._domainkey.example.onmicrosoft.com",
-      "instructions": "In the Microsoft 365 admin center under DNS records, find the CNAME record for 'selector1._domainkey' and copy its target value."
+      "instructions": "In the Microsoft 365 admin center under Domain > DNS records > Advanced > DKIM, find the CNAME record for 'selector1._domainkey' and copy its target value."
     },
     {
       "flag": "dkimSelector2Target",
@@ -23,7 +24,7 @@
     }
   ],
   "records": [
-    { "type": "TXT",   "name": "@",                    "value": "{VERIFY_TXT}", "verifyPattern": "^MS=ms" },
+    { "type": "TXT",   "name": "@",                    "value": "{VERIFY_TXT}", "verifyPattern": "^MS=ms", "verifyOnly": true },
     { "type": "MX",    "name": "@",                    "value": "{DOMAIN_DASHES}.mail.protection.outlook.com", "priority": 0 },
     { "type": "TXT",   "name": "@",                    "value": "v=spf1 include:spf.protection.outlook.com -all" },
     { "type": "TXT",   "name": "_dmarc",               "value": "v=DMARC1; p={DMARC_POLICY};", "verifyPattern": "^v=DMARC1" },
