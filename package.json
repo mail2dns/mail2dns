@@ -3,6 +3,13 @@
   "version": "1.0.0",
   "description": "CLI that automates DNS setup for email.",
   "license": "MIT",
+  "author": "Zilobyte Ltd",
+  "homepage": "https://mail2dns.com",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mail2dns/mail2dns.git"
+  },
+  "bugs": "https://github.com/mail2dns/mail2dns/issues",
   "main": "dist/cli.js",
   "bin": {
     "mail2dns": "dist/cli.js"
